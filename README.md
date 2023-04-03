@@ -12,5 +12,14 @@ The key features are:
 # Installation
 TODO
 
+# Getting Started
+
 # API
 TODO
+
+# Citation
+To cite this project in publication, please use
+
+```
+TODO
+```
