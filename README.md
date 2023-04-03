@@ -7,5 +7,5 @@ DrugGym is an open source Python library for developing and comparing reinforcem
 # Installation
 TODO
 
-# API Example
+# API
 TODo
