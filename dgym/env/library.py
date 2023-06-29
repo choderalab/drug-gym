@@ -68,11 +68,15 @@ def enumerate_library(
             returnReactants=True
         )
 
+        (p.UpdatePropertyCache() for p in library)
+
         products.extend([
-            Molecule(p.products[0], reactants=[Molecule(r) for r in p.reactants])
+            Molecule(
+                p.products[0],
+                reactants=[Molecule(r) for r in p.reactants]
+            )
             for p in library
         ])
-
 
     return products
 

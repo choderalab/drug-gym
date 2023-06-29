@@ -1,7 +1,9 @@
 import pandas as pd
 from rdkit import Chem
+from typing import Optional
 from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools
+from drug_gym.reaction import Reaction
 
 import os
 os.environ['CHEMFP_LICENSE'] = (
@@ -15,84 +17,88 @@ def fingerprints(path):
 def enamine(path):
     return Chem.SDMolSupplier(path)
 
-def dsip(path):
+
+from dgllife.utils.mol_to_graph import ToGraph, MolToBigraph
+class DGLLifeUnlabeledDataset(object):
+    """Construct a SMILES dataset without labels for inference.
+
+    We will 1) Filter out invalid SMILES strings and record canonical SMILES strings
+    for valid ones 2) Construct a DGLGraph for each valid one and feature its node/edge
+
+    Parameters
+    ----------
+    collection : dgym.Collection
+        Contains the molecules of interest.
+    mol_to_graph: callable, rdkit.Chem.rdchem.Mol -> DGLGraph
+        A function turning an RDKit molecule object into a DGLGraph.
+        Default to :func:`dgllife.utils.mol_to_bigraph`.
+    node_featurizer : None or callable, rdkit.Chem.rdchem.Mol -> dict
+        Featurization for nodes like atoms in a molecule, which can be used to update
+        ndata for a DGLGraph. Default to None.
+    edge_featurizer : None or callable, rdkit.Chem.rdchem.Mol -> dict
+        Featurization for edges like bonds in a molecule, which can be used to update
+        edata for a DGLGraph. Default to None.
+    log_every : bool
+        Print a message every time ``log_every`` molecules are processed. Default to 1000.
     """
-    Load DSi-Poised Library.
-    From Enamine: https://enamine.net/compound-libraries/fragment-libraries/dsi-poised-library
- 
-    """
-    # import and process dsip
-    dsip = PandasTools.LoadSDF(path)
+    def __init__(self,
+                 collection,
+                 mol_to_graph=None,
+                 node_featurizer=None,
+                 edge_featurizer=None,
+                 log_every=1000):
+        super(DGLLifeUnlabeledDataset, self).__init__()
 
-    # filter reactions that lack reagents
-    dsip = dsip[pd.notnull(dsip['reagsmi1'])].reset_index(drop=True)
+        self.smiles = collection.smiles
+        self.graphs = []
+        
+        mol_list = []
+        for m in collection.molecules:
+            m.mol.UpdatePropertyCache()
+            mol_list.append(m.mol)
+        
+        if mol_to_graph is None:
+            mol_to_graph = MolToBigraph()
 
-    # convert smiles to rdMol
-    dsip[['reagmol1', 'reagmol2']] = dsip[['reagsmi1', 'reagsmi2']].applymap(Chem.MolFromSmiles)
+        # Check for backward compatibility
+        if isinstance(mol_to_graph, ToGraph):
+            assert node_featurizer is None, \
+                'Initialize mol_to_graph object with node_featurizer=node_featurizer'
+            assert edge_featurizer is None, \
+                'Initialize mol_to_graph object with edge_featurizer=edge_featurizer'
+        else:
+            mol_to_graph = partial(mol_to_graph, node_featurizer=node_featurizer,
+                                   edge_featurizer=edge_featurizer)
 
-    # consolidate reagents
-    dsip['reagents'] = [
-        [
-            {'id': r1, 'smiles': rs1, 'rdMol': rm1},
-            {'id': r2, 'smiles': rs2, 'rdMol': rm2}
-        ]
-        for _, r1, r2, rs1, rm1, rs2, rm2 in
-        dsip[['reag1', 'reag2', 'reagsmi1', 'reagmol1', 'reagsmi2', 'reagmol2']].itertuples()
-    ]
+        for i, mol in enumerate(mol_list):
+            if (i + 1) % log_every == 0:
+                print('Processing molecule {:d}/{:d}'.format(i + 1, len(self)))
+            self.graphs.append(mol_to_graph(mol))
 
-    # subset columns
-    dsip = (
-        dsip[['Catalog ID', 'reaction', 'ROMol', 'reagents']]
-        .rename(columns={'ROMol': 'rdMol', 'Catalog ID': 'id'})
-    )
-    
-    return dsip
+    def __getitem__(self, item):
+            """Get datapoint with index
+
+            Parameters
+            ----------
+            item : int
+                Datapoint index
+
+            Returns
+            -------
+            str
+                SMILES for the ith datapoint
+            DGLGraph
+                DGLGraph for the ith datapoint
+            """
+            return self.smiles[item], self.graphs[item]
 
 
-def reactions(path):
-    """
-    Load reactions.
-    From SmilesClickChem: https://zenodo.org/record/4100676
-    
-    """
+    def __len__(self):
+            """Size for the dataset
 
-    # load from JSON
-    reactions = pd.read_json(path).T.reset_index(drop=True)
-    reactions['rdReaction'] = [AllChem.ReactionFromSmarts(smirks)
-                               for smirks in reactions['reaction_string']]
-    
-    # process columns
-    reactions['reactant_smarts'] = reactions['reaction_string'].apply(
-        lambda s: s.split('>>')[0].split('.')
-    )
-    reactions['product_smarts'] = reactions['reaction_string'].apply(
-        lambda s: s.split('>>')[-1]
-    )
-    reactions['reactant_rdMol'] = reactions['reactant_smarts'].apply(
-        lambda x: [Chem.MolFromSmarts(s) for s in x]
-    )
-    reactions['product_rdMol'] = reactions['rdReaction'].apply(
-        lambda x: x.GetProducts()[0]
-    )
-    
-    # make molecule dicts
-    reactions['reactants'] = [
-        [{'id': ids[i], 'smarts': smarts[i], 'rdMol': rdMols[i]}
-         for i in range(len(ids))]
-        for _, ids, smarts, rdMols in
-        reactions[['functional_groups', 'reactant_smarts', 'reactant_rdMol']].itertuples()
-    ]
-
-    reactions['product'] = [
-        {'smarts': product_string, 'rdMol': product_rdMol}
-        for _, product_string, product_rdMol in
-        reactions[['product_smarts', 'product_rdMol']].itertuples()
-    ]
-    
-    # subset and rename columns
-    reactions = (
-        reactions[['reaction_name', 'rdReaction', 'product', 'reactants']]
-        .rename(columns={'reaction_name': 'reaction'})
-    )
-    
-    return reactions
+            Returns
+            -------
+            int
+                Size for the dataset
+            """
+            return len(self.graphs)
