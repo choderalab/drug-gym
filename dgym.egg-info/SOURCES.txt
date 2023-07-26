@@ -1,9 +1,0 @@
-LICENSE
-README.md
-setup.py
-dgym.egg-info/PKG-INFO
-dgym.egg-info/SOURCES.txt
-dgym.egg-info/dependency_links.txt
-dgym.egg-info/entry_points.txt
-dgym.egg-info/requires.txt
-dgym.egg-info/top_level.txt
