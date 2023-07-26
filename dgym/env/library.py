@@ -3,7 +3,7 @@ import chemfp.arena
 from rdkit import Chem
 from rdkit.Chem import AllChem, Mol
 from typing import Union, Iterable
-from drug_gym.molecule import Molecule
+from dgym.molecule import Molecule
 
 def enumerate_library(
     hit,
