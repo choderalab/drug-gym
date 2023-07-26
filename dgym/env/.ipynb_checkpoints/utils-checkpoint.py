@@ -1,6 +1,7 @@
 import os
 import pickle
 import itertools
+import pandas as pd
 from rdkit import Chem
 from collections import defaultdict
 
@@ -39,12 +40,13 @@ def sort_fingerprints(fps, building_blocks):
 def partition_building_blocks(
     building_blocks=None,
     templates=None,
+    out_dir='.'
 ):
     """
     Get partition building blocks according to provided functional groups.
 
     """    
-    path = './out/building_block_subsets.pickle'
+    path = f'{out_dir}/out/building_block_subsets.pickle'
     if os.path.exists(path):
         with open(path, 'rb') as handle:
             building_blocks = pickle.load(handle)
@@ -75,40 +77,33 @@ def _partition_building_blocks(building_blocks, templates):
 
         # check substructure match with templates
         for template in templates:
-            if bb.HasSubstructMatch(template['rdMol']):
-                partitions[template['id']].append(
+            if bb.HasSubstructMatch(template):
+                partitions[template.GetProp('class')].append(
                     {'index': idx, 'rdMol': bb}
                 )
 
     # convert records to dataframes
     partitions = {k: pd.DataFrame(v) for k, v in partitions.items()}
     
-    return subsets
+    return partitions
 
 
 def get_unique_reactants(reactions):
     """
-    Get all unique templates from provided reactions.
+    Get all unique template classes from provided reactions.
     
     """
-
-    all_reactants = [r for g in reactions['reactants'] for r in g]
-
-    seen = set()
-    unique_reactants = []
-    for reactant in all_reactants:
-        
-        if reactant['id'] not in seen:
-            seen.add(reactant['id'])
-            unique_reactants.append(reactant)
-    
-    return unique_reactants
+    unique_dict = {r.GetProp('class'): r
+                   for reaction in reactions
+                   for r in reaction.reactants}
+    unique_classes = list(unique_dict.values())
+    return unique_classes
 
 
 # Match molecular species and reactions.
 # -----------------------------------------------
 
-def match_reactions(hit, reagents, repertoire, ignore_product=False):
+def find_synthetic_routes(hit, reactions, ignore_product=False):
     """
     Find reactions compatible with a given hit.
     
@@ -133,49 +128,44 @@ def match_reactions(hit, reagents, repertoire, ignore_product=False):
     A list of compatible reactions, each represented as a dictionary.
 
     """
-    compatible_reactions = []
-    for reaction, rdReaction, product, reactants in repertoire.itertuples(index=False):
+    hit.synthetic_routes = []
+    for reaction in reactions:
 
         # if the product is compatible
-        product_template = product['rdMol']
-        if ignore_product or _match_mol(hit, product_template):
+        if ignore_product or hit.has_substruct_match(reaction.products[0]):
 
-            # find ordering that matches reagents and reactants
-            compatible_reactants = _match_reactants(reagents, reactants)
+            # find ordering that matches reactants to reactant templates
+            compatible_reactants = _match_reactants(
+                hit.reactants,
+                reaction.reactants
+            )
 
-            # store in dict records
+            # add synthetic route: tuple of reactants and reaction
             if compatible_reactants:
-                compat_reaction = {'reaction': reaction,
-                                   'rdReaction': rdReaction,
-                                   'product': product,
-                                   'reactants': compatible_reactants}
-                compatible_reactions.append(compat_reaction)
+                synthetic_route = compatible_reactants, reaction
+                hit.synthetic_routes.append(synthetic_route)
     
-    return compatible_reactions
+    return hit
 
-def _match_mol(mol, template):
-    return mol.HasSubstructMatch(template)
-
-def _match_reactants(reags, reactants):
+def _match_reactants(reactants, templates):
     """
-    Search for ordering with 1:1 match of reagents to reactant templates.
+    Search for ordering with 1:1 match of hit reactants to reactant templates.
     
     """
-    if len(reags) != len(reactants):
+    if len(reactants) != len(templates):
         return {}
     
     compatible_reactants = {}
-    
+
     # for all possible reagent orderings
-    for permutation in itertools.permutations(reags):
+    for permutation in itertools.permutations(reactants):
         
         # if templates match elementwise
-        if all([_match_mol(permutation[i]['rdMol'], reactant['rdMol'])
-                for i, reactant in enumerate(reactants)]):
-            
-            # pair reagents with matching reactant in dict records
-            compatible_reactants = [{'reagent': reag, 'template': reactants[i]}
-                                    for i, reag in enumerate(permutation)]
+        if all([permutation[i].has_substruct_match(template)
+                for i, template in enumerate(templates)]):
+                        
+            # return permutation
+            compatible_reactants = list(permutation)
             break
 
     return compatible_reactants

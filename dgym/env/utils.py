@@ -1,6 +1,7 @@
 import os
 import pickle
 import itertools
+import pandas as pd
 from rdkit import Chem
 from collections import defaultdict
 
@@ -76,15 +77,15 @@ def _partition_building_blocks(building_blocks, templates):
 
         # check substructure match with templates
         for template in templates:
-            if bb.HasSubstructMatch(template['rdMol']):
-                partitions[template['id']].append(
+            if bb.HasSubstructMatch(template):
+                partitions[template.GetProp('class')].append(
                     {'index': idx, 'rdMol': bb}
                 )
 
     # convert records to dataframes
     partitions = {k: pd.DataFrame(v) for k, v in partitions.items()}
     
-    return subsets
+    return partitions
 
 
 def get_unique_reactants(reactions):
