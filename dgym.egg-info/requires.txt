@@ -1,0 +1,8 @@
+pandas
+rdkit
+
+[dev]
+check-manifest
+
+[test]
+coverage

@@ -3,7 +3,7 @@ from rdkit import Chem
 from typing import Optional
 from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools
-from drug_gym.reaction import Reaction
+from dgym.reaction import Reaction
 
 import os
 os.environ['CHEMFP_LICENSE'] = (
