@@ -7,13 +7,50 @@ from gymnasium.spaces import (
     Dict, Discrete, Box, Sequence, Tuple
 )
 
-
 class DrugEnv(gym.Env):
-    def __init__(self):
+    def __init__(
+        self,
+        library_designer,
+        budget: int = 10_000,
+        num_assays: int = 3,
+    ) -> None:
+    """
+    ## Description
+    This is a ...
+
+    To solve ..., you need to (achieve reward) in (budget).
+
+    ## Action Space
+    Actions are (values) in (space) and represent.
+
+    ## Observation Space
+    State consists of ...
+
+    ## Rewards
+    Reward is given for (...).
+    If (...), it gets (negative number canceling out). (Actions) cost a small
+    amount of (cost). A more optimal agent will get a better score.
+
+    ## Starting State
+    The (env) starts (...).
+
+    ## Episode Termination
+    The episode will terminate if (...) or (...).
+
+    ## Arguments
+    Extra instructions about use of the environment:
+    ```python
+    import gymnasium as gym
+    env = gym.make("DrugEnv")
+    ```
+    """
+        
         super().__init__()
+        
+        self.library_designer = library_designer
 
         # Define the maximum number of molecules that could ever be synthesized
-        self.max_molecules = 10_000
+        self.max_molecules = budget
 
         # Define the action space
         self.action_space = Dict({
@@ -22,7 +59,7 @@ class DrugEnv(gym.Env):
                 'percent_random': Box(low=0.0, high=1.0, shape=(1,))
             }),
             'order': Dict({
-                'assay': Discrete(3),  # For example, if you have 3 assays
+                'assay': Discrete(num_assays),
                 'molecule': Discrete(self.max_molecules)
             })
         })
@@ -39,6 +76,7 @@ class DrugEnv(gym.Env):
 
         # Initialize the action mask
         self.action_mask = np.zeros(self.max_molecules, dtype=bool)
+
 
     def step(self, action):
         # If the action includes a design, update the library and the action mask
@@ -67,8 +105,10 @@ class DrugEnv(gym.Env):
         return self.get_observation()
 
     def design_library(self, action):
-        # Implement the logic for designing the library based on the action
-        ...
+        """
+        Returns the 
+        """
+        return self.library_designer.design(action['design'])
 
     def select_order(self, action):
         # Implement the logic for selecting an order based on the action

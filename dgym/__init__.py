@@ -4,3 +4,4 @@ __version__ = "0.0.1"
 
 from . import datasets, utils, synthesis
 from .collection import Collection
+from .env import env
