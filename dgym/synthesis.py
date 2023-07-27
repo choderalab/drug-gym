@@ -9,36 +9,6 @@ from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 
 
-# class SyntheticLibrary(dg.Collection)
-#     """A collection of Molecules with functionalities to be compatible with
-#     training and optimization.
-    
-#     Parameters
-#     ----------
-#     molecules : List[drug_gym.Molecule]
-#         A list of Molecules.
-    
-#     Methods
-#     -------
-#     featurize(molecules)
-#         Featurize all molecules in the collection.
-#     view()
-#         Generate a torch.utils.data.DataLoader from this Collection.
-    
-#     """
-#     _lookup = None
-#     _extra = None
-
-#     def __init__(
-#         self,
-#         molecules: Optional[List] = None,
-#         repertoire
-#     ) -> None:
-
-#         super(SyntheticLibrary, self).__init__(molecules)
-#         self.
-
-
 def enumerate_analogs(
     compound,
     repertoire,
@@ -133,12 +103,16 @@ def find_synthetic_routes(
         return None
 
     synthetic_routes = []
+    
     # loop through all reactions
     for reaction in repertoire:
+        
         # find 1:1 matching ordering, if it exists
         reaction_match = _match_reaction(compound, reaction)
+        
         if reaction_match:
             synthetic_routes.append(reaction_match)
+    
     return synthetic_routes
 
 
@@ -205,10 +179,13 @@ def design_library(
             indices, building_blocks_subset = building_blocks[cognate_class].values.T
             
             # sort building blocks by fingerprint similarity and random
+            argsort = []
             size_fp, size_rand = [int(v * size) for v in sortby.values()]
-            argsort_fp = _fp_argsort(poised_compound.reactants[1], indices, size_fp, fps=fps)
-            argsort_rand = random.sample(range(len(indices)), size_rand)
-            cognate_building_blocks = _clean(building_blocks_subset[[*argsort_rand, *argsort_fp]])
+            if size_fp:
+                argsort.extend(_fp_argsort(poised_compound.reactants[1], indices, size_fp, fps=fps))
+            if size_rand:
+                argsort.extend(random.sample(range(len(indices)), size_rand))
+            cognate_building_blocks = _clean(building_blocks_subset[argsort])
             
             # enumerate library
             library = AllChem.EnumerateLibraryFromReaction(

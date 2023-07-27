@@ -41,8 +41,9 @@ class OneStepSyntheticDrugAgent(DrugAgent):
         properties=None,
         num_analogs: int,
         num_orders: int,
-        analog_heuristic: Union[str, dict] = {'fingerprint': 0.5, 'random': 0.5},
-        policy: 
+        epsilon_orders: float,
+        sortby: Union[str, dict] = {'fingerprint': 0.5, 'random': 0.5},
+        fps: Union[chemfp.arena.FingerprintArena, None] = None,
     ):
         """
         Enumerates and featurizes candidates.
@@ -57,10 +58,13 @@ class OneStepSyntheticDrugAgent(DrugAgent):
         analogs = []
         for compound in compounds:
             analogs.extend(
-                self._enumerate(
+                dg.synthesis.enumerate_analogs(
                     compound,
-                    analog_heuristic=analog_heuristic,
-                    num_analogs=num_analogs
+                    self.repertoire,
+                    self.building_blocks,
+                    num_analogs=num_analogs,
+                    sortby=sortby,
+                    fps=fps
                 )
             )
         feats = self._featurize(analogs, properties=properties)
