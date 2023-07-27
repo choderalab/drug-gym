@@ -15,14 +15,14 @@ class DrugAgent(object):
 
         self.collection = collection
 
-    def step(self, num_orders: int):
+    def sample_action(self, obs: list, num_orders: int):
         """
         Returns `orders`: tuples of `(service, list(Molecule))`.
 
         """
         raise NotImplementedError
 
-class TwoStepSyntheticDrugAgent(DrugAgent):
+class OneStepSyntheticDrugAgent(DrugAgent):
     
     def __init__(
         self,
@@ -35,13 +35,14 @@ class TwoStepSyntheticDrugAgent(DrugAgent):
         self.repertoire = repertoire
         self.building_blocks = building_blocks
 
-    def step(
+    def sample_action(
         self,
         compounds: Optional[dg.Collection] = None,
         properties=None,
         num_analogs: int,
         num_orders: int,
         analog_heuristic: Union[str, dict] = {'fingerprint': 0.5, 'random': 0.5},
+        policy: 
     ):
         """
         Enumerates and featurizes candidates.
@@ -56,55 +57,17 @@ class TwoStepSyntheticDrugAgent(DrugAgent):
         analogs = []
         for compound in compounds:
             analogs.extend(
-                self._enumerate(compound, sortby=sortby, num_analogs=num_analogs)
+                self._enumerate(
+                    compound,
+                    analog_heuristic=analog_heuristic,
+                    num_analogs=num_analogs
+                )
             )
         feats = self._featurize(analogs, properties=properties)
         orders = self._act(analogs, feats, k=k)
         return orders
 
     
-    def _enumerate(self, hit, sortby: str ='fingerprint', num_analogs: int):
-        """
-        Given a set of reagents, enumerate candidate molecules.
-        
-        Parameters
-        ----------
-        hit : dg.Molecule
-            The hit from which analogs are enumerated.
-        sortby : str
-            How to sort building blocks. Valid flags are 'fingerprint', 'random'.
-            Default: 'fingerprint'.
-        k : int
-            Number of analogs to enumerate (for each compatible reaction).
-        
-        Returns
-        -------
-        all_products : list of enumerated products
-        
-        """
-        # get matching reactions
-        hit = dg.env.utils.find_synthetic_routes(
-            hit,
-            repertoire,
-            ignore_product=True
-        )
-
-        # enumerate synthetic library
-        all_products = []
-        for poised_index, _ in enumerate(hit.reactants):
-            
-            products = dg.env.library.enumerate_library(
-                hit,
-                self.building_blocks,
-                poised_index=poised_index,
-                size=k,
-                sortby=sortby,
-                fps=fps
-            )
-            
-            all_products.extend(products)
-
-        return all_products
     
     
     def _featurize(

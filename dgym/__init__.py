@@ -2,5 +2,5 @@
 __name__ = "dgym"
 __version__ = "0.0.1"
 
-from .env import datasets, library, utils
+from . import synthesis, datasets, utils
 from .collection import Collection

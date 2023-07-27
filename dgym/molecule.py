@@ -91,6 +91,27 @@ class Molecule(object):
 
         return self
 
+    def poise(self, idx):
+
+        assert hasattr(self, 'reactants')
+        
+        def _move_idx_to_first(lst, idx):
+            lst.insert(0, lst.pop(idx))
+            return lst
+
+        # if only one reactant, do nothing
+        if len(self.reactants) == 1:
+            return self
+
+        # do not mutate in-place
+        from copy import deepcopy
+        temp = deepcopy(self)
+        
+        # reorder according to poised index
+        temp.reactants = _move_idx_to_first(temp.reactants, idx)
+
+        return temp
+
     # def __repr__(self) -> str:
     #     return self.smiles
 
