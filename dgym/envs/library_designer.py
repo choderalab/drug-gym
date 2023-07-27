@@ -22,7 +22,6 @@ class LibraryDesigner:
         self.repertoire = repertoire
         self.fingerprints = fingerprints
 
-
     def design(
         self,
         molecules: list,
@@ -54,14 +53,12 @@ class LibraryDesigner:
             reactions = self.find_compatible_reactions(molecule)
             # enumerate poised synthetic library
             analogs = self.enumerate_analogs(
-                molecule,
-                reactions,
+                molecule, reactions,
                 num_analogs=num_analogs,
                 percent_random=percent_random
             )
             products.extend(analogs)
         return products
-
 
     def find_compatible_reactions(self, molecule) -> list[Reaction]:
         """
@@ -111,9 +108,6 @@ class LibraryDesigner:
         return synthetic_routes
 
 
-    # Enumerate molecule library
-    # -----------------------------------------------
-
     def enumerate_analogs(
         self,
         molecule: Molecule,
@@ -158,7 +152,7 @@ class LibraryDesigner:
                 k=size, query=Chem.MolToSmiles(cognate_reactant),
                 targets=fps.copy(indices=indices, reorder=False)).get_indices()
 
-        products = []
+        analogs = []
         for index, _ in enumerate(molecule.reactants):
             for reaction in reactions:
 
@@ -189,11 +183,11 @@ class LibraryDesigner:
                 
                 (p.UpdatePropertyCache() for p in library)
                 for p in library:
-                    products.append(
+                    analogs.append(
                         Molecule(
                             p.products[0],
                             reactants=[Molecule(r) for r in p.reactants]
                         )
                     )
 
-        return products
+        return analogs

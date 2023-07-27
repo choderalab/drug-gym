@@ -1,5 +1,5 @@
 import rdkit
-from typing import Iterable
+from typing import Iterable, Optional
 
 import gymnasium as gym
 import numpy as np
@@ -44,6 +44,7 @@ class DrugEnv(gym.Env):
         library_designer,
         budget: int = 10_000,
         num_assays: int = 3,
+        library: Optional[list] = []
     ) -> None:
         
         super().__init__()
@@ -75,7 +76,7 @@ class DrugEnv(gym.Env):
         })
 
         # Initialize the library and orders
-        self.library = []
+        self.library = library
         self.orders = []
 
         # Initialize the action mask
@@ -112,11 +113,11 @@ class DrugEnv(gym.Env):
         """
         Returns the 
         """
-        selected_molecules = [self.library[i] for i in action['design']['selected_molecules']]
+        selected_molecules = [self.library[i] for i in action['selected_molecules']]
         return self.library_designer.design(
             selected_molecules,
-            action['design']['num_analogs'],
-            action['design']['percent_random']
+            action['num_analogs'],
+            action['percent_random']
         )
 
     def select_order(self, action):
