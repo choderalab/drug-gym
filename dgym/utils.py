@@ -12,6 +12,13 @@ __all__ = [
     'match_reactions'
 ]
 
+import os
+os.environ['CHEMFP_LICENSE'] = (
+    '20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF'
+)
+import chemfp
+
+
 # Sort fingerprints according to building blocks.
 # ---------------------------------
 

@@ -6,6 +6,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, Mol
 from typing import Union, Iterable
 from dgym.molecule import Molecule
+from dgym.reaction import Reaction
 
 
 # class SyntheticLibrary(dg.Collection)
@@ -39,12 +40,12 @@ from dgym.molecule import Molecule
 
 
 def enumerate_analogs(
-    self,
     compound,
     repertoire,
+    building_blocks,
     num_analogs: int,
-    strategy: Union[str, dict] = {'fingerprint': 0.5, 'random': 0.5},
-    fingerprints=
+    sortby: Union[str, dict] = {'fingerprint': 1.0, 'random': 0.0},
+    fps: Union[chemfp.arena.FingerprintArena, None] = None,
 ) -> list:
     """
     Given a set of reagents, enumerate candidate molecules.
@@ -55,7 +56,7 @@ def enumerate_analogs(
         The hit from which analogs are enumerated.
     num_analogs : int
         Number of analogs to enumerate (for each compatible reaction).
-    strategy : Union[str, dict]
+    sortby : Union[str, dict]
         How to sort building blocks. Valid flags are 'fingerprint', 'random'.
         The values of the dictionary indicate the tradeoff.
         Default: 'fingerprint'.
@@ -78,7 +79,7 @@ def enumerate_analogs(
             building_blocks,
             index=poised_index,
             size=num_analogs,
-            strategy=strategy,
+            sortby=sortby,
             fps=fps
         )
         all_products.extend(products)
@@ -145,12 +146,12 @@ def find_synthetic_routes(
 # -----------------------------------------------
 
 def design_library(
-    compound: dg.Molecule,
-    synthetic_routes: Iterable[dg.Reaction],
+    compound: Molecule,
+    synthetic_routes: Iterable[Reaction],
     building_blocks: dict,
     index: int = 0,
     size: int = 10,
-    strategy: Union[str, dict] = {'fingerprint': 0.5, 'random': 0.5},
+    sortby: Union[str, dict] = {'fingerprint': 1.0, 'random': 0.0},
     fps: Union[chemfp.arena.FingerprintArena, None] = None,
 ) -> list:
     """
@@ -184,24 +185,13 @@ def design_library(
         remover = SaltRemover(defnData='[Cl,Br]')
         return remover.StripMol(m.mol)
 
-    def _fp_argsort(
-        cognate_reactant: Chem.Mol,
-        indices: Iterable[int],
-        size: int = 10,
-        fps: Union[chemfp.arena.FingerprintArena, None] = None,
-    ) -> Iterable[int]:
-        
-        # clean salt in case it matters
-        cognate_rdMol = _remove_salts(cognate_reactant)
-
-        # sort by fingerprint
-        argsort = chemfp.simsearch(
-            k=size,
-            query=Chem.MolToSmiles(cognate_rdMol),
-            targets=fps.copy(indices=indices, reorder=False)
-        ).get_indices()
-        
-        return argsort
+    def _fp_argsort(cognate_reactant: Chem.Mol, indices: Iterable[int],
+                    size: int, fps: chemfp.arena.FingerprintArena) -> Iterable[int]:
+        # remove salt in case it matters
+        cognate_reactant = _remove_salts(cognate_reactant)
+        return chemfp.simsearch(
+            k=size, query=Chem.MolToSmiles(cognate_reactant),
+            targets=fps.copy(indices=indices, reorder=False)).get_indices()
 
     products = []
     for reaction in synthetic_routes:
@@ -211,15 +201,14 @@ def design_library(
             poised_reaction = reaction.poise(index)
             
             # filter building blocks compatible with poised fragment
-            cognate_class = poised_reaction.reactants[0].GetProp('class')
+            cognate_class = poised_reaction.reactants[1].GetProp('class')
             indices, building_blocks_subset = building_blocks[cognate_class].values.T
             
-            # sort building blocks
-            if strategy == 'fingerprint':
-                argsort = _fp_argsort(poised_compound.reactants[0], indices, size, fps=fps)
-            elif strategy == 'random':
-                argsort = random.sample(range(len(indices)), size)
-            cognate_building_blocks = _clean(building_blocks_subset[argsort])
+            # sort building blocks by fingerprint similarity and random
+            size_fp, size_rand = [int(v * size) for v in sortby.values()]
+            argsort_fp = _fp_argsort(poised_compound.reactants[1], indices, size_fp, fps=fps)
+            argsort_rand = random.sample(range(len(indices)), size_rand)
+            cognate_building_blocks = _clean(building_blocks_subset[[*argsort_rand, *argsort_fp]])
             
             # enumerate library
             library = AllChem.EnumerateLibraryFromReaction(
@@ -228,7 +217,7 @@ def design_library(
                 returnReactants=True
             )
             
-            # (p.UpdatePropertyCache() for p in library)
+            (p.UpdatePropertyCache() for p in library)
             for p in library:
                 products.append(
                     Molecule(
