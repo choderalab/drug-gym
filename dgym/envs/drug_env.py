@@ -8,35 +8,29 @@ from gymnasium.spaces import (
 )
 
 class DrugEnv(gym.Env):
-    def __init__(
-        self,
-        library_designer,
-        budget: int = 10_000,
-        num_assays: int = 3,
-    ) -> None:
     """
     ## Description
     This is a ...
 
     To solve ..., you need to (achieve reward) in (budget).
-
+    
     ## Action Space
     Actions are (values) in (space) and represent.
-
+    
     ## Observation Space
     State consists of ...
-
+    
     ## Rewards
     Reward is given for (...).
     If (...), it gets (negative number canceling out). (Actions) cost a small
     amount of (cost). A more optimal agent will get a better score.
-
+    
     ## Starting State
     The (env) starts (...).
-
+    
     ## Episode Termination
     The episode will terminate if (...) or (...).
-
+    
     ## Arguments
     Extra instructions about use of the environment:
     ```python
@@ -44,6 +38,13 @@ class DrugEnv(gym.Env):
     env = gym.make("DrugEnv")
     ```
     """
+
+    def __init__(
+        self,
+        library_designer,
+        budget: int = 10_000,
+        num_assays: int = 3,
+    ) -> None:
         
         super().__init__()
         
@@ -55,13 +56,16 @@ class DrugEnv(gym.Env):
         # Define the action space
         self.action_space = Dict({
             'design': Dict({
+                'selected_molecules': Sequence(Discrete(self.max_molecules)),
                 'num_analogs': Discrete(self.max_molecules),
                 'percent_random': Box(low=0.0, high=1.0, shape=(1,))
             }),
-            'order': Dict({
-                'assay': Discrete(num_assays),
-                'molecule': Discrete(self.max_molecules)
-            })
+            'order': Sequence(
+                Tuple([
+                    Discrete(num_assays),  # Assay
+                    Discrete(self.max_molecules)  # Molecule
+                ])
+            )
         })
 
         # Define the observation space
@@ -108,7 +112,12 @@ class DrugEnv(gym.Env):
         """
         Returns the 
         """
-        return self.library_designer.design(action['design'])
+        selected_molecules = [self.library[i] for i in action['design']['selected_molecules']]
+        return self.library_designer.design(
+            selected_molecules,
+            action['design']['num_analogs'],
+            action['design']['percent_random']
+        )
 
     def select_order(self, action):
         # Implement the logic for selecting an order based on the action
