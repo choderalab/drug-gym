@@ -15,16 +15,19 @@ from typing import Union, Iterable, Optional, List, Any, Callable
 class Collection(torch.utils.data.Dataset):
     """A collection of Molecules with functionalities to be compatible with
     training and optimization.
+    
     Parameters
     ----------
     molecules : List[drug_gym.Molecule]
         A list of Molecules.
+    
     Methods
     -------
     featurize(molecules)
         Featurize all molecules in the collection.
     view()
         Generate a torch.utils.data.DataLoader from this Collection.
+    
     """
     _lookup = None
     _extra = None

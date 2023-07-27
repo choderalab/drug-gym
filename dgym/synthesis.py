@@ -8,6 +8,36 @@ from typing import Union, Iterable
 from dgym.molecule import Molecule
 
 
+# class SyntheticLibrary(dg.Collection)
+#     """A collection of Molecules with functionalities to be compatible with
+#     training and optimization.
+    
+#     Parameters
+#     ----------
+#     molecules : List[drug_gym.Molecule]
+#         A list of Molecules.
+    
+#     Methods
+#     -------
+#     featurize(molecules)
+#         Featurize all molecules in the collection.
+#     view()
+#         Generate a torch.utils.data.DataLoader from this Collection.
+    
+#     """
+#     _lookup = None
+#     _extra = None
+
+#     def __init__(
+#         self,
+#         molecules: Optional[List] = None,
+#         repertoire
+#     ) -> None:
+
+#         super(SyntheticLibrary, self).__init__(molecules)
+#         self.
+
+
 def enumerate_analogs(
     self,
     compound,
