@@ -2,5 +2,5 @@
 __name__ = "dgym"
 __version__ = "0.0.1"
 
-from . import datasets, utils, synthesis, envs
-from .collection import Collection
+from . import datasets, utils, envs, agents
+from .collection import ReactionCollection

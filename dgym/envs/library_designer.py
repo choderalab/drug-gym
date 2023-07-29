@@ -13,7 +13,7 @@ class LibraryDesigner:
 
     def __init__(
         self,
-        repertoire: list,
+        repertoire: list, # allowed reactions, reactions, or valid reactions instead of repertoire
         building_blocks,
         fingerprints: Optional[chemfp.arena.FingerprintArena]
     ) -> None:
@@ -21,6 +21,8 @@ class LibraryDesigner:
         self.building_blocks = building_blocks
         self.repertoire = repertoire
         self.fingerprints = fingerprints
+        # john: why not lazily recompute fingerprints only when needed, then cache it
+        # for each object, what goes in, and what goes out
 
     def design(
         self,

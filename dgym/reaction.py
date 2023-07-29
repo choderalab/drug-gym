@@ -1,6 +1,8 @@
+import torch
 import rdkit
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 from rdkit.Chem.rdChemReactions import ChemicalReaction
+
 
 class Reaction:
     def __init__(

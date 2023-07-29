@@ -126,7 +126,7 @@ class DrugEnv(gym.Env):
 
     def get_observation(self):
         # Implement the logic for generating the observation based on the current state
-        ...
+        return self.library
 
     def get_reward(self):
         # Implement the logic for calculating the reward based on the current state
