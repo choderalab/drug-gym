@@ -35,9 +35,14 @@ class Collection(torch.utils.data.Dataset):
         assert isinstance(items, List)
         
         self._items = items
+        self._lookup = None
 
-    # def __repr__(self):
-    #     return "%s with %s molecules" % (self.__class__.__name__, len(self))
+    def __repr__(self):
+        return "{collection} with {size} {items}s".format(
+            collection = self.__class__.__name__,
+            size = len(self),
+            items = self._items[0].__class__.__name__
+        )
 
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
@@ -122,7 +127,7 @@ class Collection(torch.utils.data.Dataset):
         if isinstance(key, int):
             return self._items[key]
         elif isinstance(key, str):
-            return self.__class__(items=[self.lookup[key]])
+            return self.__class__([self.lookup[key]])
         elif isinstance(key, type(self._items[0])):
             return self.lookup[key.id]
         elif isinstance(key, torch.Tensor):
@@ -288,6 +293,15 @@ class MoleculeCollection(Collection):
         
         assert all(isinstance(molecule, Molecule) for molecule in molecules)
         super().__init__(molecules)
+
+    @property
+    def molecules(self):
+        return self._items
+
+    @molecules.setter
+    def molecules(self, value):
+        assert all(isinstance(molecule, Molecule) for molecule in value)
+        self._items = value
 
     def featurize_all(self):
         """ Featurize all molecules in collection. """

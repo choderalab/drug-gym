@@ -13,13 +13,13 @@ class LibraryDesigner:
 
     def __init__(
         self,
-        repertoire: list, # allowed reactions, reactions, or valid reactions instead of repertoire
+        reactions: list,
         building_blocks,
         fingerprints: Optional[chemfp.arena.FingerprintArena]
     ) -> None:
 
+        self.reactions = reactions
         self.building_blocks = building_blocks
-        self.repertoire = repertoire
         self.fingerprints = fingerprints
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
@@ -77,7 +77,7 @@ class LibraryDesigner:
         
         repertoire : pandas.DataFrame
             All available reactions.
-                
+
         Returns
         -------
         A list of compatible reactions, each represented as a dictionary.
@@ -99,7 +99,7 @@ class LibraryDesigner:
         synthetic_routes = []
         
         # loop through all reactions
-        for reaction in self.repertoire:
+        for reaction in self.reactions:
             
             # find 1:1 matching ordering, if it exists
             reaction_match = _match_reaction(molecule, reaction)

@@ -46,9 +46,8 @@ class Molecule(object):
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
         reactants: Optional[Iterable] = None,
-        # smiles: str,
-        # g: Optional[dgl.DGLGraph] = None,
         metadata: Optional[dict] = {},
+        id_attr: Optional[str] = 'smiles',
         # featurizer: Optional[Callable] = functools.partial(
         #     smiles_to_bigraph,
         #     node_featurizer=CanonicalAtomFeaturizer(atom_data_field="h"),
@@ -59,20 +58,18 @@ class Molecule(object):
             mol = rdkit.Chem.MolFromSmiles(mol)
 
         self.mol = mol
-        self.smiles = rdkit.Chem.MolToSmiles(self.mol)
         self.reactants = reactants
-        # self.smiles = smiles
-        # self.g = g
         self.metadata = metadata
-        
+        self.smiles = rdkit.Chem.MolToSmiles(self.mol)
+        self._id_attr = id_attr
+
         # Set the properties of the molecule using the dictionary
         for key, value in metadata.items():
             self.mol.SetProp(key, value)
 
-        # self.featurizer = featurizer
-
-        # featurize the first thing after init
-        # self.featurize()
+    @property
+    def id(self):
+        return getattr(self, self._id_attr, None)
 
     def _repr_html_(self):
         return self.mol._repr_html_()

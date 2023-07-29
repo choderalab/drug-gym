@@ -3,4 +3,4 @@ __name__ = "dgym"
 __version__ = "0.0.1"
 
 from . import datasets, utils, envs, agents
-from .collection import ReactionCollection
+from .collection import MoleculeCollection, ReactionCollection

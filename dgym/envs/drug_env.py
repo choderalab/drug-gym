@@ -72,7 +72,7 @@ class DrugEnv(gym.Env):
         # Define the observation space
         self.observation_space = Dict({
             'library': Box(low=-float('inf'), high=float('inf'), shape=(self.max_molecules,)),  
-            'order': Box(low=-float('inf'), high=float('inf'), shape=(10,))  
+            'order': Box(low=-float('inf'), high=float('inf'), shape=(10,))
         })
 
         # Initialize the library and orders
