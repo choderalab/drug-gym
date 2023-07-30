@@ -71,7 +71,7 @@ class Collection(torch.utils.data.Dataset):
         """
         return item.id in self.lookup
 
-    def filter(self, by: Callable) -> Collection:
+    def filter(self, by: Callable):
         return self.__class__([item for item in self._items if by(item)])
 
     def apply(self, function):

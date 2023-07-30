@@ -1,5 +1,4 @@
-import dgl
-import torch
+import os
 import dgllife
 from dgym.collection import Collection
 
@@ -18,10 +17,10 @@ class DGLOracle(Oracle):
         model_name: str,
         mol_to_graph=dgllife.utils.MolToBigraph(
             add_self_loop=True,
-            node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
+            node_featurizer=CanonicalAtomFeaturizer()
         )
     ):
-        super().__init__()
+        super().__int__()
         self.model_name = model_name
         self.mol_to_graph = mol_to_graph
 
@@ -34,19 +33,18 @@ class DGLOracle(Oracle):
     def predict(self, molecules: Collection):
         
         # identify uncached molecules
-        in_cache = lambda m: m.smiles not in self.cache
-        if uncached_molecules := molecules.filter(in_cache):
+        uncached_molecules = molecules.filter(lambda m: m.smiles not in self.cache)
+        
+        # featurize
+        graphs = [self.mol_to_graph(m.update_cache().mol) for m in uncached_molecules]
+        graph_batch = dgl.batch(graphs)
+        feats_batch = graph_batch.ndata['h']
+        
+        # perform inference
+        preds = self.model(graph_batch, feats_batch).flatten().tolist()
 
-            # featurize
-            graphs = [self.mol_to_graph(m.update_cache().mol) for m in uncached_molecules]
-            graph_batch = dgl.batch(graphs).to(self.device)
-            feats_batch = graph_batch.ndata['h']
-            
-            # perform inference
-            preds = self.model(graph_batch, feats_batch).flatten().tolist()
-
-            # cache results
-            self.cache.update(zip(uncached_molecules.smiles, preds))
+        # cache results
+        self.cache.update(zip(uncached_molecules.smiles, preds))
 
         # fetch all results (old and new) from cache
         return [self.cache[m.smiles] for m in molecules]
