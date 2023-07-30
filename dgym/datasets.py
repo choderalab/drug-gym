@@ -19,7 +19,8 @@ def enamine(path):
 
 
 from dgllife.utils.mol_to_graph import ToGraph, MolToBigraph
-class DGLLifeUnlabeledDataset(object):
+
+class DGLLifeDataset(object):
     """Construct a SMILES dataset without labels for inference.
 
     We will 1) Filter out invalid SMILES strings and record canonical SMILES strings
@@ -47,7 +48,6 @@ class DGLLifeUnlabeledDataset(object):
                  node_featurizer=None,
                  edge_featurizer=None,
                  log_every=1000):
-        super(DGLLifeUnlabeledDataset, self).__init__()
 
         self.smiles = collection.smiles
         self.graphs = []
@@ -67,8 +67,11 @@ class DGLLifeUnlabeledDataset(object):
             assert edge_featurizer is None, \
                 'Initialize mol_to_graph object with edge_featurizer=edge_featurizer'
         else:
-            mol_to_graph = partial(mol_to_graph, node_featurizer=node_featurizer,
-                                   edge_featurizer=edge_featurizer)
+            mol_to_graph = partial(
+                mol_to_graph,
+                node_featurizer=node_featurizer,
+                edge_featurizer=edge_featurizer
+            )
 
         for i, mol in enumerate(mol_list):
             if (i + 1) % log_every == 0:

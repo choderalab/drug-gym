@@ -147,12 +147,12 @@ class LibraryDesigner:
             return remover.StripMol(m.mol)
 
         def _fp_argsort(cognate_reactant: Chem.Mol, indices: Iterable[int],
-                        size: int, fps: chemfp.arena.FingerprintArena) -> Iterable[int]:
-            # remove salt in case it matters
+                        size: int, fps: chemfp.arena.FingerprintArena):
             cognate_reactant = _remove_salts(cognate_reactant)
             return chemfp.simsearch(
                 k=size, query=Chem.MolToSmiles(cognate_reactant),
-                targets=fps.copy(indices=indices, reorder=False)).get_indices()
+                targets=fps.copy(indices=indices, reorder=False)
+            ).get_indices()
 
         analogs = []
         for index, _ in enumerate(molecule.reactants):

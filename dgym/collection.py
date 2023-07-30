@@ -71,6 +71,9 @@ class Collection(torch.utils.data.Dataset):
         """
         return item.id in self.lookup
 
+    def filter(self, by: Callable) -> Collection:
+        return self.__class__([item for item in self._items if by(item)])
+
     def apply(self, function):
         """Apply a function to all molecules in the collection.
         Parameters
@@ -277,7 +280,7 @@ class Collection(torch.utils.data.Dataset):
             collate_fn = self._batch
 
         return torch.utils.data.DataLoader(
-            collection=self.items,
+            collection=self._items,
             collate_fn=partial(
                 collate_fn,
                 by=by,

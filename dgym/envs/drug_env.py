@@ -93,8 +93,8 @@ class DrugEnv(gym.Env):
         # If the action includes an order, perform the order
         if 'order' in action:
             molecule_index = action['order']['molecule']
-            if not self.action_mask[molecule_index]:
-                raise ValueError(f"The action for molecule {molecule_index} is masked.")
+            # if not self.action_mask[molecule_index]:
+            #     raise ValueError(f"The action for molecule {molecule_index} is masked.")
             self.orders.append(self.perform_order(action['order']))
 
         # Calculate the reward and check if the episode is done

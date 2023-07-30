@@ -182,3 +182,7 @@ class Molecule(object):
         """Erase the metadata. """
         self.metadata = None
         return self
+
+    def update_cache(self):
+        self.mol.UpdatePropertyCache()
+        return self
