@@ -194,7 +194,7 @@ class Molecule:
         
             # synchronize with rdkit mol
             for key, value in self.annotations.items():
-                self.mol.SetProp(str(key), value)
+                self.mol.SetProp(str(key), str(value))
 
         return self
 

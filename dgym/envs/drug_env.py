@@ -46,7 +46,7 @@ class DrugEnv(gym.Env):
         library_designer,
         budget: int = 10_000,
         assays: list = [],
-        library: Optional[MoleculeCollection] = MoleculeCollection()
+        library: Optional[MoleculeCollection] = None
     ) -> None:
         
         super().__init__()
@@ -79,7 +79,9 @@ class DrugEnv(gym.Env):
         })
 
         # Initialize the library and orders
-        self.library = library
+        if library is None:
+            library = MoleculeCollection()
+        self.library = library.clone()
         self.orders = []
 
         # Initialize the action mask
@@ -136,12 +138,7 @@ class DrugEnv(gym.Env):
         # update library annotations for molecules measured
         # annotations = [{f'assay_{assay_index}': r} for r in results]
         for idx, molecule in enumerate(molecules):
-            molecule.update_annotation({f'assay_{assay_index}': results[idx]})
-        # self.library[molecule_index].update_annotation(results[idx]) for 
-        # print(molecule_indices)
-        # print(annotations)
-        # self.library[molecule_indices].update_annotations(annotations)
-
+            molecule.update_annotations({f'assay_{assay_index}': results[idx]})
 
     def get_observation(self):
         # Implement the logic for generating the observation based on the current state
