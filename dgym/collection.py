@@ -135,7 +135,7 @@ class Collection(torch.utils.data.Dataset):
             return self.lookup[key.id]
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
-        elif isinstance(key, list):
+        elif isinstance(key, Iterable):
             return self.__class__([self._items[_idx] for _idx in key])
         elif isinstance(key, slice):
             return self.__class__(molecules=self._items[key])

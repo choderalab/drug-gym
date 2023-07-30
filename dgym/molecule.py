@@ -13,7 +13,7 @@ from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
 # =============================================================================
 # MODULE CLASSES
 # =============================================================================
-class Molecule(object):
+class Molecule:
     """ Models information associated with a molecule.
     
     Parameters
@@ -46,7 +46,7 @@ class Molecule(object):
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
         reactants: Optional[Iterable] = None,
-        metadata: Optional[dict] = {},
+        annotations: Optional[dict] = None,
         id_attr: Optional[str] = 'smiles',
         # featurizer: Optional[Callable] = functools.partial(
         #     smiles_to_bigraph,
@@ -59,13 +59,14 @@ class Molecule(object):
 
         self.mol = mol
         self.reactants = reactants
-        self.metadata = metadata
         self.smiles = rdkit.Chem.MolToSmiles(self.mol)
         self._id_attr = id_attr
+        
+        if annotations is None:
+            annotations = {}
+        self.annotations = annotations
+        self.update_annotations()
 
-        # Set the properties of the molecule using the dictionary
-        for key, value in metadata.items():
-            self.mol.SetProp(key, value)
 
     @property
     def id(self):
@@ -178,9 +179,23 @@ class Molecule(object):
             and self.metadata == other.metadata
         )
 
-    def erase_annotation(self) -> Any:
+    def erase_annotations(self) -> Any:
         """Erase the metadata. """
         self.metadata = None
+        return self
+
+    def update_annotations(self, other_annotations: Optional[dict] = None) -> Any:
+        """Update annotations. """
+
+        self.annotations.update(self.mol.GetPropsAsDict())
+        
+        if other_annotations:
+            self.annotations.update(other_annotations)
+        
+            # synchronize with rdkit mol
+            for key, value in self.annotations.items():
+                self.mol.SetProp(str(key), value)
+
         return self
 
     def update_cache(self):

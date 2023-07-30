@@ -62,13 +62,13 @@ class DrugEnv(gym.Env):
         # Define the action space
         self.action_space = Dict({
             'design': Dict({
-                'selected_molecules': Sequence(Discrete(self.max_molecules)),
+                'molecules': Sequence(Discrete(self.max_molecules)),
                 'num_analogs': Discrete(self.max_molecules),
                 'fraction_random': Box(low=0.0, high=1.0, shape=(1,))
             }),
             'order': Dict({
                 'assay': Discrete(len(self.assays)),
-                'selected_molecules': Sequence(Discrete(self.max_molecules))
+                'molecules': Sequence(Discrete(self.max_molecules))
             })
         })
 
@@ -95,7 +95,7 @@ class DrugEnv(gym.Env):
 
         # If the action includes an order, perform the order
         if 'order' in action:
-            molecule_index = action['order']['molecule']
+            # molecule_index = action['order']['selected_molecules']
             # if not self.action_mask[molecule_index]:
             #     raise ValueError(f"The action for molecule {molecule_index} is masked.")
             self.orders.append(self.perform_order(action['order']))
@@ -116,19 +116,31 @@ class DrugEnv(gym.Env):
         """
         Returns the 
         """
-        selected_molecules = self.library[action['selected_molecules']]
+        molecules = self.library[action['molecules']]
         return self.library_designer.design(
-            selected_molecules,
+            molecules,
             action['num_analogs'],
-            action['percent_random']
+            action['fraction_random']
         )
 
-    def perform_order(self, action):
+    def perform_order(self, action) -> None:
 
-        results = []
-        selected_assay = self.assays[action['assay']]
-        selected_molecules = self.library[action['selected_molecules']]
-        result = selected_assay(selected_molecules)
+        # gather assay and molecules
+        assay_index, molecule_indices = action['assay'], action['molecules']
+        assay = self.assays[assay_index]
+        molecules = self.library[molecule_indices]
+        
+        # perform inference
+        results = assay.predict(molecules)
+        
+        # update library annotations for molecules measured
+        # annotations = [{f'assay_{assay_index}': r} for r in results]
+        for idx, molecule in enumerate(molecules):
+            molecule.update_annotation({f'assay_{assay_index}': results[idx]})
+        # self.library[molecule_index].update_annotation(results[idx]) for 
+        # print(molecule_indices)
+        # print(annotations)
+        # self.library[molecule_indices].update_annotations(annotations)
 
 
     def get_observation(self):
