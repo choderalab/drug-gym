@@ -1,11 +1,13 @@
 import rdkit
-from typing import Iterable, Optional
+from typing import Iterable, Callable, Optional
 
 import gymnasium as gym
 import numpy as np
 from gymnasium.spaces import (
     Dict, Discrete, Box, Sequence, Tuple
 )
+
+from dgym.collection import MoleculeCollection
 
 class DrugEnv(gym.Env):
     """
@@ -43,8 +45,8 @@ class DrugEnv(gym.Env):
         self,
         library_designer,
         budget: int = 10_000,
-        num_assays: int = 3,
-        library: Optional[list] = []
+        assays: list = [],
+        library: Optional[MoleculeCollection] = MoleculeCollection()
     ) -> None:
         
         super().__init__()
@@ -54,19 +56,20 @@ class DrugEnv(gym.Env):
         # Define the maximum number of molecules that could ever be synthesized
         self.max_molecules = budget
 
+        # Define assays
+        self.assays = assays
+
         # Define the action space
         self.action_space = Dict({
             'design': Dict({
                 'selected_molecules': Sequence(Discrete(self.max_molecules)),
                 'num_analogs': Discrete(self.max_molecules),
-                'percent_random': Box(low=0.0, high=1.0, shape=(1,))
+                'fraction_random': Box(low=0.0, high=1.0, shape=(1,))
             }),
-            'order': Sequence(
-                Tuple([
-                    Discrete(num_assays),  # Assay
-                    Discrete(self.max_molecules)  # Molecule
-                ])
-            )
+            'order': Dict({
+                'assay': Discrete(len(self.assays)),
+                'selected_molecules': Sequence(Discrete(self.max_molecules))
+            })
         })
 
         # Define the observation space
@@ -84,10 +87,10 @@ class DrugEnv(gym.Env):
 
 
     def step(self, action):
-        # If the action includes a design, update the library and the action mask
+        
+        # If the action includes a design, update library and action mask
         if 'design' in action:
-            new_molecules = self.design_library(action['design'])
-            self.library.extend(new_molecules)
+            self.library += self.design_library(action['design'])
             self.action_mask[len(self.library):] = True
 
         # If the action includes an order, perform the order
@@ -113,16 +116,20 @@ class DrugEnv(gym.Env):
         """
         Returns the 
         """
-        selected_molecules = [self.library[i] for i in action['selected_molecules']]
+        selected_molecules = self.library[action['selected_molecules']]
         return self.library_designer.design(
             selected_molecules,
             action['num_analogs'],
             action['percent_random']
         )
 
-    def select_order(self, action):
-        # Implement the logic for selecting an order based on the action
-        ...
+    def perform_order(self, action):
+
+        results = []
+        selected_assay = self.assays[action['assay']]
+        selected_molecules = self.library[action['selected_molecules']]
+        result = selected_assay(selected_molecules)
+
 
     def get_observation(self):
         # Implement the logic for generating the observation based on the current state

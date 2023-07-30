@@ -136,9 +136,7 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
         elif isinstance(key, list):
-            return self.__class__(
-                items=[self._items[_idx] for _idx in key]
-            )
+            return self.__class__([self._items[_idx] for _idx in key])
         elif isinstance(key, slice):
             return self.__class__(molecules=self._items[key])
         else:
@@ -192,10 +190,10 @@ class Collection(torch.utils.data.Dataset):
         >>> len(collection)
         2
         """
-        if isinstance(items, list):
-            return self.__class__(items=self._items + items)
-        elif isinstance(items, Collection):
-            return self.__class__(items=self._items + other.items)
+        if isinstance(other, list):
+            return self.__class__(self._items + other)
+        elif isinstance(other, Collection):
+            return self.__class__(self._items + other.items)
         else:
             raise RuntimeError("Addition only supports list and Collection.")
 

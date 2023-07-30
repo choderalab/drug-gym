@@ -28,7 +28,7 @@ class LibraryDesigner:
         self,
         molecules: list,
         num_analogs: int,
-        percent_random: float
+        fraction_random: float
     ) -> list:
         """
         Given a set of reagents, enumerate candidate molecules.
@@ -57,7 +57,7 @@ class LibraryDesigner:
             analogs = self.enumerate_analogs(
                 molecule, reactions,
                 num_analogs=num_analogs,
-                percent_random=percent_random
+                fraction_random=fraction_random
             )
             products.extend(analogs)
         return products
@@ -115,7 +115,7 @@ class LibraryDesigner:
         molecule: Molecule,
         reactions: list,
         num_analogs: int,
-        percent_random: float,
+        fraction_random: float,
     ) -> list[Molecule]:
         """
         Returns enumerated product from poised reagent and compatible building blocks.
@@ -168,7 +168,7 @@ class LibraryDesigner:
                 
                 # sort building blocks by fingerprint similarity and random
                 argsort = []
-                size_rand = int(percent_random * num_analogs)
+                size_rand = int(fraction_random * num_analogs)
                 size_fp = num_analogs - size_rand
                 if size_fp:
                     argsort.extend(_fp_argsort(cognate, indices, size_fp, fps=self.fingerprints))
