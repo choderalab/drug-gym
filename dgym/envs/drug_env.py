@@ -63,7 +63,7 @@ class DrugEnv(gym.Env):
         self.action_space = Dict({
             'design': Dict({
                 'molecules': Sequence(Discrete(self.max_molecules)),
-                'num_analogs': Discrete(self.max_molecules),
+                'num_analogs': Discrete(2), # 0: 1, 1: 5, 2: 96, 3: 384
                 'fraction_random': Box(low=0.0, high=1.0, shape=(1,))
             }),
             'order': Dict({
@@ -85,7 +85,8 @@ class DrugEnv(gym.Env):
         self.orders = []
 
         # Initialize the action mask
-        self.action_mask = np.zeros(self.max_molecules, dtype=bool)
+        self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
+        self.valid_actions[:len(self.library)] = True
 
 
     def step(self, action):
@@ -93,13 +94,10 @@ class DrugEnv(gym.Env):
         # If the action includes a design, update library and action mask
         if 'design' in action:
             self.library += self.design_library(action['design'])
-            self.action_mask[len(self.library):] = True
+            self.valid_actions[:len(self.library)] = True
 
         # If the action includes an order, perform the order
         if 'order' in action:
-            # molecule_index = action['order']['selected_molecules']
-            # if not self.action_mask[molecule_index]:
-            #     raise ValueError(f"The action for molecule {molecule_index} is masked.")
             self.orders.append(self.perform_order(action['order']))
 
         # Calculate the reward and check if the episode is done
@@ -118,31 +116,34 @@ class DrugEnv(gym.Env):
         """
         Returns the 
         """
-        molecules = self.library[action['molecules']]
+        batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
+        valid_indices = [m for m in action['molecules'] if self.valid_actions[m]]
+        molecules = self.library[valid_indices]
         return self.library_designer.design(
             molecules,
-            action['num_analogs'],
+            batch_sizes[action['num_analogs']],
             action['fraction_random']
         )
 
     def perform_order(self, action) -> None:
 
-        # gather assay and molecules
+        # subset assay and molecules
         assay_index, molecule_indices = action['assay'], action['molecules']
         assay = self.assays[assay_index]
-        molecules = self.library[molecule_indices]
+
+        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
+        molecules = self.library[valid_indices]
         
         # perform inference
         results = assay.predict(molecules)
         
         # update library annotations for molecules measured
-        # annotations = [{f'assay_{assay_index}': r} for r in results]
         for idx, molecule in enumerate(molecules):
             molecule.update_annotations({f'assay_{assay_index}': results[idx]})
 
     def get_observation(self):
-        # Implement the logic for generating the observation based on the current state
         return self.library
+        # return OrderedDict({'design': self.library, 'order': self.})
 
     def get_reward(self):
         # Implement the logic for calculating the reward based on the current state

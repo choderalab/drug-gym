@@ -12,7 +12,6 @@ class DrugAgent:
 
         self.action_space = action_space
 
-
     def act(self, observations, mask):
         
         # Extract action values or logits from the policy
@@ -29,15 +28,22 @@ class DrugAgent:
 
         return action
 
-
     def policy(self, observations):
         """
         Parts of policy:
             1. scoring
             2. decision criterion
 
+        The loop according to John:
+            1. Ideate
+            2. Score
+            3. Triage
+            4. Assay
+            5. Update Models
+
         """
-        
+        for obs in observations:
+            
 
 
     def learn(self, previous_observation, action, reward, observation, done):
