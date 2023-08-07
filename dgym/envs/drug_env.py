@@ -139,7 +139,7 @@ class DrugEnv(gym.Env):
         
         # update library annotations for molecules measured
         for idx, molecule in enumerate(molecules):
-            molecule.update_annotations({f'assay_{assay_index}': results[idx]})
+            molecule.update_annotations({assay.model_name: results[idx]})
 
     def get_observation(self):
         return self.library

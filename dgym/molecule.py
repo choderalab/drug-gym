@@ -116,12 +116,12 @@ class Molecule:
     #     return self.smiles
 
     def __getitem__(self, idx):
-        if not self.metadata:
-            raise RuntimeError("No data associated with Molecule.")
+        if not self.annotations:
+            raise RuntimeError("No annotations associated with Molecule.")
         elif isinstance(idx, str):
-            return self.metadata[idx]
-        elif idx is None and len(self.metadata) == 1:
-            return list(self.metadata.values())[0]
+            return self.annotations[idx]
+        elif idx is None and len(self.annotations) == 1:
+            return list(self.annotations.values())[0]
         else:
             raise NotImplementedError
 
