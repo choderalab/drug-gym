@@ -46,6 +46,7 @@ class Molecule:
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
         reactants: Optional[Iterable] = None,
+        inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
         id_attr: Optional[str] = 'smiles',
         # featurizer: Optional[Callable] = functools.partial(
@@ -59,6 +60,7 @@ class Molecule:
 
         self.mol = mol
         self.reactants = reactants
+        self.inspiration = inspiration
         self.smiles = rdkit.Chem.MolToSmiles(self.mol)
         self._id_attr = id_attr
         

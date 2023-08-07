@@ -51,7 +51,7 @@ class LibraryDesigner:
 
         """
         products = []
-        for molecule in tqdm(molecules):
+        for molecule in molecules:
             # get matching reactions
             reactions = self.find_compatible_reactions(molecule)
             # enumerate poised synthetic library
@@ -188,7 +188,8 @@ class LibraryDesigner:
                 for p in library:
                     analog = Molecule(
                         p.products[0],
-                        reactants=[Molecule(r) for r in p.reactants]
+                        reactants=[Molecule(r) for r in p.reactants],
+                        inspiration=molecule
                     ).update_cache()
                     analogs.append(analog)
 
