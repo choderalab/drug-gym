@@ -199,5 +199,9 @@ class Molecule:
         return self
 
     def update_cache(self):
-        self.mol.UpdatePropertyCache()
+        try:
+            self.mol.UpdatePropertyCache()
+        except:
+            # sometimes throws AtomValenceException
+            pass
         return self

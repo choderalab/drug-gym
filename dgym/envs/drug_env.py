@@ -90,7 +90,7 @@ class DrugEnv(gym.Env):
 
 
     def step(self, action):
-        
+
         # If the action includes a design, update library and action mask
         if 'design' in action:
             self.library += self.design_library(action['design'])

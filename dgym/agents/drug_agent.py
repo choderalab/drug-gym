@@ -43,7 +43,7 @@ class DrugAgent:
 
         """
         for obs in observations:
-            
+            pass
 
 
     def learn(self, previous_observation, action, reward, observation, done):

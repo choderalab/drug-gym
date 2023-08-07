@@ -4,8 +4,9 @@
 # =============================================================================
 import dgl
 import dgym
-from rdkit import Chem
 import torch
+import pandas as pd
+from rdkit import Chem
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from typing import Union, Iterable, Optional, List, Any, Callable
@@ -47,6 +48,11 @@ class Collection(torch.utils.data.Dataset):
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
         self._lookup = {item.id: item for item in self._items}
+
+    @property
+    def annotations(self):
+        return pd.DataFrame([item.annotations for item in self._items])
+    
 
     @property
     def lookup(self):

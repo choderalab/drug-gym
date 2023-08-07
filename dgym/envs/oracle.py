@@ -38,7 +38,10 @@ class DGLOracle(Oracle):
         if uncached_molecules := molecules.filter(in_cache):
 
             # featurize
-            graphs = [self.mol_to_graph(m.update_cache().mol) for m in uncached_molecules]
+            graphs = [
+                self.mol_to_graph(m.update_cache().mol)
+                for m in uncached_molecules
+            ]
             graph_batch = dgl.batch(graphs).to(self.device)
             feats_batch = graph_batch.ndata['h']
             

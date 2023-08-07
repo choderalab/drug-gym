@@ -7,6 +7,7 @@ from rdkit.Chem import AllChem, Mol
 from typing import Union, Iterable, Optional
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
+from tqdm import tqdm_notebook as tqdm
 
 
 class LibraryDesigner:
@@ -50,12 +51,13 @@ class LibraryDesigner:
 
         """
         products = []
-        for molecule in molecules:
+        for molecule in tqdm(molecules):
             # get matching reactions
             reactions = self.find_compatible_reactions(molecule)
             # enumerate poised synthetic library
             analogs = self.enumerate_analogs(
-                molecule, reactions,
+                molecule,
+                reactions,
                 num_analogs=num_analogs,
                 fraction_random=fraction_random
             )
@@ -183,13 +185,11 @@ class LibraryDesigner:
                     returnReactants=True
                 )
                 
-                (p.UpdatePropertyCache() for p in library)
                 for p in library:
-                    analogs.append(
-                        Molecule(
-                            p.products[0],
-                            reactants=[Molecule(r) for r in p.reactants]
-                        )
-                    )
+                    analog = Molecule(
+                        p.products[0],
+                        reactants=[Molecule(r) for r in p.reactants]
+                    ).update_cache()
+                    analogs.append(analog)
 
         return analogs
