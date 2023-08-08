@@ -1,31 +1,36 @@
 import dgl
 import torch
 import dgllife
+from rdkit import Chem
+from typing import Union
 from rdkit.Chem import Descriptors
-from dgym.collection import Collection, MoleculeCollection
+from dgym.collection import MoleculeCollection
 
 class Oracle:
     
     def __init__(self) -> None:
         self.cache = {}
 
-    def __call__(self, molecules: Collection):
+    def __call__(self, molecules: Union[MoleculeCollection, list]):
         
+        if isinstance(molecules, list):
+            molecules = MoleculeCollection(molecules)
+
         # identify uncached molecules
-        in_cache = lambda m: m.smiles not in self.cache
+        not_in_cache = lambda m: m.smiles not in self.cache
         
-        if uncached_molecules := molecules.filter(in_cache):
+        if uncached_molecules := molecules.filter(not_in_cache):
             
             # make predictions
             preds = self.predict(uncached_molecules)
-            
+
             # cache results
             self.cache.update(zip(uncached_molecules.smiles, preds))
 
         # fetch all results (old and new) from cache
         return [self.cache[m.smiles] for m in molecules]
 
-    def predict(self, molecules: Collection):
+    def predict(self, molecules: MoleculeCollection):
         raise NotImplementedError
 
 
