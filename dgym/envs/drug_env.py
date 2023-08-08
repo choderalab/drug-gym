@@ -135,7 +135,7 @@ class DrugEnv(gym.Env):
         molecules = self.library[valid_indices]
         
         # perform inference
-        results = assay.predict(molecules)
+        results = assay(molecules)
         
         # update library annotations for molecules measured
         for idx, molecule in enumerate(molecules):
