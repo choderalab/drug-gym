@@ -68,17 +68,27 @@ class PropertyEvaluator:
     def score_acceptable(self, value):
         raise NotImplementedError
 
-class GaussianPropertyEvaluator(PropertyEvaluator):
+class LogisticPropertyEvaluator(PropertyEvaluator):
     def __init__(self, ideal, acceptable):
         
         super().__init__(ideal, acceptable)
-        self.mu_acceptable = np.mean(acceptable)
-        self.sigma_acceptable = (acceptable[1] - acceptable[0]) / 2
+        self.k_coef = -8 # steepness of curve
     
-    def score_acceptable(self, value):        
-        return 0.9 * self._gaussian(value, self.mu_acceptable, self.sigma_acceptable)
+    def score_acceptable(self, value):
+        
+        if value < self.ideal[0]:
+            x_0 = self.acceptable[0]
+            range_ = x_0 - self.ideal[0]
+        
+        elif value > self.ideal[1]:
+            x_0 = self.acceptable[1]
+            range_ = x_0 - self.ideal[1]
+        
+        k = self.k_coef / range_
 
-    def _gaussian(x, mu, sigma, A=1):
-        """Computes the Gaussian function for a given x."""
-        sigma = sigma if sigma != 0 else 1e-6
-        return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
+        return self._logistic(value, k, x_0)
+
+    @staticmethod
+    # Define the logistic function
+    def _logistic(x, k, x_0):
+        return 1 / (1 + np.exp(-k * (x - x_0)))
