@@ -24,10 +24,7 @@ class UtilityFunction:
     >>>     strategy = lambda x: np.prod(x)
     >>> )
     >>> 
-    >>> utility.score([0, 5])
-    
-    0.5458775937413701
-
+    >>> assert utility.score([0, 5]) == 0.5458775937413701
 
     """
     def __init__(self, evaluators, strategy: Optional[Callable] = None):
@@ -92,3 +89,31 @@ class LogisticEvaluator(Evaluator):
     # Define the logistic function
     def _logistic(x, k, x_0):
         return 1 / (1 + np.exp(-k * (x - x_0)))
+
+
+class PolynomialEvaluator(Evaluator):
+    def __init__(self, ideal, acceptable):
+        
+        super().__init__(ideal, acceptable)
+    
+    def score_acceptable(self, value):
+        
+        if value < self.ideal[0]:
+            dist = (value - self.ideal[0])**2
+            dist += 
+            x_0 = self.acceptable[0]
+            range_ = x_0 - self.ideal[0]
+        
+        elif value > self.ideal[1]:
+            x_0 = self.acceptable[1]
+            range_ = x_0 - self.ideal[1]
+        
+        k = self.k_coef / range_
+
+        return self._logistic(value, k, x_0)
+
+    @staticmethod
+    # Define the logistic function
+    def _logistic(x, k, x_0):
+        return 1 / (1 + np.exp(-k * (x - x_0)))
+
