@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import dgl
 import torch
 import dgllife
 from rdkit import Chem
 from typing import Union
 from rdkit.Chem import Descriptors
-from dgym.collection import MoleculeCollection
 
 class Oracle:
     
@@ -12,7 +13,10 @@ class Oracle:
         self.cache = {}
 
     def __call__(self, molecules: Union[MoleculeCollection, list]):
-        
+        return self.get_predictions(self, molecules)
+    
+    def get_predictions(self, molecules: Union[MoleculeCollection, list])
+
         if isinstance(molecules, list):
             molecules = MoleculeCollection(molecules)
 
@@ -32,6 +36,7 @@ class Oracle:
 
     def predict(self, molecules: MoleculeCollection):
         raise NotImplementedError
+
 
 
 class DGLOracle(Oracle):
