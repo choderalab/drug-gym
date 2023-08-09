@@ -54,7 +54,7 @@ class UtilityFunction:
         return self.score(values)
 
 
-class PropertyEvaluator:
+class Evaluator:
     def __init__(self, ideal, acceptable):
         self.ideal = ideal
         self.acceptable = acceptable
@@ -68,7 +68,7 @@ class PropertyEvaluator:
     def score_acceptable(self, value):
         raise NotImplementedError
 
-class LogisticPropertyEvaluator(PropertyEvaluator):
+class LogisticEvaluator(Evaluator):
     def __init__(self, ideal, acceptable):
         
         super().__init__(ideal, acceptable)
