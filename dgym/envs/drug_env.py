@@ -59,6 +59,9 @@ class DrugEnv(gym.Env):
         # Define assays
         self.assays = assays
 
+        # Define utility function
+        self.utility_function = utility_function
+
         # Define the action space
         self.action_space = Dict({
             'design': Dict({
@@ -147,7 +150,12 @@ class DrugEnv(gym.Env):
 
     def get_reward(self):
         # Implement the logic for calculating the reward based on the current state
-        ...
+        assay_results = [assay(self.library) for assay in self.assays]
+        utility = [
+            self.utility_function(properties)
+            for properties in zip(*assay_results)
+        ]
+        return max(utility)
 
     def check_done(self):
         # Implement the logic for checking if the episode is done

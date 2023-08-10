@@ -48,7 +48,7 @@ class Molecule:
         reactants: Optional[Iterable] = None,
         inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
-        id_attr: Optional[str] = 'smiles',
+        name_attr: Optional[str] = 'smiles',
         # featurizer: Optional[Callable] = functools.partial(
         #     smiles_to_bigraph,
         #     node_featurizer=CanonicalAtomFeaturizer(atom_data_field="h"),
@@ -62,7 +62,7 @@ class Molecule:
         self.reactants = reactants
         self.inspiration = inspiration
         self.smiles = rdkit.Chem.MolToSmiles(self.mol)
-        self._id_attr = id_attr
+        self._name_attr = name_attr
         
         if annotations is None:
             annotations = {}
@@ -71,8 +71,8 @@ class Molecule:
 
 
     @property
-    def id(self):
-        return getattr(self, self._id_attr, None)
+    def name(self):
+        return getattr(self, self._name_attr, None)
 
     def _repr_html_(self):
         return self.mol._repr_html_()

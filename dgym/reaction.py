@@ -9,6 +9,7 @@ class Reaction:
         self,
         template: Union[str, ChemicalReaction],
         metadata: Optional[dict] = None,
+        name: Optional[str] = None
     ) -> None:
         """
         Parameters
@@ -24,6 +25,7 @@ class Reaction:
         self.agents = list(template.GetAgents())
         self.reactants = list(template.GetReactants())
         self.metadata = metadata
+        self.name = name
     
     def run(self, reagents):
         return self.template.RunReactants(reagents)

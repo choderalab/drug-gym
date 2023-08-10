@@ -1,13 +1,13 @@
 import random
 import chemfp
-import chemfp.arena
+import itertools
 import dgym as dg
+import chemfp.arena
 from rdkit import Chem
 from rdkit.Chem import AllChem, Mol
 from typing import Union, Iterable, Optional
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
-from tqdm import tqdm_notebook as tqdm
 
 
 class LibraryDesigner:
@@ -22,6 +22,7 @@ class LibraryDesigner:
         self.reactions = reactions
         self.building_blocks = building_blocks
         self.fingerprints = fingerprints
+        self.cache = set()
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
 
@@ -177,6 +178,18 @@ class LibraryDesigner:
                 if size_rand:
                     argsort.extend(random.sample(range(len(indices)), size_rand))
                 cognate_building_blocks = _clean(building_blocks_subset[argsort])
+
+                # ensure no duplicates
+                for c in cognate_building_blocks:
+                    cognate_name = Chem.MolToSmiles(c)
+                    combo = tuple([
+                        f'{reaction.name}_{poised.name}_{cognate_name}',
+                        f'{reaction.name}_{cognate_name}_{poised.name}'
+                    ])
+                    if combo in self.cache:
+                        cognate_building_blocks.remove(c)
+                    else:
+                        self.cache.add(combo)
                 
                 # enumerate library
                 library = AllChem.EnumerateLibraryFromReaction(

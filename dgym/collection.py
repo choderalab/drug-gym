@@ -47,7 +47,7 @@ class Collection(torch.utils.data.Dataset):
 
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
-        self._lookup = {item.id: item for item in self._items}
+        self._lookup = {item.name: item for item in self._items}
 
     @property
     def annotations(self):
@@ -75,7 +75,7 @@ class Collection(torch.utils.data.Dataset):
         >>> Molecule("C") in collection
         False
         """
-        return item.id in self.lookup
+        return item.name in self.lookup
 
     def filter(self, by: Callable):
         return self.__class__([item for item in self._items if by(item)])
@@ -138,7 +138,7 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, str):
             return self.__class__([self.lookup[key]])
         elif isinstance(key, type(self._items[0])):
-            return self.lookup[key.id]
+            return self.lookup[key.name]
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
         elif isinstance(key, Iterable):
@@ -227,7 +227,7 @@ class Collection(torch.utils.data.Dataset):
             [
                 item
                 for item in self._items
-                if item.id not in other.lookup
+                if item.name not in other.lookup
             ]
         )
 
@@ -440,8 +440,7 @@ class ReactionCollection(Collection):
 
         def _make_reaction(row):
             smirks = row[smarts_col]
-            metadata = {'name': row['reaction_name']}
-            r = Reaction(smirks, metadata=metadata)
+            r = Reaction(smirks, name=row['reaction_name'])
             r = r.annotate_reactants(row[classes_col])
             return r
 
