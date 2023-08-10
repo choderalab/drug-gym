@@ -13,9 +13,9 @@ class Oracle:
         self.cache = {}
 
     def __call__(self, molecules: Union[MoleculeCollection, list]):
-        return self.get_predictions(self, molecules)
+        return self.get_predictions(molecules)
     
-    def get_predictions(self, molecules: Union[MoleculeCollection, list])
+    def get_predictions(self, molecules: Union[MoleculeCollection, list]):
 
         if isinstance(molecules, list):
             molecules = MoleculeCollection(molecules)
