@@ -95,22 +95,22 @@ class ClassicEvaluator(Evaluator):
     def __init__(self, ideal, acceptable):
         
         super().__init__(ideal, acceptable)
-        self.lower_slope = self._slope(self.acceptable[0], 0.5, self.ideal[0], 1)
-        self.upper_slope = self._slope(self.ideal[1], 1, self.acceptable[1], 0.5)
+        self._lower_slope = self._slope(self.acceptable[0], 0.5, self.ideal[0], 1)
+        self._upper_slope = self._slope(self.ideal[1], 1, self.acceptable[1], 0.5)
     
     def score_acceptable(self, value):
         
         if value < self.acceptable[0]:
-            return self._logistic(value, self.lower_slope, self.acceptable[0]) # positive slope
+            return self._logistic(value, self._lower_slope, self.acceptable[0]) # positive slope
         
         elif value > self.acceptable[0] and value < self.ideal[0]:
-            return (value - self.ideal[0]) * self.lower_slope + 1
+            return (value - self.ideal[0]) * self._lower_slope + 1
         
         elif value < self.acceptable[1] and value > self.ideal[1]:
-            return (value - self.ideal[1]) * self.upper_slope + 1
+            return (value - self.ideal[1]) * self._upper_slope + 1
         
         if value > self.acceptable[1]:
-            return self._logistic(value, self.upper_slope, self.acceptable[1]) # negative slope
+            return self._logistic(value, self._upper_slope, self.acceptable[1]) # negative slope
 
     @staticmethod
     def _slope(x1, y1, x2, y2):
