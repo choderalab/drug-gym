@@ -76,7 +76,7 @@ class HardcodedDrugAgent(DrugAgent):
             # branch_factor,
             # temperature,
         )
-        self.mode = 'ideate'
+        self.action_type = 'ideate'
         self.transitions = {
             'ideate': 'prioritize',
             'prioritize': 'ideate'
@@ -84,17 +84,6 @@ class HardcodedDrugAgent(DrugAgent):
 
     def policy(self, observations):
         """
-        Parts of policy:
-            1. scoring
-            2. decision criterion
-
-        The loop according to John:
-            1. Ideate
-            2. Score
-            3. Triage
-            4. Assay
-            5. Update Models
-
         """
         # score library
         library = observations[0]
@@ -104,26 +93,31 @@ class HardcodedDrugAgent(DrugAgent):
         return utility
 
     def construct_action(self, molecules):
-        action = self.__getattr__(self.action_state)(molecules)
-        self.mode = self.transitions[self.mode]
+
+        if self.action_type == 'ideate':
+            action = {
+                'design': {
+                    'molecules': molecules,
+                    'num_analogs': self.num_analogs,
+                    'fraction_random': 0.0
+                }
+            }
+        
+        elif self.action_type == 'prioritize':
+            action = [
+                {'order': {'assay': 0, 'molecules': molecules}},
+                {'order': {'assay': 1, 'molecules': molecules}}
+            ]
+
+        # iterate action type
+        self.action_type = self.transitions[self.action_type]
+        
         return action
 
     def ideate(self, molecules):
-        # ideate
-        action = {
-            'design': {
-                'molecules': molecules,
-                'num_analogs': self.num_analogs,
-                'fraction_random': 0.0
-            }
-        }
         return action
 
     def prioritize(self, molecules):
-        action = [
-            {'order': {'assay': 0, 'molecules': molecules}},
-            {'order': {'assay': 1, 'molecules': molecules}}
-        ]
         return action
 
     def reset(self):
