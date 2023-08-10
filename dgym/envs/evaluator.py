@@ -118,8 +118,10 @@ class ClassicEvaluator(Evaluator):
           return (float)(y2-y1)/(x2-x1)
 
     @staticmethod
-    def _logistic(x, scale, midpoint):
-        return 1 / (1 + np.exp((midpoint - x) * 4*scale))
+    def _logistic(x, slope, midpoint):
+        """ Slope of logistic function is scale / 4 """
+        scale = 4 * slope
+        return 1 / (1 + np.exp((midpoint - x) * scale))
 
 
 # class PolynomialEvaluator(Evaluator):

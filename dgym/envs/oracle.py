@@ -6,6 +6,7 @@ import dgllife
 from rdkit import Chem
 from typing import Union
 from rdkit.Chem import Descriptors
+from dgym.collection import MoleculeCollection
 
 class Oracle:
     
