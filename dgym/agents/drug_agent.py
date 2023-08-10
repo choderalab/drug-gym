@@ -8,27 +8,79 @@ from collections.abc import Callable
 
 class DrugAgent:
 
-    def __init__(self, action_space, utiity_function):
+    def __init__(
+        self,
+        action_space,
+        scoring_function=None,
+        branch_factor=5,
+        temperature=0.1,
+    ) -> None:
 
         self.action_space = action_space
-        self.mode = 'ideate'
-        self.scoring_function = utility_function.score
+        self.scoring_function = scoring_function
 
-    def act(self, observations, mask):
+    def act(self, observations, mask=None):
         
-        # Extract action values or logits from the policy
-        action_values = self.policy(observations)
+        # Extract action utility from the policy
+        utility = self.policy(observations)
         
-        # Apply large negative bias to action values of masked actions (True = valid)
-        action_values[~mask] = -1e8
+        # Apply negative bias to utility of masked actions (True = valid)
+        if mask:
+            utility[~mask] = -1e8
 
-        # Softmax logits to get probabilities
-        action_probs = softmax(action_values)
+        # Compute probabilities from logits to get probabilities
+        probs = self.boltzmann(utility)
 
         # Sample from action distribution
-        action = np.random.choice(range(len(action_probs)), p=action_probs)
+        molecules = np.random.choice(
+            range(len(probs)),
+            size=self.branch_factor,
+            replace=False,
+            p=probs
+        )
+
+        # Construct actions
+        action = self.construct_action(molecules)
 
         return action
+
+    def policy(self, observations):
+        raise NotImplementedError
+
+    def construct_action(self, molecules):
+        raise NotImplementedError
+
+    @staticmethod
+    def boltzmann(utility, temperature):
+        """Compute Boltzmann probabilities for a given set of utilities and temperature."""
+        energies = -np.array(utility)
+        exp_energies = np.exp(-energies / temperature)
+        return exp_energies / np.sum(exp_energies)
+
+
+class HardcodedDrugAgent(DrugAgent):
+
+    def __init__(
+        self,
+        action_space,
+        utility_function,
+        num_analogs,
+        branch_factor=5,
+        temperature=0.1,
+        epsilon=0.2,
+    ) -> None:
+
+        super().__init__(
+            action_space,
+            utility_function.score,
+            # branch_factor,
+            # temperature,
+        )
+        self.mode = 'ideate'
+        self.transitions = {
+            'ideate': 'prioritize',
+            'prioritize': 'ideate'
+        }
 
     def policy(self, observations):
         """
@@ -44,42 +96,38 @@ class DrugAgent:
             5. Update Models
 
         """
-        if self.mode == 'ideate':
+        # score library
+        library = observations[0]
+        assay_results = [assay(library) for assay in assays]
+        utility = [self.scoring_function(properties)
+                   for properties in zip(*assay_results)]
+        return utility
 
-            # ideate
-            action = {
-                'design': {
-                    'molecules': chosen_molecules,
-                    'num_analogs': 1,
-                    'fraction_random': 0.0
-                }
-            }
-            
-            self.mode = 'triage'
-
-        elif self.mode == 'triage':
-
-            # score library
-            library = observations[0]
-            assay_results = [assay(library) for assay in assays]
-            utility = [self.scoring_function(properties)
-                       for properties in zip(*assay_results)]
-
-            # triage
-            chosen_molecules = utility.argsort()[-5:].tolist()
-            if len(library) > 2:
-                chosen_molecules.extend(
-                    random.sample(range(len(library)), 2)
-                )
-
-            action = [
-                {'order': {'assay': 0, 'molecules': chosen_molecules}},
-                {'order': {'assay': 0, 'molecules': chosen_molecules}}
-            ]
-
-            self.mode = 'ideate'
-
+    def construct_action(self, molecules):
+        action = self.__getattr__(self.action_state)(molecules)
+        self.mode = self.transitions[self.mode]
         return action
+
+    def ideate(self, molecules):
+        # ideate
+        action = {
+            'design': {
+                'molecules': molecules,
+                'num_analogs': self.num_analogs,
+                'fraction_random': 0.0
+            }
+        }
+        return action
+
+    def prioritize(self, molecules):
+        action = [
+            {'order': {'assay': 0, 'molecules': molecules}},
+            {'order': {'assay': 1, 'molecules': molecules}}
+        ]
+        return action
+
+    def reset(self):
+        self.action_state = 'ideate'
 
     def learn(self, previous_observation, action, reward, observation, done):
         """Implement your learning algorithm here"""

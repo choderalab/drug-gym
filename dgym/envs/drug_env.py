@@ -97,6 +97,42 @@ class DrugEnv(gym.Env):
 
 
     def step(self, action):
+        """
+        Run one timestep of the environment’s dynamics using the agent actions.
+        When the end of an episode is reached (terminated or truncated),
+        it is necessary to call reset() to reset this environment’s state for the next episode.
+
+        Parameters
+        ----------
+        action: ActType
+            An action provided by the agent to update the environment state.
+
+        Returns
+        -------
+        observation : ObsType
+            An element of the environment’s observation_space as the next observation due to the agent actions.
+            An example is a numpy array containing the positions and velocities of the pole in CartPole.
+
+        reward: float
+            The reward as a result of taking the action.
+
+        terminated: bool
+            Whether the agent reaches the terminal state (as defined under the MDP of the task) which can be positive or negative.
+            An example is reaching the goal state or moving into the lava from the Sutton and Barton, Gridworld.
+            If true, the user needs to call reset().
+
+        truncated: bool
+            Whether the truncation condition outside the scope of the MDP is satisfied.
+            Typically, this is a timelimit, but could also be used to indicate an agent physically going out of bounds.
+            Can be used to end the episode prematurely before a terminal state is reached. If true, the user needs to call reset().
+
+        info: dict
+            Contains auxiliary diagnostic information (helpful for debugging, learning, and logging).
+            This might, for instance, contain: metrics that describe the agent’s performance state,
+            variables that are hidden from observations, or individual reward terms that are combined
+            to produce the total reward.
+
+        """
 
         # If the action includes a design, update library and action mask
         if 'design' in action:
@@ -109,9 +145,9 @@ class DrugEnv(gym.Env):
 
         # Calculate the reward and check if the episode is done
         reward = self.get_reward()
-        done = self.check_done()
+        terminated = self.check_terminated()
 
-        return self.get_observation(), reward, done, {}
+        return self.get_observation(), reward, terminated, truncated, {}
 
     def reset(self):
         self.library = None
