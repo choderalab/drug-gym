@@ -26,6 +26,9 @@ class LibraryDesigner:
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
 
+    def reset_cache(self):
+        self.cache = set()
+
     def design(
         self,
         molecules: list,

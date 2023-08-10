@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import rdkit
 from typing import Iterable, Callable, Optional
 
@@ -46,12 +48,14 @@ class DrugEnv(gym.Env):
         library_designer,
         budget: int = 10_000,
         assays: list = [],
-        library: Optional[MoleculeCollection] = None
+        library: Optional[MoleculeCollection] = None,
+        utility_function: Optional[UtilityFunction] = None,
     ) -> None:
         
         super().__init__()
         
         self.library_designer = library_designer
+        self.library_designer.reset_cache()
 
         # Define the maximum number of molecules that could ever be synthesized
         self.max_molecules = budget
