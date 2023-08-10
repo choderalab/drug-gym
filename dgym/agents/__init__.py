@@ -1,1 +1,1 @@
-from .drug_agent import DrugAgent
+from .drug_agent import DrugAgent, HardcodedDrugAgent

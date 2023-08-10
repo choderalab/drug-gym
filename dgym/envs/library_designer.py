@@ -210,3 +210,14 @@ class LibraryDesigner:
                     analogs.append(analog)
 
         return analogs
+
+
+# # Compute probabilities from logits to get probabilities
+# probs = self.boltzmann(utility, self.temperature)
+
+# @staticmethod
+# def boltzmann(utility, temperature):
+#     """Compute Boltzmann probabilities for a given set of utilities and temperature."""
+#     energies = -np.array(utility)
+#     exp_energies = np.exp(-energies / temperature)
+#     return exp_energies / np.sum(exp_energies)

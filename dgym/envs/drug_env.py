@@ -150,9 +150,7 @@ class DrugEnv(gym.Env):
         return self.get_observation(), reward, terminated, truncated, {}
 
     def reset(self):
-        self.library = None
-        self.orders = []
-        self.current_stage = 'design'
+        # self.library = None
         return self.get_observation()
 
     def design_library(self, action):
