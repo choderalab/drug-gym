@@ -27,18 +27,16 @@ class DrugAgent:
         if mask:
             utility[~mask] = -1e8
 
-        # Compute probabilities from logits to get probabilities
-        probs = self._softmax(utility)
+        # Epsilon greedy selection
+        molecules = []
+        sorted_utility = np.argsort(utility)[::-1]
+        for i in range(self.branch_factor):
+            if np.random.rand() < self.epsilon:
+                molecules.append(np.random.choice(len(utility)))
+            else:
+                molecules.append(sorted_utility[i])
 
-        # Sample from action distribution
-        molecules = np.random.choice(
-            range(len(probs)),
-            size=self.branch_factor,
-            replace=False,
-            p=probs
-        ).tolist()
-
-        # Construct actions
+        # Construct action
         action = self.construct_action(molecules)
 
         return action
@@ -48,12 +46,6 @@ class DrugAgent:
 
     def construct_action(self, molecules):
         raise NotImplementedError
-
-    @staticmethod
-    def _softmax(self, x):
-        exp_x = np.exp(x)
-        return exp_x / exp_x.sum(axis=0, keepdims=True)
-
 
 
 class HardcodedDrugAgent(DrugAgent):

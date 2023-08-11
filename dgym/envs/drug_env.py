@@ -68,15 +68,9 @@ class DrugEnv(gym.Env):
 
         # Define the action space
         self.action_space = Dict({
-            'design': Dict({
-                'molecules': Sequence(Discrete(self.max_molecules)),
-                'num_analogs': Discrete(2), # 0: 1, 1: 5, 2: 96, 3: 384
-                'fraction_random': Box(low=0.0, high=1.0, shape=(1,))
-            }),
-            'order': Dict({
-                'assay': Discrete(len(self.assays)),
-                'molecules': Sequence(Discrete(self.max_molecules))
-            })
+            'type': Discrete(len(self.assays)),
+            'molecules': Sequence(Discrete(self.max_molecules)),
+            # 'parameters': None, # TBD
         })
 
         # Define the observation space
@@ -133,43 +127,45 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
-
+        action_type, molecules, parameters = action.values()
+        
         # If the action includes a design, update library and action mask
-        if 'design' in action:
-            self.library += self.design_library(action['design'])
+        if action_type == 0:
+            self.library += self.design_library(molecules, **parameters)
             self.valid_actions[:len(self.library)] = True
-
+        
         # If the action includes an order, perform the order
-        if 'order' in action:
-            self.orders.append(self.perform_order(action['order']))
+        elif action_type == 1:
+            self.orders.append(self.perform_order(action_type, molecules, *parameters))
 
         # Calculate the reward and check if the episode is done
         reward = self.get_reward()
-        terminated = self.check_terminated()
+        terminated = False # self.check_terminated()
+        truncated = False # self.check_truncated()
 
         return self.get_observation(), reward, terminated, truncated, {}
 
     def reset(self):
+        # library should be reset to what it started out with
         # self.library = None
         return self.get_observation()
 
-    def design_library(self, action):
+    def design_library(self, molecule_indices, num_analogs, fraction_random):
         """
         Returns the 
         """
         batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
-        valid_indices = [m for m in action['molecules'] if self.valid_actions[m]]
+        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
         return self.library_designer.design(
             molecules,
-            batch_sizes[action['num_analogs']],
-            action['fraction_random']
+            batch_sizes[num_analogs],
+            fraction_random
         )
 
-    def perform_order(self, action) -> None:
+    def perform_order(self, assay_index, molecule_indices) -> None:
 
         # subset assay and molecules
-        assay_index, molecule_indices = action['assay'], action['molecules']
         assay = self.assays[assay_index]
 
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
