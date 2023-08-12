@@ -90,7 +90,9 @@ class DrugEnv(gym.Env):
         self.reward_history = []
 
         # Initialize the action mask
-        self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
+        # TODO - figure out the logic for the case when the budget is smaller than the initial library
+        # self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
+        self.valid_actions = np.zeros(len(self.library), dtype='int8')
         self.valid_actions[:len(self.library)] = True
 
 
