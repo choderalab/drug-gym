@@ -57,8 +57,10 @@ class DrugEnv(gym.Env):
         self.library_designer = library_designer
         self.library_designer.reset_cache()
 
-        # Define the maximum number of molecules that could ever be synthesized
-        self.max_molecules = budget
+        self.budget = budget
+
+        # For now, max library size is equivalent to budget
+        self.max_molecules = self.budget
 
         # Define assays
         self.assays = assays
@@ -69,7 +71,7 @@ class DrugEnv(gym.Env):
         # Define the action space
         self.action_space = Dict({
             'type': Discrete(len(self.assays)),
-            'molecules': Sequence(Discrete(self.max_molecules)),
+            'molecules': Sequence(Discrete(self.budget)),
             # 'parameters': None, # TBD
         })
 
@@ -82,8 +84,10 @@ class DrugEnv(gym.Env):
         # Initialize the library and orders
         if library is None:
             library = MoleculeCollection()
-        self.library = library.clone()
+        self.input_library = library.clone()
+        self.library = self.input_library.clone()
         self.orders = []
+        self.reward_history = []
 
         # Initialize the action mask
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
@@ -138,10 +142,13 @@ class DrugEnv(gym.Env):
         elif action_type == 1:
             self.orders.append(self.perform_order(action_type, molecules, *parameters))
 
-        # Calculate the reward and check if the episode is done
+        # Calculate the reward
         reward = self.get_reward()
-        terminated = False # self.check_terminated()
-        truncated = False # self.check_truncated()
+        self.reward_history.append(reward)
+        
+        # Check if the episode is done
+        terminated = self.check_terminated()
+        truncated = self.check_truncated()
 
         return self.get_observation(), reward, terminated, truncated, {}
 
@@ -167,7 +174,6 @@ class DrugEnv(gym.Env):
 
         # subset assay and molecules
         assay = self.assays[assay_index]
-
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
         
@@ -191,10 +197,14 @@ class DrugEnv(gym.Env):
         ]
         return max(utility)
 
-    def check_done(self):
+    def check_terminated(self):
         # Implement the logic for checking if the episode is done
-        ...
+        return self.reward_history[-1] == 1
 
-    def is_library_exhausted(self):
-        # Implement the logic for checking if the library is exhausted
-        ...
+    def check_truncated(self):
+        # Implement the logic for checking if the episode is done
+        return len(self.library) >= self.budget
+
+    def reset(self):
+        self.library = self.input_library.clone()
+        return self.get_observation(), {}

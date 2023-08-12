@@ -55,6 +55,8 @@ class DGLOracle(Oracle):
         self.mol_to_graph = mol_to_graph
 
         # load model
+        # TODO - avoid internet download if the model is already local
+        # if f'{name}_pre_trained.pth' in os.listdir():
         self.model = dgllife.model.load_pretrained(self.name, log=False)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self.model.to(self.device)

@@ -19,7 +19,10 @@ class DrugAgent:
         self.epsilon = epsilon
 
     def act(self, observations, mask=None):
-        
+
+        # check index error
+        branches = min([self.branch_factor, len(observations)])
+
         # Extract action utility from the policy
         utility = self.policy(observations)
         
@@ -30,7 +33,7 @@ class DrugAgent:
         # Epsilon greedy selection
         molecules = []
         sorted_utility = np.argsort(utility)[::-1]
-        for i in range(self.branch_factor):
+        for i in range(branches):
             if np.random.rand() < self.epsilon:
                 molecules.append(np.random.choice(len(utility)))
             else:
