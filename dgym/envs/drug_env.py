@@ -71,7 +71,7 @@ class DrugEnv(gym.Env):
         # Define the action space
         self.action_space = Dict({
             'type': Discrete(len(self.assays)),
-            'molecules': Sequence(Discrete(self.budget)),
+            'molecules': Sequence(Discrete(self.max_molecules)),
             # 'parameters': None, # TBD
         })
 
@@ -84,15 +84,14 @@ class DrugEnv(gym.Env):
         # Initialize the library and orders
         if library is None:
             library = MoleculeCollection()
-        self.input_library = library.clone()
-        self.library = self.input_library.clone()
+        self._library_0 = library.clone()
+        self.library = self._library_0.clone()
         self.orders = []
         self.reward_history = []
 
         # Initialize the action mask
         # TODO - figure out the logic for the case when the budget is smaller than the initial library
-        # self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
-        self.valid_actions = np.zeros(len(self.library), dtype='int8')
+        self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
         self.valid_actions[:len(self.library)] = True
 
 
@@ -208,5 +207,5 @@ class DrugEnv(gym.Env):
         return len(self.library) >= self.budget
 
     def reset(self):
-        self.library = self.input_library.clone()
+        self.library = self._library_0.clone()
         return self.get_observation(), {}
