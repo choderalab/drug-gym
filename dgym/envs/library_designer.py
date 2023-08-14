@@ -168,7 +168,7 @@ class LibraryDesigner:
                 poised, cognate = molecule.poise(index).reactants
                 reaction = reaction.poise(index)
                 
-                # filter building blocks compatible with poised fragment
+                # filter building blocks compatible with poised fragment - TODO - refactor
                 cognate_class = reaction.reactants[1].GetProp('class')
                 indices, building_blocks_subset = self.building_blocks[cognate_class].values.T
                 

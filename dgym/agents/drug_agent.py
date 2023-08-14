@@ -51,7 +51,7 @@ class DrugAgent:
         raise NotImplementedError
 
 
-class HardcodedDrugAgent(DrugAgent):
+class SequentialDrugAgent(DrugAgent):
 
     def __init__(
         self,

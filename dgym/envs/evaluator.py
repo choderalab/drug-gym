@@ -1,4 +1,5 @@
 import numpy as np
+from dgym.envs.oracle import Oracle
 from typing import Optional, Callable
 
 
@@ -27,25 +28,25 @@ class UtilityFunction:
     >>> assert utility.score([0, 5]) == 0.5458775937413701
 
     """
-    def __init__(self, evaluators, strategy: Optional[Callable] = None):
-        """Initializes with a list of PropertyEvaluator instances."""
+    def __init__(self, oracles, evaluators, strategy: Callable):
+        
+        # Check correspondence of oracles and evaluators
+        assert len(oracles) == len(evaluators)
+        assert all(isinstance(oracle, Oracle) for oracle in oracles)
+        assert all(isinstance(evaluators, Evaluator) for evaluator in evaluators)
+
+        self.oracles = oracles
         self.evaluators = evaluators
-        self._strategy = strategy
-    
-    def score(self, values):
+        self.strategy = strategy
+
+    def score(self, molecules):
         """Compute the score for a molecule based on its properties."""
         if not values: return None
+
         scores = [evaluator.score(val)
                   for evaluator, val
                   in zip(self.evaluators, values)]
         return self.strategy(scores)
-
-    def strategy(self, scores):
-        if self._strategy:
-            return self._strategy(scores)
-        else:
-            # Default behavior or raise an exception
-            raise NotImplementedError("A strategy function must be provided or set.")
 
     def __call__(self, values):
         return self.score(values)
@@ -75,7 +76,7 @@ class ClassicEvaluator(Evaluator):
     def score_acceptable(self, value):
         
         if value < self.acceptable[0]:
-            return self._logistic(value, self._lower_slope, self.acceptable[0]) # positive slope
+            return self._logistic(value, 1, self.acceptable[0]) # positive slope
         
         elif value > self.acceptable[0] and value < self.ideal[0]:
             return (value - self.ideal[0]) * self._lower_slope + 1
@@ -84,7 +85,7 @@ class ClassicEvaluator(Evaluator):
             return (value - self.ideal[1]) * self._upper_slope + 1
         
         if value > self.acceptable[1]:
-            return self._logistic(value, self._upper_slope, self.acceptable[1]) # negative slope
+            return self._logistic(value, -1, self.acceptable[1]) # negative slope
 
     @staticmethod
     def _slope(x1, y1, x2, y2):
@@ -92,7 +93,6 @@ class ClassicEvaluator(Evaluator):
           return (float)(y2-y1)/(x2-x1)
 
     @staticmethod
-    def _logistic(x, slope, midpoint):
+    def _logistic(x, scale, midpoint):
         """ Slope of logistic function is scale / 4 """
-        scale = 4 * slope
         return 1 / (1 + np.exp((midpoint - x) * scale))
