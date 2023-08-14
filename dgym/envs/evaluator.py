@@ -52,8 +52,8 @@ class UtilityFunction:
 
         return self.strategy(scores)
 
-    def plot(self, deck):
-        return dg.plotting.plot(deck, self)
+    def plot(self, deck, **kwargs):
+        return dg.plotting.plot(deck, self, **kwargs)
 
     def __call__(self, values):
         return self.score(values)

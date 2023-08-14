@@ -5,7 +5,9 @@ import matplotlib.cm as cm
 import seaborn as sns
 import numpy as np
 
-def plot(deck, utility_function):
+def plot(deck, utility_function, plot_cycle=True):
+
+    design_cycle = deck.annotations['design'] if plot_cycle else None
 
     oracles = utility_function.oracles
 
@@ -13,6 +15,7 @@ def plot(deck, utility_function):
     g = sns.jointplot(
         x=oracles[0](deck),
         y=oracles[1](deck),
+        hue=design_cycle
     )
 
     # add evaluator boundaries

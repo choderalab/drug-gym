@@ -84,15 +84,20 @@ class DrugEnv(gym.Env):
         # Initialize the library and orders
         if library is None:
             library = MoleculeCollection()
+        
         self._library_0 = library.clone()
+        self._library_0.update_annotations({'design': 0})
+        
         self.library = self._library_0.clone()
-        self.orders = []
         self.reward_history = []
 
         # Initialize the action mask
         # TODO - figure out the logic for the case when the budget is smaller than the initial library
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
         self.valid_actions[:len(self.library)] = True
+
+        # Keep track of design cycles
+        self.design_cycle = 0
 
 
     def step(self, action):
@@ -134,15 +139,15 @@ class DrugEnv(gym.Env):
         """
         action_type, molecules, parameters = action.values()
         
-        # If the action includes a design, update library and action mask
+        # Perform action
         if action_type == 0:
             self.library += self.design_library(molecules, **parameters)
-            self.valid_actions[:len(self.library)] = True
-        
-        # If the action includes an order, perform the order
         elif action_type == 1:
-            self.orders.append(self.perform_order(action_type, molecules, *parameters))
+            self.perform_order(action_type, molecules, *parameters)
 
+        # Update valid actions
+        self.valid_actions[:len(self.library)] = True
+        
         # Calculate the reward
         reward = self.get_reward()
         self.reward_history.append(reward)
@@ -153,25 +158,30 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def reset(self):
-        # library should be reset to what it started out with
-        # self.library = None
-        return self.get_observation()
-
     def design_library(self, molecule_indices, num_analogs, fraction_random):
         """
         Returns the 
         """
         batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
+        self.design_cycle += 1
+        
+        # subset valid molecules
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
-        return self.library_designer.design(
+        
+        # design new library
+        new_molecules = self.library_designer.design(
             molecules,
             batch_sizes[num_analogs],
             fraction_random
         )
 
-    def perform_order(self, assay_index, molecule_indices) -> None:
+        # update library annotations with design cycle
+        new_molecules.update_annotations({'design': self.design_cycle})
+
+        return new_molecules
+
+    def perform_order(self, assay_index, molecule_indices, **parameters) -> None:
 
         # subset assay and molecules
         assay = self.assays[assay_index]
@@ -179,11 +189,10 @@ class DrugEnv(gym.Env):
         molecules = self.library[valid_indices]
         
         # perform inference
-        results = assay(molecules)
+        results = assay(molecules, **parameters)
         
         # update library annotations for molecules measured
-        for idx, molecule in enumerate(molecules):
-            molecule.update_annotations({assay.name: results[idx]})
+        molecules.update_annotations(zip([assay.name], results))
 
     def get_observation(self):
         return self.library
@@ -202,5 +211,6 @@ class DrugEnv(gym.Env):
         return len(self.library) >= self.budget
 
     def reset(self):
+        self.design_cycle = 0
         self.library = self._library_0.clone()
         return self.get_observation(), {}

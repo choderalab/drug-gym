@@ -8,6 +8,7 @@ from rdkit.Chem import AllChem, Mol
 from typing import Union, Iterable, Optional
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
+from dgym.collection import MoleculeCollection
 
 
 class LibraryDesigner:
@@ -54,18 +55,17 @@ class LibraryDesigner:
         all_products : list of enumerated products
 
         """
-        products = []
+        products = MoleculeCollection()
         for molecule in molecules:
             # get matching reactions
             reactions = self.find_compatible_reactions(molecule)
             # enumerate poised synthetic library
-            analogs = self.enumerate_analogs(
+            products += self.enumerate_analogs(
                 molecule,
                 reactions,
                 num_analogs=num_analogs,
                 fraction_random=fraction_random
             )
-            products.extend(analogs)
         return products
 
     def find_compatible_reactions(self, molecule) -> list[Reaction]:

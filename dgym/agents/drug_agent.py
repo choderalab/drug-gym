@@ -56,7 +56,6 @@ class SequentialDrugAgent(DrugAgent):
     def __init__(
         self,
         action_space,
-        scoring_functions: list,
         utility_function,
         num_analogs,
         branch_factor=5,
@@ -71,7 +70,6 @@ class SequentialDrugAgent(DrugAgent):
             epsilon = epsilon,
         )
 
-        self.scoring_functions = scoring_functions
         self.utility_function = utility_function
         self.num_analogs = num_analogs
         self.fraction_random = fraction_random

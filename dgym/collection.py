@@ -199,7 +199,7 @@ class Collection(torch.utils.data.Dataset):
         if isinstance(other, list):
             return self.__class__(self._items + other)
         elif isinstance(other, Collection):
-            return self.__class__(self._items + other.items)
+            return self.__class__(self._items + other._items)
         else:
             raise RuntimeError("Addition only supports list and Collection.")
 
@@ -318,7 +318,13 @@ class MoleculeCollection(Collection):
     def erase_annotations(self):
         """Erase the metadata. """
         for molecule in self.molecules:
-            molecule.erase_annotation()
+            molecule.erase_annotations()
+        return self
+
+    def update_annotations(self, other_annotations):
+        """Update the metadata. """
+        for molecule in self.molecules:
+            molecule.update_annotations(other_annotations)
         return self
 
     @property
