@@ -94,15 +94,8 @@ class SequentialDrugAgent(DrugAgent):
     def policy(self, observations):
         """
         """
-        # score library
-        scores = [scorer(observations)
-                  for scorer in self.scoring_functions]
-        
         # convert scores to utility
-        utility = [self.utility_function(score)
-                   for score in zip(*scores)]
-        
-        return utility
+        return self.utility_function(observations)
 
     def construct_action(self, molecules):
 

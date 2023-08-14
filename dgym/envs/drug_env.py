@@ -190,12 +190,7 @@ class DrugEnv(gym.Env):
         # return OrderedDict({'design': self.library, 'order': self.})
 
     def get_reward(self):
-        # Implement the logic for calculating the reward based on the current state
-        assay_results = [assay(self.library) for assay in self.assays]
-        utility = [
-            self.utility_function(properties)
-            for properties in zip(*assay_results)
-        ]
+        utility = self.utility_function(self.library)
         return max(utility)
 
     def check_terminated(self):

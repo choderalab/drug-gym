@@ -5,12 +5,14 @@ import matplotlib.cm as cm
 import seaborn as sns
 import numpy as np
 
-def plot(assay_results, assays, utility, utility_function):
+def plot(deck, utility_function):
+
+    oracles = utility_function.oracles
 
     # create basic plot
     g = sns.jointplot(
-        x=assay_results[0],
-        y=assay_results[1],
+        x=oracles[0](deck),
+        y=oracles[1](deck),
     )
 
     # add evaluator boundaries
@@ -38,8 +40,8 @@ def plot(assay_results, assays, utility, utility_function):
     )
 
     # labels
-    plt.xlabel(assays[0].name)
-    plt.ylabel(assays[1].name)
+    plt.xlabel(oracles[0].name)
+    plt.ylabel(oracles[1].name)
 
     # formatting
     g.fig.set_figwidth(6)

@@ -1,3 +1,4 @@
+import dgym as dg
 import numpy as np
 from dgym.envs.oracle import Oracle
 from typing import Optional, Callable
@@ -33,66 +34,85 @@ class UtilityFunction:
         # Check correspondence of oracles and evaluators
         assert len(oracles) == len(evaluators)
         assert all(isinstance(oracle, Oracle) for oracle in oracles)
-        assert all(isinstance(evaluators, Evaluator) for evaluator in evaluators)
+        assert all(isinstance(evaluator, Evaluator) for evaluator in evaluators)
 
         self.oracles = oracles
         self.evaluators = evaluators
         self.strategy = strategy
 
     def score(self, molecules):
-        """Compute the score for a molecule based on its properties."""
-        if not values: return None
+        """Compute the score for molecules based on their properties."""
+        if not molecules:
+            return None
+        
+        scores = [
+            evaluator.score(oracle(molecules))
+            for evaluator, oracle in zip(self.evaluators, self.oracles)
+        ]
 
-        scores = [evaluator.score(val)
-                  for evaluator, val
-                  in zip(self.evaluators, values)]
         return self.strategy(scores)
+
+    def plot(self, deck):
+        return dg.plotting.plot(deck, self)
 
     def __call__(self, values):
         return self.score(values)
 
 
 class Evaluator:
-    def __init__(self, ideal, acceptable):
-        self.ideal = ideal
-        self.acceptable = acceptable
     
+    def __init__(self, ideal, acceptable):
+        self.ideal = np.array(ideal)
+        self.acceptable = np.array(acceptable)
+
     def score(self, value):
-        if self.ideal[0] <= value <= self.ideal[1]:
-            return 1
-        else:
-            return self.score_acceptable(value)
+        is_scalar = np.isscalar(value)
+        value = np.asarray(value)
+        scores = np.where(
+            (self.ideal[0] <= value) & (value <= self.ideal[1]), 
+            1, 
+            self.score_acceptable(value)
+        )
+        return scores.item() if is_scalar else scores
 
     def score_acceptable(self, value):
         raise NotImplementedError
 
+
 class ClassicEvaluator(Evaluator):
+    
     def __init__(self, ideal, acceptable):
-        
         super().__init__(ideal, acceptable)
+ 
         self._lower_slope = self._slope(self.acceptable[0], 0.5, self.ideal[0], 1)
         self._upper_slope = self._slope(self.ideal[1], 1, self.acceptable[1], 0.5)
-    
+
     def score_acceptable(self, value):
+        value = np.asarray(value)
+        res = np.empty_like(value, dtype=float)
         
-        if value < self.acceptable[0]:
-            return self._logistic(value, 1, self.acceptable[0]) # positive slope
+        # Value less than lower acceptable limit
+        mask = value < self.acceptable[0]
+        res[mask] = self._logistic(value[mask], 1, self.acceptable[0])
         
-        elif value > self.acceptable[0] and value < self.ideal[0]:
-            return (value - self.ideal[0]) * self._lower_slope + 1
+        # Value between lower acceptable limit and lower ideal limit
+        mask = (value > self.acceptable[0]) & (value < self.ideal[0])
+        res[mask] = (value[mask] - self.ideal[0]) * self._lower_slope + 1
         
-        elif value < self.acceptable[1] and value > self.ideal[1]:
-            return (value - self.ideal[1]) * self._upper_slope + 1
+        # Value between upper ideal limit and upper acceptable limit
+        mask = (value < self.acceptable[1]) & (value > self.ideal[1])
+        res[mask] = (value[mask] - self.ideal[1]) * self._upper_slope + 1
         
-        if value > self.acceptable[1]:
-            return self._logistic(value, -1, self.acceptable[1]) # negative slope
+        # Value greater than upper acceptable limit
+        mask = value > self.acceptable[1]
+        res[mask] = self._logistic(value[mask], -1, self.acceptable[1])
+        
+        return res
 
     @staticmethod
     def _slope(x1, y1, x2, y2):
-        if(x2 - x1 != 0):
-          return (float)(y2-y1)/(x2-x1)
+        return (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0
 
     @staticmethod
     def _logistic(x, scale, midpoint):
-        """ Slope of logistic function is scale / 4 """
         return 1 / (1 + np.exp((midpoint - x) * scale))
