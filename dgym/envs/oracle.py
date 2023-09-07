@@ -93,3 +93,19 @@ class RDKitOracle(Oracle):
 
     def predict(self, molecules: MoleculeCollection):
         return [self.descriptor(m.mol) for m in molecules]
+
+
+class DockingOracle(Oracle):
+
+    def __init__(
+        self,
+        name: str,
+    ):
+        super().__init__()
+        self.name = name
+
+        # load descriptor
+        self.descriptor = getattr(Descriptors, self.name)
+
+    def predict(self, molecules: MoleculeCollection):
+        return [self.descriptor(m.mol) for m in molecules]

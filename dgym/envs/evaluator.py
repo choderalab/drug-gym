@@ -96,11 +96,11 @@ class ClassicEvaluator(Evaluator):
         res[mask] = self._logistic(value[mask], 1, self.acceptable[0])
         
         # Value between lower acceptable limit and lower ideal limit
-        mask = (value > self.acceptable[0]) & (value < self.ideal[0])
+        mask = (self.acceptable[0] < value) & (value < self.ideal[0])
         res[mask] = (value[mask] - self.ideal[0]) * self._lower_slope + 1
         
         # Value between upper ideal limit and upper acceptable limit
-        mask = (value < self.acceptable[1]) & (value > self.ideal[1])
+        mask = (self.ideal[1] < value) & (value < self.acceptable[1])
         res[mask] = (value[mask] - self.ideal[1]) * self._upper_slope + 1
         
         # Value greater than upper acceptable limit
