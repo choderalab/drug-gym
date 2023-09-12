@@ -6,11 +6,11 @@ import rdkit
 import torch
 import dgllife
 import numpy as np
+from typing import Union
 from rdkit import Chem
 from rdkit.Chem import Descriptors
-from typing import Union
-from meeko import PDBQTWriterLegacy
-from meeko import MoleculePreparation
+from contextlib import contextmanager
+from meeko import MoleculePreparation, PDBQTWriterLegacy
 from dgym.collection import MoleculeCollection
 
 class Oracle:
@@ -18,10 +18,14 @@ class Oracle:
     def __init__(self) -> None:
         self.cache = {}
 
-    def __call__(self, molecules: Union[MoleculeCollection, list]):
-        return self.get_predictions(molecules)
+    def __call__(self, molecules: Union[MoleculeCollection, list], **kwargs):
+        return self.get_predictions(molecules, **kwargs)
     
-    def get_predictions(self, molecules: Union[MoleculeCollection, list]):
+    def get_predictions(
+        self,
+        molecules: Union[MoleculeCollection, list],
+        **kwargs
+    ):
 
         if isinstance(molecules, list):
             molecules = MoleculeCollection(molecules)
@@ -30,9 +34,9 @@ class Oracle:
         not_in_cache = lambda m: m.smiles not in self.cache
         
         if uncached_molecules := molecules.filter(not_in_cache):
-            
+
             # make predictions
-            preds = self.predict(uncached_molecules)
+            preds = self.predict(uncached_molecules, **kwargs)
 
             # cache results
             self.cache.update(zip(uncached_molecules.smiles, preds))
@@ -117,28 +121,23 @@ class DockingOracle(Oracle):
         molecules: MoleculeCollection,
         path: Optional[str] = None
     ):
-        if not path:
+        with self._managed_directory(path) as directory:
+
+            # prepare ligands
+            self._prepare_ligands(molecules, directory)
+
+            # prepare command
+            command = self._prepare_command(self.config, directory)
+
+            # run docking
+            resp = self._dock(command)
             
-            import tempfile
-        
-            # Create a temporary directory
-            with tempfile.TemporaryDirectory() as temp_dir:
-
-                # prepare ligands
-                self.prepare_ligands(molecules, temp_dir)
-
-                # prepare command
-                command = self.prepare_command(self.config, temp_dir)
-
-                # run docking
-                resp = self.dock(command)
-                
-                # gather results
-                affinities = self.gather_results(temp_dir)
+            # gather results
+            affinities = self._gather_results(directory)
 
         return affinities
 
-    def dock(self, command: str):
+    def _dock(self, command: str):
         import subprocess
         return subprocess.run(
             command,
@@ -148,7 +147,7 @@ class DockingOracle(Oracle):
             encoding='utf-8'
         )
 
-    def gather_results(self, directory: str):
+    def _gather_results(self, directory: str):
         
         import re
         import glob
@@ -171,14 +170,14 @@ class DockingOracle(Oracle):
                 energies = [float(process_affinity(a)) for a in affinity_strs]
 
                 # compute boltzmann sum
-                affinity = self.boltzmann_sum(energies)
+                affinity = self._boltzmann_sum(energies)
 
                 # append to affinities
                 affinities.append(affinity)
 
         return affinities
 
-    def prepare_command(self, config, directory: str):
+    def _prepare_command(self, config, directory: str):
         
         # create inputs
         inputs = [
@@ -198,7 +197,7 @@ class DockingOracle(Oracle):
 
         return ' '.join(['unidock', *inputs])
 
-    def prepare_ligands(self, molecules, directory: str):
+    def _prepare_ligands(self, molecules, directory: str):
         
         import os
         
@@ -206,7 +205,7 @@ class DockingOracle(Oracle):
         for mol in molecules:
             
             # compute PDBQT
-            pdbqt = self.get_pdbqt(mol.mol)
+            pdbqt = self._get_pdbqt(mol)
             path = os.path.join(
                 directory,
                 f'{mol.name}.pdbqt'
@@ -223,24 +222,24 @@ class DockingOracle(Oracle):
         with open(path, 'w') as file:
             file.write(ligands_txt)
 
-    def get_pdbqt(self, mol):
+    def _get_pdbqt(self, mol):
 
         # add hydrogens (without regard to pH)
-        protonated_mol = rdkit.Chem.AddHs(mol)
+        protonated_mol = rdkit.Chem.AddHs(mol.mol)
 
-        # generate 3D coordinates for the ligand. 
+        # generate 3D coordinates for the ligand.
         rdkit.Chem.AllChem.EmbedMolecule(protonated_mol)
 
         # initialize preparation
         preparator = MoleculePreparation(rigid_macrocycles=True)
         setup = preparator.prepare(protonated_mol)[0]
-        
-        # print PDBQT
-        pdbqt_string, _, _ = PDBQTWriterLegacy.write_string(setup)
+
+        # write PDBQT
+        pdbqt_string, _, _ = PDBQTWriterLegacy.write_string(setup, bad_charge_ok=True)
         
         return pdbqt_string
 
-    def boltzmann_sum(self, energies, temperature=298.15):
+    def _boltzmann_sum(self, energies, temperature=298.15):
 
         # Boltzmann constant in kcal/(mol·K) multiplied by temperature in K
         kT = 0.0019872041 * temperature
@@ -252,6 +251,21 @@ class DockingOracle(Oracle):
         boltz_sum = -kT * np.log(np.sum(np.exp(-energies / kT)))
         
         return boltz_sum
+
+    @contextmanager
+    def _managed_directory(self, dir_path=None):
+        import shutil
+        import tempfile
+        is_temp_dir = False
+        if dir_path is None:
+            dir_path = tempfile.mkdtemp()
+            is_temp_dir = True
+        try:
+            yield dir_path
+        finally:
+            if is_temp_dir:
+                shutil.rmtree(dir_path)
+
 
 
 class NeuralOracle(Oracle):
@@ -298,3 +312,4 @@ def build_model_2d(config=None):
     )
 
     return model
+

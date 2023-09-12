@@ -160,6 +160,13 @@ class LibraryDesigner:
                 targets=fps.copy(indices=indices, reorder=False)
             ).get_indices()
 
+        def _check_kekule(mol):
+            try:
+                Chem.Kekulize(mol, clearAromaticFlags=True)
+                return True
+            except:
+                return False
+
         analogs = []
         for index, _ in enumerate(molecule.reactants):
             for reaction in reactions:
@@ -202,13 +209,13 @@ class LibraryDesigner:
                 )
                 
                 for p in library:
-                    analog = Molecule(
-                        p.products[0],
-                        reactants=[Molecule(r) for r in p.reactants],
-                        inspiration=molecule
-                    ).update_cache()
-                    analogs.append(analog)
-
+                    if _check_kekule(p.products[0]):
+                        analog = Molecule(
+                            p.products[0],
+                            reactants=[Molecule(r) for r in p.reactants],
+                            inspiration=molecule
+                        ).update_cache()
+                        analogs.append(analog)
         return analogs
 
 
