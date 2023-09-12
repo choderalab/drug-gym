@@ -126,7 +126,7 @@ class DockingOracle(Oracle):
 
                 # prepare ligands
                 self.prepare_ligands(molecules, temp_dir)
-                
+
                 # prepare command
                 command = self.prepare_command(self.config, temp_dir)
 
