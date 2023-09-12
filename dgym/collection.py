@@ -252,7 +252,10 @@ class Collection(torch.utils.data.Dataset):
     def batch(items=None):
         raise NotImplementedError
 
-    def clone(self):
+    def unique(self):
+        return self.__class__(list(set(self._items)))
+
+    def clone(self, unique=False):
         """ Return a copy of self. """
         import copy
         return self.__class__(copy.deepcopy(self._items))

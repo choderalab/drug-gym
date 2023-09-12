@@ -32,11 +32,14 @@ class Oracle:
 
         # identify uncached molecules
         not_in_cache = lambda m: m.smiles not in self.cache
-        
         if uncached_molecules := molecules.filter(not_in_cache):
 
             # make predictions
+            # import pdb; pdb.set_trace()
+            uncached_molecules = uncached_molecules.unique()
             preds = self.predict(uncached_molecules, **kwargs)
+            # print(uncached_molecules)
+            # print(len(preds))
 
             # cache results
             self.cache.update(zip(uncached_molecules.smiles, preds))

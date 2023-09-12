@@ -154,32 +154,15 @@ class Molecule:
             If the two objects are identical.
         Examples
         --------
-        >>> molecule = Molecule("C", metadata={"name": "john"})
-        Type mismatch:
-        >>> molecule == "john"
-        False
-        Graph mismatch:
-        >>> molecule == Molecule("CC", metadata={"name": "john"})
-        False
-        Metadata mismatch:
-        >>> molecule == Molecule("C", metadata={"name": "jane"})
-        False
-        Both graph and metadata match:
-        >>> molecule == Molecule("C", metadata={"name": "john"})
-        True
+        TODO
         """
         # if not a molecule, fuggedaboutit
         if not isinstance(other, type(self)):
             return False
+        return self.smiles == other.smiles
 
-        # NOTE(yuanqing-wang):
-        # Equality is not well-defined for DGL graph
-        # Use networx isomorphism instead.
-        import networkx as nx
-        return (
-            nx.is_isomorphic(self.g.to_networkx(), other.g.to_networkx())
-            and self.metadata == other.metadata
-        )
+    def __hash__(self):
+        return hash(self.smiles)
 
     def erase_annotations(self) -> Any:
         """Erase the metadata. """
