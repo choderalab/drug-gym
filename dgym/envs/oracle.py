@@ -35,10 +35,9 @@ class Oracle:
         if uncached_molecules := molecules.filter(not_in_cache):
 
             # make predictions
-            # import pdb; pdb.set_trace()
             uncached_molecules = uncached_molecules.unique()
             preds = self.predict(uncached_molecules, **kwargs)
-            # print(uncached_molecules)
+            # print(len(uncached_molecules))
             # print(len(preds))
 
             # cache results
@@ -205,13 +204,13 @@ class DockingOracle(Oracle):
         import os
         
         paths = []
-        for mol in molecules:
+        for idx, mol in enumerate(molecules):
             
             # compute PDBQT
             pdbqt = self._get_pdbqt(mol)
             path = os.path.join(
                 directory,
-                f'{mol.name}.pdbqt'
+                f'ligand_{idx}.pdbqt'
             )
 
             # write PDBQTs to disk

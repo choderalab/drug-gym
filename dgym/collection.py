@@ -326,8 +326,12 @@ class MoleculeCollection(Collection):
 
     def update_annotations(self, other_annotations):
         """Update the metadata. """
-        for molecule in self.molecules:
-            molecule.update_annotations(other_annotations)
+        if isinstance(other_annotations, list):
+            for idx, molecule in enumerate(self.molecules):
+                molecule.update_annotations(other_annotations[idx])
+        elif isinstance(other_annotations, dict):
+            for idx, molecule in enumerate(self.molecules):
+                molecule.update_annotations(other_annotations)
         return self
 
     @property

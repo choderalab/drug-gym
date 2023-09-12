@@ -142,8 +142,8 @@ class DrugEnv(gym.Env):
         # Perform action
         if action_type == 0:
             self.library += self.design_library(molecules, **parameters)
-        elif action_type == 1:
-            self.perform_order(action_type, molecules, *parameters)
+        elif action_type >= 1:
+            self.perform_order(action_type - 1, molecules, *parameters)
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -181,7 +181,7 @@ class DrugEnv(gym.Env):
 
         return new_molecules
 
-    def perform_order(self, assay_index, molecule_indices, **parameters) -> None:
+    def perform_order(self, assay_index, molecule_indices, **params) -> None:
 
         # subset assay and molecules
         assay = self.assays[assay_index]
@@ -189,10 +189,11 @@ class DrugEnv(gym.Env):
         molecules = self.library[valid_indices]
         
         # perform inference
-        results = assay(molecules, **parameters)
+        results = assay(molecules, **params)
+        print([{assay.name: r} for r in results])
         
         # update library annotations for molecules measured
-        molecules.update_annotations(zip([assay.name], results))
+        molecules.update_annotations([{assay.name: r} for r in results])
 
     def get_observation(self):
         return self.library
