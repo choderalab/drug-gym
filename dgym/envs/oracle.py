@@ -78,7 +78,6 @@ class DGLOracle(Oracle):
         return preds
 
 
-
 class RDKitOracle(Oracle):
 
     def __init__(
@@ -109,3 +108,48 @@ class DockingOracle(Oracle):
 
     def predict(self, molecules: MoleculeCollection):
         return [self.descriptor(m.mol) for m in molecules]
+
+class NeuralOracle(Oracle):
+
+    def __init__(
+        self,
+        name: str
+    ):
+        super().__init__()
+        self.name = name
+
+        # load 
+
+
+def build_model_2d(config=None):
+    """
+    Build appropriate 2D graph model.
+
+    Parameters
+    ----------
+    config : Union[str, dict], optional
+        Either a dict or JSON file with model config options. If not passed,
+        `config` will be taken from `wandb`.
+
+    Returns
+    -------
+    mtenn.conversion_utils.GAT
+        GAT graph model
+    """
+    from dgllife.utils import CanonicalAtomFeaturizer
+    from mtenn.conversion_utils import GAT
+
+    # config.update({"in_node_feats": CanonicalAtomFeaturizer().feat_size()})
+    in_node_feats = CanonicalAtomFeaturizer().feat_size()
+
+    model = GAT(
+        in_feats=in_node_feats,
+        hidden_feats=[config["gnn_hidden_feats"]] * config["num_gnn_layers"],
+        num_heads=[config["num_heads"]] * config["num_gnn_layers"],
+        feat_drops=[config["dropout"]] * config["num_gnn_layers"],
+        attn_drops=[config["dropout"]] * config["num_gnn_layers"],
+        alphas=[config["alpha"]] * config["num_gnn_layers"],
+        residuals=[config["residual"]] * config["num_gnn_layers"],
+    )
+
+    return model
