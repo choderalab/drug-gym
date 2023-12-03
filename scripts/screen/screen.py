@@ -1,3 +1,6 @@
+import os
+import dgym as dg
+import pandas as pd
 import argparse
 from rdkit import Chem
 from itertools import islice
@@ -92,5 +95,6 @@ for batch in batches:
         file_path,
         mode='a',
         header=header,
-        index=False
+        index=False,
+	sep='\t',
     )
