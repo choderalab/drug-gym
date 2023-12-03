@@ -6,7 +6,7 @@ import rdkit
 import torch
 import dgllife
 import numpy as np
-from typing import Union
+from typing import Union, Optional
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from contextlib import contextmanager
@@ -37,8 +37,6 @@ class Oracle:
             # make predictions
             uncached_molecules = uncached_molecules.unique()
             preds = self.predict(uncached_molecules, **kwargs)
-            # print(len(uncached_molecules))
-            # print(len(preds))
 
             # cache results
             self.cache.update(zip(uncached_molecules.smiles, preds))
@@ -274,44 +272,122 @@ class NeuralOracle(Oracle):
 
     def __init__(
         self,
-        name: str
+        name: str,
+        state_dict_path: str = None,
+        config: Optional[dict] = None,
     ):
         super().__init__()
         self.name = name
 
-        # load 
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+
+        # load model architecture
+        model = self.model_factory(config=config)
+
+        # load model weights
+        self.model = self.load_state_dict(model, state_dict_path)
+
+    def predict(self, molecules: MoleculeCollection):
+
+        # make mol_to_graph util
+        mol_to_graph = dgllife.utils.MolToBigraph(
+            add_self_loop=True,
+            node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
+        )
+
+        # featurize
+        graphs = [
+            mol_to_graph(m.update_cache().mol)
+            for m in molecules
+        ]
+
+        # batch
+        graph_batch = dgl.batch(graphs).to(self.device)
+
+        # perform inference
+        with torch.no_grad():
+            preds = self.model({'g': graph_batch})
+
+        # clip to limit of detection
+        preds = torch.clamp(preds, 4.0, None)
+        
+        return preds.ravel().tolist()
+
+    def model_factory(self, config=None):
+        """
+        Build appropriate 2D graph model.
+
+        Parameters
+        ----------
+        config : Union[str, dict], optional
+            Either a dict or JSON file with model config options. If not passed,
+            `config` will be taken from `wandb`.
+
+        Returns
+        -------
+        mtenn.conversion_utils.GAT
+            GAT graph model
+        """
+        from dgllife.utils import CanonicalAtomFeaturizer
+        from mtenn.conversion_utils import GAT
+
+        # defaults
+        if not config:
+            config = {
+                "dropout": 0.05,
+                "gnn_hidden_feats": 64,
+                "num_heads": 8,
+                "alpha": 0.06,
+                "predictor_hidden_feats": 128,
+                "num_gnn_layers": 5,
+                "residual": True
+            }
 
 
-def build_model_2d(config=None):
-    """
-    Build appropriate 2D graph model.
+        # config.update({"in_node_feats": CanonicalAtomFeaturizer().feat_size()})
+        in_node_feats = CanonicalAtomFeaturizer().feat_size()
 
-    Parameters
-    ----------
-    config : Union[str, dict], optional
-        Either a dict or JSON file with model config options. If not passed,
-        `config` will be taken from `wandb`.
+        model = GAT(
+            in_feats=in_node_feats,
+            hidden_feats=[config["gnn_hidden_feats"]] * config["num_gnn_layers"],
+            num_heads=[config["num_heads"]] * config["num_gnn_layers"],
+            feat_drops=[config["dropout"]] * config["num_gnn_layers"],
+            attn_drops=[config["dropout"]] * config["num_gnn_layers"],
+            alphas=[config["alpha"]] * config["num_gnn_layers"],
+            residuals=[config["residual"]] * config["num_gnn_layers"],
+        )
 
-    Returns
-    -------
-    mtenn.conversion_utils.GAT
-        GAT graph model
-    """
-    from dgllife.utils import CanonicalAtomFeaturizer
-    from mtenn.conversion_utils import GAT
+        return model
 
-    # config.update({"in_node_feats": CanonicalAtomFeaturizer().feat_size()})
-    in_node_feats = CanonicalAtomFeaturizer().feat_size()
+    def load_state_dict(self, model, state_dict_path):
+        """
+        Get the state dictionary for the neural net from disk.
 
-    model = GAT(
-        in_feats=in_node_feats,
-        hidden_feats=[config["gnn_hidden_feats"]] * config["num_gnn_layers"],
-        num_heads=[config["num_heads"]] * config["num_gnn_layers"],
-        feat_drops=[config["dropout"]] * config["num_gnn_layers"],
-        attn_drops=[config["dropout"]] * config["num_gnn_layers"],
-        alphas=[config["alpha"]] * config["num_gnn_layers"],
-        residuals=[config["residual"]] * config["num_gnn_layers"],
-    )
+        Parameters
+        ----------
+        model : ...
+            The model object.
 
-    return model
+        state_dict_path : str
+            The path on disk to the model weights.
+        
+        Returns
+        -------
+        mtenn.conversion_utils.GAT
+            GAT graph model        
+        """
+        
+        # get state dict from disk
+        preloaded_state_dict = torch.load(state_dict_path)
+        state_dict = dict(zip(
+            model.state_dict().keys(),
+            preloaded_state_dict.values()
+        ))
 
+        # load into model
+        model.load_state_dict(state_dict)
+        model.eval()
+        model = model.to(self.device)
+
+        return model

@@ -3,7 +3,7 @@
 # IMPORTS
 # =============================================================================
 import dgl
-import dgym
+import dgym as dg
 import torch
 import pandas as pd
 from rdkit import Chem
@@ -53,7 +53,6 @@ class Collection(torch.utils.data.Dataset):
     def annotations(self):
         return pd.DataFrame([item.annotations for item in self._items])
     
-
     @property
     def lookup(self):
         """Returns the mapping between the SMILES and the molecule. """
@@ -299,7 +298,7 @@ class Collection(torch.utils.data.Dataset):
 
 class MoleculeCollection(Collection):
     
-    def __init__(self, molecules: Optional[List] = []) -> None:
+    def __init__(self, molecules: Optional[Iterable] = []) -> None:
         
         assert all(isinstance(molecule, Molecule) for molecule in molecules)
         super().__init__(molecules)
@@ -340,7 +339,7 @@ class MoleculeCollection(Collection):
         return [molecule.smiles for molecule in self.molecules]
 
     @classmethod
-    def from_sdf(
+    def load(
         cls,
         path: str,
         reactant_names: Optional[list],
@@ -354,11 +353,10 @@ class MoleculeCollection(Collection):
         Examples
         --------
         >>> TODO
-        >>> collection = from_sdf(path, ['reagsmi1', 'reagsmi2'])
+        >>> collection = load(path, ['reagsmi1', 'reagsmi2'])
         """
-
         # load from disk
-        records = Chem.SDMolSupplier(path)
+        records = dg.datasets.disk_loader(path)
         
         def _make_mol(record):
             reactants = [

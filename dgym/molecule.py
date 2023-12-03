@@ -48,11 +48,7 @@ class Molecule:
         reactants: Optional[Iterable] = None,
         inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
-        name_attr: Optional[str] = 'smiles',
-        # featurizer: Optional[Callable] = functools.partial(
-        #     smiles_to_bigraph,
-        #     node_featurizer=CanonicalAtomFeaturizer(atom_data_field="h"),
-        # ),
+        id_attr: Optional[str] = 'smiles',
     ) -> None:
         
         if isinstance(mol, str):
@@ -61,8 +57,8 @@ class Molecule:
         self.mol = mol
         self.reactants = reactants
         self.inspiration = inspiration
+        self._id_attr = id_attr
         self.smiles = rdkit.Chem.MolToSmiles(self.mol)
-        self._name_attr = name_attr
         
         if annotations is None:
             annotations = {}
@@ -71,8 +67,8 @@ class Molecule:
 
 
     @property
-    def name(self):
-        return getattr(self, self._name_attr, None)
+    def id(self):
+        return getattr(self, self._id_attr, None)
 
     def _repr_html_(self):
         return self.mol._repr_html_()
@@ -112,9 +108,6 @@ class Molecule:
 
         return temp
 
-    # def __repr__(self) -> str:
-    #     return self.smiles
-
     def __getitem__(self, idx):
         if not self.annotations:
             raise RuntimeError("No annotations associated with Molecule.")
@@ -124,23 +117,6 @@ class Molecule:
             return list(self.annotations.values())[0]
         else:
             raise NotImplementedError
-
-    def featurize(self) -> None:
-        """Featurize the SMILES string to get the graph.
-        Returns
-        -------
-        dgl.DGLGraph : The resulting graph.
-        """
-        # if there is already a graph, do nothing
-        if not self.is_featurized():
-            # featurize
-            self.g = self.featurizer(self.smiles)
-
-        return self
-
-    def is_featurized(self) -> bool:
-        """Returns whether this molecule is attached with a graph. """
-        return self.g is not None
 
     def __eq__(self, other: Any):
         """Determine if two AssayedMolecule objects are equal.
@@ -173,6 +149,9 @@ class Molecule:
         """Update annotations. """
 
         self.annotations.update(self.mol.GetPropsAsDict())
+
+        if 'smiles' not in self.annotations:
+            self.annotations.update({'smiles', self.smiles})
         
         if other_annotations:
             self.annotations.update(other_annotations)
