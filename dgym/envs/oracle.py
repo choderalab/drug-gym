@@ -34,6 +34,8 @@ class Oracle:
         not_in_cache = lambda m: m.smiles not in self.cache
         if uncached_molecules := molecules.filter(not_in_cache):
 
+            print(len(uncached_molecules))
+
             # make predictions
             uncached_molecules = uncached_molecules.unique()
             preds = self.predict(uncached_molecules, **kwargs)
@@ -42,6 +44,9 @@ class Oracle:
             self.cache.update(zip(uncached_molecules.smiles, preds))
 
         # fetch all results (old and new) from cache
+        for molecule in molecules:
+            if molecule.smiles not in self.cache:
+                print(molecule)
         return [self.cache[m.smiles] for m in molecules]
 
     def predict(self, molecules: MoleculeCollection):
