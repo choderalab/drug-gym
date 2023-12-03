@@ -46,7 +46,7 @@ class Oracle:
         # fetch all results (old and new) from cache
         for molecule in molecules:
             if molecule.smiles not in self.cache:
-                print(molecule)
+                print(molecule.smiles)
         return [self.cache[m.smiles] for m in molecules]
 
     def predict(self, molecules: MoleculeCollection):
@@ -210,7 +210,11 @@ class DockingOracle(Oracle):
         for idx, mol in enumerate(molecules):
             
             # compute PDBQT
-            pdbqt = self._get_pdbqt(mol)
+            try:
+                pdbqt = self._get_pdbqt(mol)
+            except:
+                continue
+
             path = os.path.join(
                 directory,
                 f'ligand_{idx}.pdbqt'
@@ -232,8 +236,13 @@ class DockingOracle(Oracle):
         # add hydrogens (without regard to pH)
         protonated_mol = rdkit.Chem.AddHs(mol.mol)
 
-        # generate 3D coordinates for the ligand.
-        rdkit.Chem.AllChem.EmbedMolecule(protonated_mol)
+        # Generate 3D coordinates for the ligand.
+        if rdkit.Chem.AllChem.EmbedMolecule(protonated_mol) != 0:
+            raise ValueError("Failed to generate 3D coordinates for molecule.")
+
+        # Check if the molecule has a valid conformer
+        if protonated_mol.GetNumConformers() == 0:
+            raise ValueError("No valid conformer found in the molecule.")
 
         # initialize preparation
         preparator = MoleculePreparation(rigid_macrocycles=True)
