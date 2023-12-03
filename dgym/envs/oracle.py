@@ -13,10 +13,14 @@ from contextlib import contextmanager
 from meeko import MoleculePreparation, PDBQTWriterLegacy
 from dgym.collection import MoleculeCollection
 
+class OracleCache(dict):
+    def __missing__(self, key):
+        return float('nan')
+
 class Oracle:
     
     def __init__(self) -> None:
-        self.cache = {}
+        self.cache = OracleCache()
 
     def __call__(self, molecules: Union[MoleculeCollection, list], **kwargs):
         return self.get_predictions(molecules, **kwargs)
@@ -34,19 +38,16 @@ class Oracle:
         not_in_cache = lambda m: m.smiles not in self.cache
         if uncached_molecules := molecules.filter(not_in_cache):
 
-            print(len(uncached_molecules))
+            # remove duplicates
+            uncached_molecules = uncached_molecules.unique()
 
             # make predictions
-            uncached_molecules = uncached_molecules.unique()
-            preds = self.predict(uncached_molecules, **kwargs)
+            smiles, preds = self.predict(uncached_molecules, **kwargs)
 
             # cache results
-            self.cache.update(zip(uncached_molecules.smiles, preds))
+            self.cache.update(zip(smiles, preds))
 
         # fetch all results (old and new) from cache
-        for molecule in molecules:
-            if molecule.smiles not in self.cache:
-                print(molecule.smiles)
         return [self.cache[m.smiles] for m in molecules]
 
     def predict(self, molecules: MoleculeCollection):
@@ -89,7 +90,7 @@ class DGLOracle(Oracle):
         # perform inference
         preds = self.model(graph_batch, feats_batch).flatten().tolist()
         
-        return preds
+        return molecules.smiles, preds
 
 
 class RDKitOracle(Oracle):
@@ -105,7 +106,8 @@ class RDKitOracle(Oracle):
         self.descriptor = getattr(Descriptors, self.name)
 
     def predict(self, molecules: MoleculeCollection):
-        return [self.descriptor(m.mol) for m in molecules]
+        preds = [self.descriptor(m.mol) for m in molecules]
+        return molecules.smiles, preds
 
 
 class DockingOracle(Oracle):
@@ -129,7 +131,7 @@ class DockingOracle(Oracle):
         with self._managed_directory(path) as directory:
 
             # prepare ligands
-            self._prepare_ligands(molecules, directory)
+            failed = self._prepare_ligands(molecules, directory)
 
             # prepare command
             command = self._prepare_command(self.config, directory)
@@ -138,9 +140,9 @@ class DockingOracle(Oracle):
             resp = self._dock(command)
             
             # gather results
-            affinities = self._gather_results(directory)
+            smiles, preds = self._gather_results(directory)
 
-        return affinities
+        return smiles, preds
 
     def _dock(self, command: str):
         import subprocess
@@ -159,6 +161,7 @@ class DockingOracle(Oracle):
         from itertools import islice
 
         affinities = []
+        smiles = []
         paths = glob.glob(f'{directory}/*_out.pdbqt')
 
         for idx, path in enumerate(paths):
@@ -166,10 +169,11 @@ class DockingOracle(Oracle):
 
                 # extract SMILES from the file
                 smiles_str = list(islice(file, 7))[-1]
-                smiles = smiles_str.split(' ')[-1].split('\n')[0]
-                file.seek(0)
+                smiles_str = smiles_str.split(' ')[-1].split('\n')[0]
+                smiles.append(smiles_str)
 
                 # extract affinities
+                file.seek(0)
                 affinity_strs = [line for line in file if line.startswith('REMARK VINA RESULT')]
                 process_affinity = lambda s: re.search(r'-?\d+\.\d+', s).group()
                 energies = [float(process_affinity(a)) for a in affinity_strs]
@@ -179,8 +183,8 @@ class DockingOracle(Oracle):
 
                 # append to affinities
                 affinities.append(affinity)
-
-        return affinities
+        
+        return smiles, affinities
 
     def _prepare_command(self, config, directory: str):
         
@@ -206,6 +210,7 @@ class DockingOracle(Oracle):
         
         import os
         
+        failed = []
         paths = []
         for idx, mol in enumerate(molecules):
             
@@ -213,7 +218,7 @@ class DockingOracle(Oracle):
             try:
                 pdbqt = self._get_pdbqt(mol)
             except:
-                continue
+                failed.append(mol)
 
             path = os.path.join(
                 directory,
@@ -230,6 +235,8 @@ class DockingOracle(Oracle):
         path = os.path.join(directory, 'ligands.txt')
         with open(path, 'w') as file:
             file.write(ligands_txt)
+
+        return failed
 
     def _get_pdbqt(self, mol):
 
@@ -324,9 +331,9 @@ class NeuralOracle(Oracle):
             preds = self.model({'g': graph_batch})
 
         # clip to limit of detection
-        preds = torch.clamp(preds, 4.0, None)
-        
-        return preds.ravel().tolist()
+        preds = torch.clamp(preds, 4.0, None).ravel().tolist()
+
+        return molecules.smiles, preds
 
     def model_factory(self, config=None):
         """
