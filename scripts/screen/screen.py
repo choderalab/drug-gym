@@ -87,14 +87,13 @@ batches = batched(supplier_subset, batch_size)
 
 # Check if file already exists
 file_path = f'./out/strict_fragments_machine_{args.machine_id}.tsv'
-header = not os.path.exists(file_path)
 for batch in batches:
     results = get_docking_results(batches)
     results_df = pd.DataFrame(results, columns=['smiles', 'affinity'])
     results_df.to_csv(
         file_path,
-        mode='a',
-        header=header,
-        index=False,
-	sep='\t',
+        mode = 'a',
+        header = not os.path.exists(file_path),
+        index = False,
+        sep='\t',
     )
