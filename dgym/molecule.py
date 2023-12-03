@@ -151,7 +151,7 @@ class Molecule:
         self.annotations.update(self.mol.GetPropsAsDict())
 
         if 'smiles' not in self.annotations:
-            self.annotations.update({'smiles', self.smiles})
+            self.annotations.update({'smiles': self.smiles})
         
         if other_annotations:
             self.annotations.update(other_annotations)
