@@ -451,7 +451,7 @@ class ReactionCollection(Collection):
 
         def _make_reaction(row):
             smirks = row[smarts_col]
-            r = Reaction(smirks, name=row['reaction_name'])
+            r = Reaction(smirks, id=row['reaction_name'])
             r = r.annotate_reactants(row[classes_col])
             return r
 

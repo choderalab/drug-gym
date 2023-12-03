@@ -138,12 +138,11 @@ class DockingOracle(Oracle):
 
             # run docking
             resp = self._dock(command)
-
-            # if resp.stderr:
-            #     raise Exception(resp.stderr)
             
             # gather results
             smiles, preds = self._gather_results(directory)
+
+            print(smiles, preds)
 
         return smiles, preds
 

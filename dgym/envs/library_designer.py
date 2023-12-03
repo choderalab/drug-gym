@@ -191,10 +191,10 @@ class LibraryDesigner:
 
                 # ensure no duplicates
                 for c in cognate_building_blocks:
-                    cognate_name = Chem.MolToSmiles(c)
+                    cognate_id = Chem.MolToSmiles(c)
                     combo = tuple([
-                        f'{reaction.name}_{poised.name}_{cognate_name}',
-                        f'{reaction.name}_{cognate_name}_{poised.name}'
+                        f'{reaction.id}_{poised.id}_{cognate_id}',
+                        f'{reaction.id}_{cognate_id}_{poised.id}'
                     ])
                     if combo in self.cache:
                         cognate_building_blocks.remove(c)

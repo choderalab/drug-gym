@@ -58,7 +58,7 @@ class Molecule:
         self.reactants = reactants
         self.inspiration = inspiration
         self._id_attr = id_attr
-        self.smiles = rdkit.Chem.MolToSmiles(self.mol)
+        self.smiles = rdkit.Chem.MolToSmiles(self.mol, canonical=True)
         
         if annotations is None:
             annotations = {}

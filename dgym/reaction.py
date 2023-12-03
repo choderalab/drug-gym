@@ -9,7 +9,7 @@ class Reaction:
         self,
         template: Union[str, ChemicalReaction],
         metadata: Optional[dict] = None,
-        name: Optional[str] = None
+        id: Optional[str] = None
     ) -> None:
         """
         Parameters
@@ -20,12 +20,12 @@ class Reaction:
         if isinstance(template, str):
             template = rdkit.Chem.AllChem.ReactionFromSmarts(template)
 
+        self.id = id
         self.template = template
         self.products = list(template.GetProducts())
         self.agents = list(template.GetAgents())
         self.reactants = list(template.GetReactants())
         self.metadata = metadata
-        self.name = name
     
     def run(self, reagents):
         return self.template.RunReactants(reagents)
@@ -35,7 +35,6 @@ class Reaction:
         assert len(self.reactants) == len(classes)
         for i, _ in enumerate(self.reactants):
             self.reactants[i].SetProp('class', classes[i])
-
         return self
 
     def poise(self, idx):
