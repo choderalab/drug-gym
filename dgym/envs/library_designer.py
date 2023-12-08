@@ -54,24 +54,52 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
+        num_reactants = self._get_num_reactants(num_analogs, temperature)
         reactants = [
-            self._get_analogs(r, num_analogs // 4, temperature)
+            self._get_analogs(r, temperature, num_reactants)
             for r in molecule.reactants
         ]
 
         # Enumerate possible products given repertoire of reactions
-        products = self._enumerate_products(reactants)
+        candidates = self._enumerate_products(reactants)
+        
+        if len(candidates) <= num_analogs:
+            return candidates
+
+        # Sample from product candidates
+        products = self._sample_products(candidates, molecule, temperature, num_analogs)
         
         return MoleculeCollection(products)
 
-    def _get_analogs(self, reactant, size, temperature):
+    def _get_num_reactants(self, num_analogs, temperature):
+        """
+        Adjusts the number of analogs based on the temperature while ensuring the number
+        of analogs does not fall below 5 and temperature is non-negative.
+
+        Parameters:
+        temperature (float): The current temperature. Assumed to be non-negative.
+        original_analogs (int): The original number of analogs.
+
+        Returns:
+        int: The adjusted number of analogs based on the temperature, constrained to be no less than 5.
+        """
+        import math
+        num_reactants = math.sqrt(num_analogs * 2)
+        num_reactants /= (1 - min(0.2, max(0.0, temperature)))
+        num_reactants = max(5, int(num_reactants))
+        return num_reactants
+
+    def _get_analogs(self, reactant, temperature, size):
         
         # Perform similarity search
-        indices, scores = zip(*chemfp.simsearch(
+        result = chemfp.simsearch(
             k = 500,
             query = reactant.smiles,
             targets = self.fingerprints
-        ).get_indices_and_scores())
+        )
+        
+        # Collect scores
+        indices, scores = zip(*result.get_indices_and_scores())
 
         # Resample indices
         indices = self._boltzmann_sampling(indices, scores, temperature, size)
@@ -105,9 +133,45 @@ class LibraryDesigner:
                 if prod and smiles not in self.cache:
                     self.cache.add(smiles)
                     products += [Molecule(smiles, reactants=reactants)]
+        
         return products
 
-    def _boltzmann_sampling(self, arr, probabilities, temperature, size=1):
+    def _sample_products(self, candidates, molecule, temperature, size):
+
+        # Get similarities of candidates to original molecule
+        scores = [self._tanimoto_similarity(molecule, c) for c in candidates]
+        
+        # Sample boltzmann-adjusted probabilities
+        products = self._boltzmann_sampling(candidates, scores, temperature, size)
+
+        return products
+    
+    def _tanimoto_similarity(self, mol1, mol2):
+        """
+        Calculate the Tanimoto similarity between two molecules represented by their SMILES strings.
+
+        Parameters
+        ----------
+        smiles1 : str
+            The SMILES representation of the first molecule.
+        smiles2 : str
+            The SMILES representation of the second molecule.
+
+        Returns
+        -------
+        float
+            The Tanimoto similarity between the two molecules.
+        """    
+        # Generate Morgan fingerprints
+        fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1.mol, 2)
+        fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2.mol, 2)
+
+        # Calculate Tanimoto similarity
+        similarity = DataStructs.FingerprintSimilarity(fp1, fp2)
+
+        return similarity
+
+    def _boltzmann_sampling(self, array, probabilities, temperature, size=1):
         """
         Perform sampling based on Boltzmann probabilities with a temperature parameter.
 
@@ -119,6 +183,8 @@ class LibraryDesigner:
         Returns:
         numpy.ndarray: Indices of the sampled elements.
         """
+        assert len(array) == len(probabilities)
+
         # Avoid dividing by zero
         temperature += 1e-2
         
@@ -128,6 +194,9 @@ class LibraryDesigner:
 
         # Perform the sampling
         rng = np.random.default_rng()
-        choices = rng.choice(arr, size=size, p=adjusted_probs, replace=False).tolist()
-
-        return choices
+        choices = rng.choice(array, size=size, p=adjusted_probs, replace=False)
+        
+        # Shuffle sample
+        choices = rng.permutation(choices)
+        
+        return choices.tolist()
