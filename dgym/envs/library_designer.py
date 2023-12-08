@@ -54,23 +54,31 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
-        reactant_analogs = [self._get_analogs(r, num_analogs//2) for r in molecule.reactants]
+        reactants = [
+            self._get_analogs(r, num_analogs // 4, temperature)
+            for r in molecule.reactants
+        ]
 
         # Enumerate possible products given repertoire of reactions
-        candidates = self._enumerate_products(reactant_analogs)
-
-        # Sample from products
-        products = self._sample(candidates, molecule, temperature, num_analogs)
+        products = self._enumerate_products(reactants)
         
         return MoleculeCollection(products)
 
-    def _get_analogs(self, reactant, k):
-        indices = chemfp.simsearch(
-            k = k,
+    def _get_analogs(self, reactant, size, temperature):
+        
+        # Perform similarity search
+        indices, scores = zip(*chemfp.simsearch(
+            k = 500,
             query = reactant.smiles,
             targets = self.fingerprints
-        ).get_indices()
+        ).get_indices_and_scores())
+
+        # Resample indices
+        indices = self._boltzmann_sampling(indices, scores, temperature, size)
+
+        # Get analogs
         analogs = [self.building_blocks[i] for i in indices]
+        
         return analogs
 
     def _enumerate_products(self, analogs):
@@ -99,43 +107,7 @@ class LibraryDesigner:
                     products += [Molecule(smiles, reactants=reactants)]
         return products
 
-    def _sample(self, candidates, molecule, temperature, num_analogs):
-
-        # Get similarities of candidates to original molecule
-        probabilities = [self._tanimoto_similarity(molecule, c) for c in candidates]
-        
-        # Sample boltzmann-adjusted probabilities
-        choices = self._boltzmann_sampling(probabilities, temperature, size=num_analogs)
-        products = [candidates[c] for c in choices]
-
-        return products
-    
-    def _tanimoto_similarity(self, mol1, mol2):
-        """
-        Calculate the Tanimoto similarity between two molecules represented by their SMILES strings.
-
-        Parameters
-        ----------
-        smiles1 : str
-            The SMILES representation of the first molecule.
-        smiles2 : str
-            The SMILES representation of the second molecule.
-
-        Returns
-        -------
-        float
-            The Tanimoto similarity between the two molecules.
-        """    
-        # Generate Morgan fingerprints
-        fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1.mol, 2)
-        fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2.mol, 2)
-
-        # Calculate Tanimoto similarity
-        similarity = DataStructs.FingerprintSimilarity(fp1, fp2)
-
-        return similarity
-
-    def _boltzmann_sampling(self, probabilities, temperature, size=1):
+    def _boltzmann_sampling(self, arr, probabilities, temperature, size=1):
         """
         Perform sampling based on Boltzmann probabilities with a temperature parameter.
 
@@ -148,13 +120,14 @@ class LibraryDesigner:
         numpy.ndarray: Indices of the sampled elements.
         """
         # Avoid dividing by zero
-        temperature += 1e-3
+        temperature += 1e-2
         
         # Adjust probabilities using the Boltzmann distribution and temperature
         adjusted_probs = np.exp(np.log(probabilities) / temperature)
         adjusted_probs /= np.sum(adjusted_probs)
 
         # Perform the sampling
-        return np.random.choice(len(probabilities), size=size, p=adjusted_probs, replace=False)
+        rng = np.random.default_rng()
+        choices = rng.choice(arr, size=size, p=adjusted_probs, replace=False).tolist()
 
-        
+        return choices
