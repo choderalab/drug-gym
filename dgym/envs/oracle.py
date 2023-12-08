@@ -44,6 +44,9 @@ class Oracle:
             # make predictions
             smiles, preds = self.predict(uncached_molecules, **kwargs)
 
+            # import pdb; pdb.set_trace()
+            # print([l[0] == l[1] for l in zip(set(smiles), set(uncached_molecules.smiles))])
+
             # cache results
             self.cache.update(zip(smiles, preds))
 
@@ -142,8 +145,6 @@ class DockingOracle(Oracle):
             # gather results
             smiles, preds = self._gather_results(directory)
 
-            print(smiles, preds)
-
         return smiles, preds
 
     def _dock(self, command: str):
@@ -186,7 +187,7 @@ class DockingOracle(Oracle):
                 # append to affinities
                 affinities.append(affinity)
         
-        return smiles, affinities
+        return smiles, [-a for a in affinities]
 
     def _prepare_command(self, config, directory: str):
         

@@ -8,6 +8,7 @@ import dgl
 import rdkit
 import copy
 import torch
+from rdkit.Chem import Mol
 from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
 
 # =============================================================================
@@ -54,11 +55,16 @@ class Molecule:
         if isinstance(mol, str):
             mol = rdkit.Chem.MolFromSmiles(mol)
 
+        if reactants and isinstance(reactants[0], Mol):
+            reactants = [Molecule(r) for r in reactants]
+
         self.mol = mol
         self.reactants = reactants
         self.inspiration = inspiration
         self._id_attr = id_attr
-        self.smiles = rdkit.Chem.MolToSmiles(self.mol, canonical=True)
+        self.smiles = rdkit.Chem.CanonSmiles(
+            rdkit.Chem.MolToSmiles(self.mol)
+        )
         
         if annotations is None:
             annotations = {}

@@ -2,9 +2,11 @@ import random
 import chemfp
 import itertools
 import dgym as dg
+import numpy as np
 import chemfp.arena
 from rdkit import Chem
-from rdkit.Chem import AllChem, Mol
+from itertools import chain, product
+from rdkit.Chem import AllChem, DataStructs
 from typing import Union, Iterable, Optional
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
@@ -32,10 +34,10 @@ class LibraryDesigner:
 
     def design(
         self,
-        molecules: list,
+        molecule: Molecule,
         num_analogs: int,
-        fraction_random: float
-    ) -> list:
+        temperature: float
+    ) -> Iterable:
         """
         Given a set of reagents, enumerate candidate molecules.
 
@@ -45,186 +47,114 @@ class LibraryDesigner:
             The hit from which analogs are enumerated.
         num_analogs : int
             Number of analogs to enumerate (for each compatible reaction).
-        sortby : Union[str, dict]
-            How to sort building blocks. Valid flags are 'fingerprint', 'random'.
-            The values of the dictionary indicate the tradeoff.
-            Default: 'fingerprint'.
 
         Returns
         -------
         all_products : list of enumerated products
 
         """
-        products = MoleculeCollection()
-        for molecule in molecules:
-            # get matching reactions
-            reactions = self.find_compatible_reactions(molecule)
-            # enumerate poised synthetic library
-            products += self.enumerate_analogs(
-                molecule,
-                reactions,
-                num_analogs=num_analogs,
-                fraction_random=fraction_random
-            )
-        return products
+        # Get analogs of the molecule reactants
+        reactant_analogs = [self._get_analogs(r, num_analogs//2) for r in molecule.reactants]
 
-    def find_compatible_reactions(self, molecule) -> list[Reaction]:
-        """
-        Find reactions compatible with a given molecule.
+        # Enumerate possible products given repertoire of reactions
+        candidates = self._enumerate_products(reactant_analogs)
+
+        # Sample from products
+        products = self._sample(candidates, molecule, temperature, num_analogs)
         
-        Parameters
-        ----------
-        hit : rdkit.Chem.rdchem.Mol
-            The end-product of a reaction, comprising the hit.
-        
-        reagents : list of dict
-            The synthetic reagents for the hit.
-            Each dict has keys 'id', 'smiles', 'rdMol'.
-        
-        repertoire : pandas.DataFrame
-            All available reactions.
+        return MoleculeCollection(products)
 
-        Returns
-        -------
-        A list of compatible reactions, each represented as a dictionary.
-
-        """
-        def _match_reaction(molecule, reaction):
-            
-            if len(molecule.reactants) != len(reaction.reactants): return None
-            # reorder reactants, test 1:1 match
-            for idx, _ in enumerate(reaction.reactants):
-                poised_reaction = reaction.poise(idx)
-                if all([
-                    reactant.has_substruct_match(template)
-                    for reactant, template
-                    in zip(molecule.reactants, poised_reaction.reactants)
-                ]): return poised_reaction
-            return None
-
-        synthetic_routes = []
-        
-        # loop through all reactions
-        for reaction in self.reactions:
-            
-            # find 1:1 matching ordering, if it exists
-            reaction_match = _match_reaction(molecule, reaction)
-            
-            if reaction_match:
-                synthetic_routes.append(reaction_match)
-        
-        return synthetic_routes
-
-
-    def enumerate_analogs(
-        self,
-        molecule: Molecule,
-        reactions: list,
-        num_analogs: int,
-        fraction_random: float,
-    ) -> list[Molecule]:
-        """
-        Returns enumerated product from poised reagent and compatible building blocks.
-
-        Parameters
-        ----------
-        reaction : dict
-            Reaction compatible with the hit.
-        building_blocks : dict
-            Building blocks partitioned by functional class.
-        num_analogs : int
-            Number of analogs to compute given a molecule.
-        sortby : str
-            How to sort building blocks. Valid flags are 'fingerprint', 'random'.
-            Default: 'fingerprint'.
-        fps : chemfp.arena.FingerprintArena, optional
-            If sortby is set to 'fingerprint', fps must be provided.
-
-        Returns
-        -------
-        Products of reactions. A list of `rdkit.Chem.Mol`.
-        """
-        def _clean(lst):
-            return [Chem.MolFromSmiles(Chem.MolToSmiles(m)) for m in lst]
-        
-        def _remove_salts(m):
-            from rdkit.Chem.SaltRemover import SaltRemover
-            remover = SaltRemover(defnData='[Cl,Br]')
-            return remover.StripMol(m.mol)
-
-        def _fp_argsort(cognate_reactant: Chem.Mol, indices: Iterable[int],
-                        size: int, fps: chemfp.arena.FingerprintArena):
-            cognate_reactant = _remove_salts(cognate_reactant)
-            return chemfp.simsearch(
-                k=size, query=Chem.MolToSmiles(cognate_reactant),
-                targets=fps.copy(indices=indices, reorder=False)
-            ).get_indices()
-
-        def _check_kekule(mol):
-            try:
-                Chem.Kekulize(mol, clearAromaticFlags=True)
-                return True
-            except:
-                return False
-
-        analogs = []
-        for index, _ in enumerate(molecule.reactants):
-            for reaction in reactions:
-
-                # poise fragment and each reaction
-                poised, cognate = molecule.poise(index).reactants
-                reaction = reaction.poise(index)
-                
-                # filter building blocks compatible with poised fragment - TODO - refactor
-                cognate_class = reaction.reactants[1].GetProp('class')
-                indices, building_blocks_subset = self.building_blocks[cognate_class].values.T
-                
-                # sort building blocks by fingerprint similarity and random
-                argsort = []
-                size_rand = int(fraction_random * num_analogs)
-                size_fp = num_analogs - size_rand
-                if size_fp:
-                    argsort.extend(_fp_argsort(cognate, indices, size_fp, fps=self.fingerprints))
-                if size_rand:
-                    argsort.extend(random.sample(range(len(indices)), size_rand))
-                cognate_building_blocks = _clean(building_blocks_subset[argsort])
-
-                # ensure no duplicates
-                for c in cognate_building_blocks:
-                    cognate_id = Chem.MolToSmiles(c)
-                    combo = tuple([
-                        f'{reaction.id}_{poised.id}_{cognate_id}',
-                        f'{reaction.id}_{cognate_id}_{poised.id}'
-                    ])
-                    if combo in self.cache:
-                        cognate_building_blocks.remove(c)
-                    else:
-                        self.cache.add(combo)
-                
-                # enumerate library
-                library = AllChem.EnumerateLibraryFromReaction(
-                    reaction.template,
-                    [[poised.mol], cognate_building_blocks],
-                    returnReactants=True
-                )
-                
-                for p in library:
-                    if _check_kekule(p.products[0]):
-                        analog = Molecule(
-                            p.products[0],
-                            reactants=[Molecule(r) for r in p.reactants],
-                            inspiration=molecule
-                        ).update_cache()
-                        analogs.append(analog)
+    def _get_analogs(self, reactant, k):
+        indices = chemfp.simsearch(
+            k = k,
+            query = reactant.smiles,
+            targets = self.fingerprints
+        ).get_indices()
+        analogs = [self.building_blocks[i] for i in indices]
         return analogs
 
+    def _enumerate_products(self, analogs):
 
-# # Compute probabilities from logits to get probabilities
-# probs = self.boltzmann(utility, self.temperature)
+        def _bi_product(l1, l2):
+            return chain(product(l1, l2), product(l2, l1))
 
-# @staticmethod
-# def boltzmann(utility, temperature):
-#     """Compute Boltzmann probabilities for a given set of utilities and temperature."""
-#     energies = -np.array(utility)
-#     exp_energies = np.exp(-energies / temperature)
-#     return exp_energies / np.sum(exp_energies)
+        def _sanitize(mol):
+            smiles = Chem.MolToSmiles(mol[0][0])
+            return Chem.MolFromSmiles(smiles), smiles
+        
+        products = []
+        for reactants in _bi_product(*analogs):
+            for reaction in self.reactions:
+                
+                # Run reaction
+                try:
+                    prod = reaction.run(reactants)
+                    prod, smiles = _sanitize(prod)
+                except:
+                    continue
+
+                # Process product, check cache
+                if prod and smiles not in self.cache:
+                    self.cache.add(smiles)
+                    products += [Molecule(smiles, reactants=reactants)]
+        return products
+
+    def _sample(self, candidates, molecule, temperature, num_analogs):
+
+        # Get similarities of candidates to original molecule
+        probabilities = [self._tanimoto_similarity(molecule, c) for c in candidates]
+        
+        # Sample boltzmann-adjusted probabilities
+        choices = self._boltzmann_sampling(probabilities, temperature, size=num_analogs)
+        products = [candidates[c] for c in choices]
+
+        return products
+    
+    def _tanimoto_similarity(self, mol1, mol2):
+        """
+        Calculate the Tanimoto similarity between two molecules represented by their SMILES strings.
+
+        Parameters
+        ----------
+        smiles1 : str
+            The SMILES representation of the first molecule.
+        smiles2 : str
+            The SMILES representation of the second molecule.
+
+        Returns
+        -------
+        float
+            The Tanimoto similarity between the two molecules.
+        """    
+        # Generate Morgan fingerprints
+        fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1.mol, 2)
+        fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2.mol, 2)
+
+        # Calculate Tanimoto similarity
+        similarity = DataStructs.FingerprintSimilarity(fp1, fp2)
+
+        return similarity
+
+    def _boltzmann_sampling(self, probabilities, temperature, size=1):
+        """
+        Perform sampling based on Boltzmann probabilities with a temperature parameter.
+
+        Parameters:
+        probabilities (list of float): Original probabilities derived from Tanimoto similarity.
+        temperature (float): Temperature parameter controlling the randomness of the sampling.
+        size (int, optional): Number of samples to draw. Defaults to 1.
+
+        Returns:
+        numpy.ndarray: Indices of the sampled elements.
+        """
+        # Avoid dividing by zero
+        temperature += 1e-3
+        
+        # Adjust probabilities using the Boltzmann distribution and temperature
+        adjusted_probs = np.exp(np.log(probabilities) / temperature)
+        adjusted_probs /= np.sum(adjusted_probs)
+
+        # Perform the sampling
+        return np.random.choice(len(probabilities), size=size, p=adjusted_probs, replace=False)
+
+        

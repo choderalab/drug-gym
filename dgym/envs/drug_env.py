@@ -190,7 +190,6 @@ class DrugEnv(gym.Env):
         
         # perform inference
         results = assay(molecules, **params)
-        print([{assay.name: r} for r in results])
         
         # update library annotations for molecules measured
         molecules.update_annotations([{assay.name: r} for r in results])
