@@ -62,6 +62,10 @@ class LibraryDesigner:
 
         # Enumerate possible products given repertoire of reactions
         candidates = self._enumerate_products(reactants)
+
+        # Add inspiration
+        for candidate in candidates:
+            candidate.inspiration = molecule
         
         if len(candidates) <= num_analogs:
             return candidates

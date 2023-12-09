@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import dgl
+import math
 import rdkit
 import torch
 import dgllife
@@ -25,6 +26,10 @@ class Oracle:
     def __call__(self, molecules: Union[MoleculeCollection, list], **kwargs):
         return self.get_predictions(molecules, **kwargs)
     
+    def reset_cache(self):
+        self.cache = OracleCache()
+        return self
+    
     def get_predictions(
         self,
         molecules: Union[MoleculeCollection, list],
@@ -42,13 +47,10 @@ class Oracle:
             uncached_molecules = uncached_molecules.unique()
 
             # make predictions
-            smiles, preds = self.predict(uncached_molecules, **kwargs)
-
-            # import pdb; pdb.set_trace()
-            # print([l[0] == l[1] for l in zip(set(smiles), set(uncached_molecules.smiles))])
+            smiles, scores = self.predict(uncached_molecules, **kwargs)
 
             # cache results
-            self.cache.update(zip(smiles, preds))
+            self.cache.update(zip(smiles, scores))
 
         # fetch all results (old and new) from cache
         return [self.cache[m.smiles] for m in molecules]
@@ -91,9 +93,9 @@ class DGLOracle(Oracle):
         feats_batch = graph_batch.ndata['h']
         
         # perform inference
-        preds = self.model(graph_batch, feats_batch).flatten().tolist()
+        scores = self.model(graph_batch, feats_batch).flatten().tolist()
         
-        return molecules.smiles, preds
+        return molecules.smiles, scores
 
 
 class RDKitOracle(Oracle):
@@ -109,8 +111,8 @@ class RDKitOracle(Oracle):
         self.descriptor = getattr(Descriptors, self.name)
 
     def predict(self, molecules: MoleculeCollection):
-        preds = [self.descriptor(m.mol) for m in molecules]
-        return molecules.smiles, preds
+        scores = [self.descriptor(m.mol) for m in molecules]
+        return molecules.smiles, scores
 
 
 class DockingOracle(Oracle):
@@ -129,7 +131,8 @@ class DockingOracle(Oracle):
     def predict(
         self,
         molecules: MoleculeCollection,
-        path: Optional[str] = None
+        path: Optional[str] = None,
+        units: Optional[str] = 'pIC50'
     ):
         with self._managed_directory(path) as directory:
 
@@ -143,19 +146,30 @@ class DockingOracle(Oracle):
             resp = self._dock(command)
             
             # gather results
-            smiles, preds = self._gather_results(directory)
+            smiles, scores = self._gather_results(directory)
 
-        return smiles, preds
+            # convert units
+            scores = self._convert_units(scores, units)
 
-    def _dock(self, command: str):
-        import subprocess
-        return subprocess.run(
-            command,
-            shell=True, 
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, 
-            encoding='utf-8'
-        )
+        return smiles, scores
+    
+
+    def _convert_units(
+            self,
+            scores: list[float],
+            units: Optional[str] = 'pIC50'
+    ):
+        match units:
+            case 'deltaG':
+                pass
+            case 'pIC50':
+                coef = -math.log10(math.e) / 0.6
+                scores = [coef * score for score in scores]
+            case _:
+                raise Exception(f'{units} is not a valid units. Must be `pIC50` or `deltaG`.')
+        
+        return scores
+
 
     def _gather_results(self, directory: str):
         
@@ -163,7 +177,7 @@ class DockingOracle(Oracle):
         import glob
         from itertools import islice
 
-        affinities = []
+        scores = []
         smiles = []
         paths = glob.glob(f'{directory}/*_out.pdbqt')
 
@@ -182,12 +196,22 @@ class DockingOracle(Oracle):
                 energies = [float(process_affinity(a)) for a in affinity_strs]
 
                 # compute boltzmann sum
-                affinity = self._boltzmann_sum(energies)
+                score = self._boltzmann_sum(energies)
 
                 # append to affinities
-                affinities.append(affinity)
+                scores.append(score)
         
-        return smiles, [-a for a in affinities]
+        return smiles, scores
+    
+    def _dock(self, command: str):
+        import subprocess
+        return subprocess.run(
+            command,
+            shell=True, 
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, 
+            encoding='utf-8'
+        )
 
     def _prepare_command(self, config, directory: str):
         
@@ -334,9 +358,9 @@ class NeuralOracle(Oracle):
             preds = self.model({'g': graph_batch})
 
         # clip to limit of detection
-        preds = torch.clamp(preds, 4.0, None).ravel().tolist()
+        scores = torch.clamp(preds, 4.0, None).ravel().tolist()
 
-        return molecules.smiles, preds
+        return molecules.smiles, scores
 
     def model_factory(self, config=None):
         """
