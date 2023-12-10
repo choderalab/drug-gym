@@ -54,28 +54,47 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
-        num_reactants = self._get_num_reactants(num_analogs, temperature)
         reactants = [
-            self._get_analogs(r, temperature, num_reactants)
+            self._get_analogs(r, temperature, num_analogs)
             for r in molecule.reactants
         ]
 
         # Enumerate possible products given repertoire of reactions
-        candidates = self._enumerate_products(reactants)
+        products = self._enumerate_products(reactants)
 
         # Add inspiration
-        for candidate in candidates:
-            candidate.inspiration = molecule
+        for product in products:
+            product.inspiration = molecule
         
-        if len(candidates) <= num_analogs:
-            return candidates
-
         # Sample from product candidates
-        products = self._sample_products(candidates, molecule, temperature, num_analogs)
+        if len(products) > num_analogs:
+            products = self._sample_products(products, molecule, temperature, num_analogs)
         
         return MoleculeCollection(products)
 
-    def _get_num_reactants(self, num_analogs, temperature):
+
+    def _get_analogs(self, reactant, temperature, num_analogs):
+
+        # Perform similarity search
+        result = chemfp.simsearch(
+            k = 500,
+            query = reactant.smiles,
+            targets = self.fingerprints
+        )
+        
+        # Collect scores
+        indices, scores = zip(*result.get_indices_and_scores())
+
+        # Resample indices
+        size = self._get_num_reactants(temperature, num_analogs)
+        indices = self._boltzmann_sampling(indices, scores, temperature, size)
+
+        # Get analogs
+        analogs = [self.building_blocks[i] for i in indices]
+        
+        return analogs
+
+    def _get_num_reactants(self, temperature, num_analogs):
         """
         Adjusts the number of analogs based on the temperature while ensuring the number
         of analogs does not fall below 5 and temperature is non-negative.
@@ -92,26 +111,6 @@ class LibraryDesigner:
         num_reactants /= (1 - min(0.2, max(0.0, temperature)))
         num_reactants = max(5, int(num_reactants))
         return num_reactants
-
-    def _get_analogs(self, reactant, temperature, size):
-        
-        # Perform similarity search
-        result = chemfp.simsearch(
-            k = 500,
-            query = reactant.smiles,
-            targets = self.fingerprints
-        )
-        
-        # Collect scores
-        indices, scores = zip(*result.get_indices_and_scores())
-
-        # Resample indices
-        indices = self._boltzmann_sampling(indices, scores, temperature, size)
-
-        # Get analogs
-        analogs = [self.building_blocks[i] for i in indices]
-        
-        return analogs
 
     def _enumerate_products(self, analogs):
 
