@@ -72,7 +72,7 @@ class LibraryDesigner:
         Returns a generator that samples analogs of the original molecules.
         """
         
-        def _generate_analogs(samples, r=1):
+        def _generate_analogs(samples, r=0):
             """
             A generator that efficiently yields analogs.
 
@@ -99,18 +99,23 @@ class LibraryDesigner:
                 # Increment
                 count += 1
 
-        # Score analogs of each original reactant
-        original_mols = [o.mol for o in original_molecules]
-        analogs = self.get_analog_indices_and_scores(original_molecules)
-        indices = list(analogs.iter_indices())
-        scores = list(analogs.iter_scores())
+        if original_molecules:
 
-        # Convert scores to probabilities
-        probabilities = self.boltzmann(torch.tensor(scores), temperature)
+            # Score analogs of each original reactant
+            original_mols = [o.mol for o in original_molecules]
+            analogs = self.get_analog_indices_and_scores(original_molecules)
+            indices = list(analogs.iter_indices())
+            scores = list(analogs.iter_scores())
 
-        # Sample indices
-        samples_idx = torch.multinomial(probabilities, 500)
-        samples = torch.gather(torch.tensor(indices), 1, samples_idx).T
+            # Convert scores to probabilities
+            probabilities = self.boltzmann(torch.tensor(scores), temperature)
+
+            # Sample indices
+            samples_idx = torch.multinomial(probabilities, 500)
+            samples = torch.gather(torch.tensor(indices), 1, samples_idx).T
+        
+        else:
+            samples = torch.multinomial(torch.ones([2, len(self.building_blocks)]), 500).T
 
         return _generate_analogs(samples)
     
