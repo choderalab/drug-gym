@@ -59,8 +59,7 @@ class SequentialDrugAgent(DrugAgent):
         utility_function,
         num_analogs,
         branch_factor=5,
-        # temperature=0.1,
-        fraction_random = 0.1,
+        temperature=0.1,
         epsilon=0.2,
     ) -> None:
 
@@ -72,8 +71,7 @@ class SequentialDrugAgent(DrugAgent):
 
         self.utility_function = utility_function
         self.num_analogs = num_analogs
-        self.fraction_random = fraction_random
-        # self.temperature = temperature
+        self.temperature = temperature
 
         # action utils
         self._encoder = {
@@ -102,7 +100,7 @@ class SequentialDrugAgent(DrugAgent):
         if self.action_type == 'ideate':
             parameters.update({
                 'num_analogs': self.num_analogs,
-                'fraction_random': self.fraction_random
+                'temperature': self.temperature
             })
         
         action = {

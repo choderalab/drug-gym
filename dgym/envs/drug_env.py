@@ -158,9 +158,9 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def design_library(self, molecule_indices, num_analogs, fraction_random):
+    def design_library(self, molecule_indices, num_analogs, temperature):
         """
-        Returns the 
+        Returns the library of molecules.
         """
         batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
         self.design_cycle += 1
@@ -170,11 +170,13 @@ class DrugEnv(gym.Env):
         molecules = self.library[valid_indices]
         
         # design new library
-        new_molecules = self.library_designer.design(
-            molecules,
-            batch_sizes[num_analogs],
-            fraction_random
-        )
+        new_molecules = MoleculeCollection()
+        for molecule in molecules:
+            new_molecules += self.library_designer.design(
+                molecule,
+                batch_sizes[num_analogs],
+                temperature
+            )
 
         # update library annotations with design cycle
         new_molecules.update_annotations({'design': self.design_cycle})

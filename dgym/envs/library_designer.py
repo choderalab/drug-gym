@@ -11,6 +11,7 @@ from typing import Union, Iterable, Optional
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
+import torch
 
 
 class LibraryDesigner:
@@ -35,7 +36,7 @@ class LibraryDesigner:
     def design(
         self,
         molecule: Molecule,
-        num_analogs: int,
+        size: int,
         temperature: float
     ) -> Iterable:
         """
@@ -54,152 +55,159 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
-        reactants = [
-            self._get_analogs(r, temperature, num_analogs)
-            for r in molecule.reactants
-        ]
+        reactants = self.generate_analogs(molecule.reactants, temperature)
 
         # Enumerate possible products given repertoire of reactions
-        products = self._enumerate_products(reactants)
+        products = self.enumerate_products(reactants, size=size)
 
         # Add inspiration
         for product in products:
             product.inspiration = molecule
-        
-        # Sample from product candidates
-        if len(products) > num_analogs:
-            products = self._sample_products(products, molecule, temperature, num_analogs)
-        
+                
         return MoleculeCollection(products)
 
 
-    def _get_analogs(self, reactant, temperature, num_analogs):
+    def generate_analogs(self, original_molecules, temperature):
+        """
+        Returns a generator that samples analogs of the original molecules.
+        """
+        
+        def _generate_analogs(samples, r=1):
+            """
+            A generator that efficiently yields analogs.
 
-        # Perform similarity search
-        result = chemfp.simsearch(
-            k = 500,
-            query = reactant.smiles,
-            targets = self.fingerprints
+            """
+            count = 0
+            while True:
+                
+                # Gather constant and variable masks
+                combo_indices = [i for i in range(len(samples[0]))]
+                combos = self.random_combinations(combo_indices, r=r)
+                constant_mask, variable_mask = next(combos)
+                
+                # Get variable reactants
+                variable = samples[count, variable_mask].tolist()
+                variable_reactants = [self.building_blocks[v] for v in variable]
+                
+                # Get constant reactants
+                constant_reactants = [original_mols[c] for c in constant_mask]
+                
+                # Yield reactants
+                reactants = [*constant_reactants, *variable_reactants]
+                yield reactants
+                
+                # Increment
+                count += 1
+
+        # Score analogs of each original reactant
+        original_mols = [o.mol for o in original_molecules]
+        analogs = self.get_analog_indices_and_scores(original_molecules)
+        indices = list(analogs.iter_indices())
+        scores = list(analogs.iter_scores())
+
+        # Convert scores to probabilities
+        probabilities = self.boltzmann(torch.tensor(scores), temperature)
+
+        # Sample indices
+        samples_idx = torch.multinomial(probabilities, 500)
+        samples = torch.gather(torch.tensor(indices), 1, samples_idx).T
+
+        return _generate_analogs(samples)
+    
+
+    def get_analog_indices_and_scores(self, molecules):
+        
+        fingerprint_type = self.fingerprints.get_fingerprint_type()
+        fingerprints = [
+            (m.id, fingerprint_type.from_smi(m.smiles))
+            for m in molecules
+        ]
+        
+        queries = chemfp.load_fingerprints(
+            fingerprints,
+            metadata = fingerprint_type.get_metadata(),
+            reorder=False
         )
         
-        # Collect scores
-        indices, scores = zip(*result.get_indices_and_scores())
+        return chemfp.simsearch(
+            queries = queries,
+            targets = self.fingerprints,
+            progress=False,
+            k=500
+        )
 
-        # Resample indices
-        size = self._get_num_reactants(temperature, num_analogs)
-        indices = self._boltzmann_sampling(indices, scores, temperature, size)
-
-        # Get analogs
-        analogs = [self.building_blocks[i] for i in indices]
-        
-        return analogs
-
-    def _get_num_reactants(self, temperature, num_analogs):
+    @staticmethod
+    def random_combinations(lst, r, k=500):
         """
-        Adjusts the number of analogs based on the temperature while ensuring the number
-        of analogs does not fall below 5 and temperature is non-negative.
-
-        Parameters:
-        temperature (float): The current temperature. Assumed to be non-negative.
-        original_analogs (int): The original number of analogs.
-
-        Returns:
-        int: The adjusted number of analogs based on the temperature, constrained to be no less than 5.
+        Yields a random combination of r items in list.
         """
-        import math
-        num_reactants = math.sqrt(num_analogs * 2)
-        num_reactants /= (1 - min(0.2, max(0.0, temperature)))
-        num_reactants = max(5, int(num_reactants))
-        return num_reactants
+        if r < 1:
+            yield [], lst
 
-    def _enumerate_products(self, analogs):
+        all_combinations = list(itertools.combinations(lst, r))
+        selected_combinations = random.choices(all_combinations, k=k)
+        for combo in selected_combinations:
+            nonselected_items = tuple(item for item in lst if item not in combo)
+            yield combo, nonselected_items
 
-        def _bi_product(l1, l2):
-            return chain(product(l1, l2), product(l2, l1))
-
-        def _sanitize(mol):
-            smiles = Chem.MolToSmiles(mol[0][0])
-            return Chem.MolFromSmiles(smiles), smiles
-        
-        products = []
-        for reactants in _bi_product(*analogs):
-            for reaction in self.reactions:
-                
-                # Run reaction
-                try:
-                    prod = reaction.run(reactants)
-                    prod, smiles = _sanitize(prod)
-                except:
-                    continue
-
-                # Process product, check cache
-                if prod and smiles not in self.cache:
-                    self.cache.add(smiles)
-                    products += [Molecule(smiles, reactants=reactants)]
-        
-        return products
-
-    def _sample_products(self, candidates, molecule, temperature, size):
-
-        # Get similarities of candidates to original molecule
-        scores = [self._tanimoto_similarity(molecule, c) for c in candidates]
-        
-        # Sample boltzmann-adjusted probabilities
-        products = self._boltzmann_sampling(candidates, scores, temperature, size)
-
-        return products
-    
-    def _tanimoto_similarity(self, mol1, mol2):
+    @staticmethod
+    def boltzmann(scores, temperature):
         """
-        Calculate the Tanimoto similarity between two molecules represented by their SMILES strings.
+        Applies the Boltzmann distribution to the given scores with a specified temperature.
 
         Parameters
         ----------
-        smiles1 : str
-            The SMILES representation of the first molecule.
-        smiles2 : str
-            The SMILES representation of the second molecule.
+        scores : torch.Tensor
+            The scores to which the Boltzmann distribution is applied.
+        temperature : float
+            The temperature parameter of the Boltzmann distribution.
 
         Returns
         -------
-        float
-            The Tanimoto similarity between the two molecules.
-        """    
-        # Generate Morgan fingerprints
-        fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1.mol, 2)
-        fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2.mol, 2)
-
-        # Calculate Tanimoto similarity
-        similarity = DataStructs.FingerprintSimilarity(fp1, fp2)
-
-        return similarity
-
-    def _boltzmann_sampling(self, array, probabilities, temperature, size=1):
+        torch.Tensor
+            The probabilities resulting from the Boltzmann distribution.
         """
-        Perform sampling based on Boltzmann probabilities with a temperature parameter.
+        temperature = max(temperature, 1e-2)  # Ensure temperature is not too low
+        scaled_scores = scores / temperature
+        probabilities = torch.softmax(scaled_scores, dim=-1)
+        return probabilities
+    
 
-        Parameters:
-        probabilities (list of float): Original probabilities derived from Tanimoto similarity.
-        temperature (float): Temperature parameter controlling the randomness of the sampling.
-        size (int, optional): Number of samples to draw. Defaults to 1.
+    def enumerate_products(self, reactants, size):
 
-        Returns:
-        numpy.ndarray: Indices of the sampled elements.
-        """
-        assert len(array) == len(probabilities)
+        products = []
+                    
+        # Loop through permutations of reactants
+        for reactants_ in reactants:
+            for reactant_order in itertools.permutations(reactants_):
+                for reaction in self.reactions:
 
-        # Avoid dividing by zero
-        temperature += 1e-2
+                    # Check if completed enumeration
+                    if len(products) >= size:
+                        return products
+
+                    # Verify reactants match
+                    if len(reactants_) == len(reaction.reactants):
+
+                        # Perform reaction
+                        if output := reaction.run(reactant_order):
+                            for product in output:
+                                
+                                # Check if valid molecule
+                                if smiles := self.unique_sanitize(product):
+                                    products += [Molecule(smiles, reactants = reactant_order)]
+                        else:
+                            continue
         
-        # Adjust probabilities using the Boltzmann distribution and temperature
-        adjusted_probs = np.exp(np.log(probabilities) / temperature)
-        adjusted_probs /= np.sum(adjusted_probs)
+        return products
 
-        # Perform the sampling
-        rng = np.random.default_rng()
-        choices = rng.choice(array, size=size, p=adjusted_probs, replace=False)
+    def unique_sanitize(self, mol):
         
-        # Shuffle sample
-        choices = rng.permutation(choices)
+        # Sanitize
+        smiles = Chem.MolToSmiles(mol[0])
+        product = Chem.MolFromSmiles(smiles)
         
-        return choices.tolist()
+        # Check unique
+        if product and smiles not in self.cache:
+            self.cache.add(smiles)
+            return smiles
