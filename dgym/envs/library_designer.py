@@ -116,13 +116,13 @@ class LibraryDesigner:
             indices, scores, sizes = self.fingerprint_similarity(original_molecules)
 
             # Add size similarity to score
-            scores += self.size_similarity(sizes, original_molecules)
+            scores += self.size_similarity(original_molecules, sizes)
 
             # Convert scores to probabilities
             probabilities = self.boltzmann(scores, temperature)
 
             # Reorder analogs
-            samples_idx = torch.multinomial(probabilities, 1_000)
+            samples_idx = torch.multinomial(probabilities, 200)
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
         elif mode == 'expand':
@@ -131,7 +131,7 @@ class LibraryDesigner:
 
             # Unbiased sample of building_blocks
             probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 1_000).tolist()
+            samples = torch.multinomial(probabilities, 200).tolist()
 
         return _mask_analogs(samples)
     
@@ -154,7 +154,7 @@ class LibraryDesigner:
             queries = queries,
             targets = self.fingerprints,
             progress=False,
-            k=1_000
+            k=500
         )
 
         indices = torch.tensor(list(results.iter_indices()))
@@ -165,7 +165,7 @@ class LibraryDesigner:
 
         return indices, scores, sizes
     
-    def size_similarity(self, sizes, molecules):
+    def size_similarity(self, molecules, sizes):
         """
         Using L1-norm of building blocks with original molecules
         """
