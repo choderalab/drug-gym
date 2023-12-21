@@ -47,7 +47,7 @@ class Collection(torch.utils.data.Dataset):
 
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
-        self._lookup = {item.name: item for item in self._items}
+        self._lookup = {item.id: item for item in self._items}
 
     @property
     def annotations(self):
@@ -74,7 +74,7 @@ class Collection(torch.utils.data.Dataset):
         >>> Molecule("C") in collection
         False
         """
-        return item.name in self.lookup
+        return (item is not None) and (item.id in self.lookup)
 
     def filter(self, by: Callable):
         return self.__class__([item for item in self._items if by(item)])
@@ -143,7 +143,7 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, Iterable):
             return self.__class__([self._items[_idx] for _idx in key])
         elif isinstance(key, slice):
-            return self.__class__(molecules=self._items[key])
+            return self.__class__(self._items[key])
         else:
             raise RuntimeError("The slice is not recognized.")
 

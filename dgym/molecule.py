@@ -46,20 +46,24 @@ class Molecule:
     def __init__(
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
-        reactants: Optional[Iterable] = None,
+        reactants: Optional[Iterable] = [],
+        id_attr: Optional[str] = 'smiles',
+        reaction: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
-        id_attr: Optional[str] = 'smiles',
     ) -> None:
         
         if isinstance(mol, str):
             mol = rdkit.Chem.MolFromSmiles(mol)
 
-        if reactants and isinstance(reactants[0], Mol):
-            reactants = [Molecule(r) for r in reactants]
+        reactants = list(reactants)
+        for idx, reactant in enumerate(reactants):
+            if isinstance(reactant, Mol):
+                reactants[idx] = Molecule(reactant)
 
         self.mol = mol
         self.reactants = reactants
+        self.reaction = reaction
         self.inspiration = inspiration
         self._id_attr = id_attr
         self.smiles = rdkit.Chem.CanonSmiles(
@@ -92,27 +96,6 @@ class Molecule:
             self.reactants[i].SetProp('class', classes[i])
 
         return self
-
-    def poise(self, idx):
-
-        assert hasattr(self, 'reactants')
-        
-        def _move_idx_to_first(lst, idx):
-            lst.insert(0, lst.pop(idx))
-            return lst
-
-        # if only one reactant, do nothing
-        if len(self.reactants) == 1:
-            return self
-
-        # do not mutate in-place
-        from copy import deepcopy
-        temp = deepcopy(self)
-        
-        # reorder according to poised index
-        temp.reactants = _move_idx_to_first(temp.reactants, idx)
-
-        return temp
 
     def __getitem__(self, idx):
         if not self.annotations:

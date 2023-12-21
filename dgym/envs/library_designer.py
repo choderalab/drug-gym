@@ -62,8 +62,11 @@ class LibraryDesigner:
             temperature=temperature
         )
 
+        # Get most specific possible reactions
+        reactions = self.specify_reactions(molecule, mode=mode)
+
         # Enumerate possible products given repertoire of reactions
-        products = self.enumerate_products(reactants, size=size)
+        products = self.enumerate_products(reactants, reactions, size=size)
 
         # Add inspiration
         for product in products:
@@ -102,7 +105,7 @@ class LibraryDesigner:
                 variable_reactants = [self.building_blocks[v] for v in variable]
 
                 # Get constant reactants
-                constant_reactants = [original_molecules[c].mol for c in constant_mask]
+                constant_reactants = [original_molecules[c] for c in constant_mask]
                 
                 # Yield reactants
                 reactants = [*constant_reactants, *variable_reactants]
@@ -209,15 +212,41 @@ class LibraryDesigner:
         probabilities = torch.softmax(scaled_scores, dim=-1)
         return probabilities
     
+    def specify_reactions(self, molecule, mode):
+        """
+        Finds the most specific reactions for the given molecule
+        """
+        if mode == 'expand':
+            return self.reactions
+        
+        if molecule.reaction in self.reactions:
+            return self.reactions[molecule.reaction]
 
-    def enumerate_products(self, reactants, size):
+        # First, filter by reactions compatible with reactants
+        match_reactants = [reaction for reaction in self.reactions
+                           if reaction.is_compatible(reactants = molecule.reactants)]
+
+        # Next, filter those reactions by compatibility with product
+        if match_reactants_and_products := [reaction for reaction in match_reactants
+                                            if reaction.is_compatible(molecule)]:
+            reactions = dg.collection.ReactionCollection(match_reactants_and_products)
+
+        elif match_reactants:
+            reactions = dg.collection.ReactionCollection(match_reactants)
+
+        else:
+            reactions = self.reactions
+        
+        return reactions
+
+    def enumerate_products(self, reactants, reactions, size):
 
         products = []
                     
         # Loop through permutations of reactants
         for reactants_ in reactants:
             for reactant_order in itertools.permutations(reactants_):
-                for reaction in self.reactions:
+                for reaction in reactions:
 
                     # Check if completed enumeration
                     if len(products) >= size:
@@ -232,9 +261,13 @@ class LibraryDesigner:
 
                                 # Check if valid molecule
                                 if smiles := self.unique_sanitize(product):
-                                    products += [Molecule(smiles, reactants = reactant_order)]
+                                    products += [Molecule(
+                                        smiles,
+                                        reactants = reactant_order,
+                                        reaction = reaction.id
+                                    )]
         return products
-
+    
     def unique_sanitize(self, mol):
         
         # Sanitize
