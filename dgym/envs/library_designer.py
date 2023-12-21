@@ -82,15 +82,15 @@ class LibraryDesigner:
         Returns a generator that samples analogs of the original molecules.
         """
         
-        def _mask_analogs(analogs, r=1):
+        def _mask_analogs(samples, r=1):
             """
             A generator that efficiently yields analogs.
 
             """
-            while any(analogs):
+            while any(samples):
                 
                 if mode == 'analog':
-                    combo_indices = [i for i in range(len(analogs))]
+                    combo_indices = [i for i in range(len(samples))]
                     combos = self.random_combinations(combo_indices, r=r)
                     constant_mask, variable_mask = next(combos)
 
@@ -98,8 +98,9 @@ class LibraryDesigner:
                     constant_mask, variable_mask = [0], [0]
 
                 # Get variable reactants
-                variable_reactants = [analogs[i].pop(0) for i in variable_mask]
-                
+                variable = [samples[i].pop(0) for i in variable_mask]
+                variable_reactants = [self.building_blocks[v] for v in variable]
+
                 # Get constant reactants
                 constant_reactants = [original_molecules[c].mol for c in constant_mask]
                 
@@ -112,37 +113,30 @@ class LibraryDesigner:
             original_molecules = molecule.reactants
 
             # Identify analogs of each original reactant
-            indices, scores = self.get_analog_indices_and_scores(original_molecules)
-            analogs = []
-            for indices_ in indices:
-                analogs.append([self.building_blocks[i] for i in indices_.tolist()])
+            indices, scores, sizes = self.fingerprint_similarity(original_molecules)
 
             # Add size similarity to score
-            scores += self.size_similarity(analogs, original_molecules)
+            scores += self.size_similarity(sizes, original_molecules)
 
             # Convert scores to probabilities
             probabilities = self.boltzmann(scores, temperature)
 
             # Reorder analogs
-            samples = torch.multinomial(probabilities, 100).tolist()
-            for idx, (analogs_, samples_) in enumerate(zip(analogs, samples)):
-                analogs[idx] = [analogs_[index] for index in samples_]
+            samples_idx = torch.multinomial(probabilities, 1_000)
+            samples = torch.gather(indices, 1, samples_idx).tolist()
 
         elif mode == 'expand':
 
             original_molecules = [molecule]
 
             # Unbiased sample of building_blocks
-            samples = torch.multinomial(
-                torch.ones([1, len(self.building_blocks)]),
-                100
-            ).tolist()
-            analogs = [self.building_blocks[i] for i in samples]
+            probabilities = torch.ones([1, len(self.building_blocks)])
+            samples = torch.multinomial(probabilities, 1_000).tolist()
 
-        return _mask_analogs(analogs)
+        return _mask_analogs(samples)
     
 
-    def get_analog_indices_and_scores(self, molecules):
+    def fingerprint_similarity(self, molecules):
         
         fingerprint_type = self.fingerprints.get_fingerprint_type()
         fingerprints = [
@@ -160,30 +154,24 @@ class LibraryDesigner:
             queries = queries,
             targets = self.fingerprints,
             progress=False,
-            k=100
+            k=1_000
         )
 
         indices = torch.tensor(list(results.iter_indices()))
         scores = torch.tensor(list(results.iter_scores()))
 
-        return indices, scores
+        get_size = lambda ids: [int(i.split(' ')[-1]) for i in ids]
+        sizes = torch.tensor([get_size(ids) for ids in results.iter_ids()])
+
+        return indices, scores, sizes
     
-    def size_similarity(self, analogs, references):
+    def size_similarity(self, sizes, molecules):
         """
         Using L1-norm of building blocks with original molecules
         """
-        def _absolute_sigmoid(n):
-            return 1 / (1 + abs(n))
-
-        similarity = []
-        for analogs_, reference in zip(analogs, references):
-            reference_size = reference.mol.GetNumAtoms()
-            similarity.append([
-                _absolute_sigmoid(a.GetNumAtoms() - reference_size)
-                for a in analogs_
-            ])
-        
-        return torch.tensor(similarity)
+        original_sizes = torch.tensor([m.mol.GetNumAtoms() for m in molecules])
+        l1_norm = sizes - original_sizes[:, None]
+        return 1 / (1 + abs(l1_norm))
     
     @staticmethod
     def random_combinations(lst, r, k=100):
