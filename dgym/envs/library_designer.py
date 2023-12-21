@@ -7,7 +7,7 @@ import chemfp.arena
 from rdkit import Chem
 from itertools import chain, product
 from rdkit.Chem import AllChem, DataStructs
-from typing import Union, Iterable, Optional
+from typing import Union, Iterable, Optional, Literal
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
@@ -37,7 +37,8 @@ class LibraryDesigner:
         self,
         molecule: Molecule,
         size: int,
-        temperature: float
+        mode: Literal['analog', 'expand'] = 'analog',
+        temperature: Optional[float] = 0.0
     ) -> Iterable:
         """
         Given a set of reagents, enumerate candidate molecules.
@@ -55,7 +56,11 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
-        reactants = self.generate_analogs(molecule.reactants, temperature)
+        reactants = self.generate_analogs(
+            molecule,
+            mode=mode,
+            temperature=temperature
+        )
 
         # Enumerate possible products given repertoire of reactions
         products = self.enumerate_products(reactants, size=size)
@@ -67,7 +72,12 @@ class LibraryDesigner:
         return MoleculeCollection(products)
 
 
-    def generate_analogs(self, original_molecules, temperature):
+    def generate_analogs(
+        self,
+        molecule: Molecule,
+        mode: Literal['analog', 'expand'] = 'analog',
+        temperature: Optional[float] = 0.0
+    ):
         """
         Returns a generator that samples analogs of the original molecules.
         """
@@ -80,17 +90,20 @@ class LibraryDesigner:
             count = 0
             while True:
                 
-                # Gather constant and variable masks
-                combo_indices = [i for i in range(len(samples[0]))]
-                combos = self.random_combinations(combo_indices, r=r)
-                constant_mask, variable_mask = next(combos)
+                if mode == 'analog':
+                    combo_indices = [i for i in range(len(samples[0]))]
+                    combos = self.random_combinations(combo_indices, r=r)
+                    constant_mask, variable_mask = next(combos)
+
+                elif mode == 'expand':
+                    constant_mask, variable_mask = [0], [1]
                 
                 # Get variable reactants
                 variable = samples[count, variable_mask].tolist()
                 variable_reactants = [self.building_blocks[v] for v in variable]
                 
                 # Get constant reactants
-                constant_reactants = [original_mols[c] for c in constant_mask]
+                constant_reactants = [original_molecules[c].mol for c in constant_mask]
                 
                 # Yield reactants
                 reactants = [*constant_reactants, *variable_reactants]
@@ -99,23 +112,40 @@ class LibraryDesigner:
                 # Increment
                 count += 1
 
-        if original_molecules:
+        match mode:
+            
+            case 'analog':
 
-            # Score analogs of each original reactant
-            original_mols = [o.mol for o in original_molecules]
-            analogs = self.get_analog_indices_and_scores(original_molecules)
-            indices = list(analogs.iter_indices())
-            scores = list(analogs.iter_scores())
+                original_molecules = molecule.reactants
 
-            # Convert scores to probabilities
-            probabilities = self.boltzmann(torch.tensor(scores), temperature)
+                # Score analogs of each original reactant
+                analogs = self.get_analog_indices_and_scores(original_molecules)
+                indices = list(analogs.iter_indices())
+                scores = list(analogs.iter_scores())
 
-            # Sample indices
-            samples_idx = torch.multinomial(probabilities, 500)
-            samples = torch.gather(torch.tensor(indices), 1, samples_idx).T
-        
-        else:
-            samples = torch.multinomial(torch.ones([2, len(self.building_blocks)]), 500).T
+                # Convert scores to probabilities
+                probabilities = self.boltzmann(torch.tensor(scores), temperature)
+
+                # Weighted sample of indices
+                samples_idx = torch.multinomial(probabilities, 500)
+                samples = torch.gather(
+                    torch.tensor(indices),
+                    1, samples_idx
+                ).T
+
+            case 'expand':
+
+                original_molecules = [molecule]
+
+                # Unbiased sample of indices
+                samples = torch.multinomial(
+                    torch.ones([2, len(self.building_blocks)]),
+                    500
+                ).T
+            
+            case _:
+                
+                raise Exception("`mode` must be one of 'retrosynthesize' or 'expand'.")
 
         return _generate_analogs(samples)
     

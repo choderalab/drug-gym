@@ -338,6 +338,11 @@ class MoleculeCollection(Collection):
         """Return the list of SMILE strings in the datset. """
         return [molecule.smiles for molecule in self.molecules]
 
+    @property
+    def mols(self):
+        """Return the list of RDMol in the datset. """
+        return [molecule.mol for molecule in self.molecules]
+
     @classmethod
     def load(
         cls,
