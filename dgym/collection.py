@@ -137,7 +137,7 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, str):
             return self.__class__([self.lookup[key]])
         elif isinstance(key, type(self._items[0])):
-            return self.lookup[key.name]
+            return self.lookup[key.id]
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
         elif isinstance(key, Iterable):

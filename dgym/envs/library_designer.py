@@ -56,7 +56,7 @@ class LibraryDesigner:
 
         """
         # Get analogs of the molecule reactants
-        reactants = self.generate_analogs(
+        reactants = self.generate_reactants(
             molecule,
             mode=mode,
             temperature=temperature
@@ -71,11 +71,11 @@ class LibraryDesigner:
         # Add inspiration
         for product in products:
             product.inspiration = molecule
-                
+        
         return MoleculeCollection(products)
 
 
-    def generate_analogs(
+    def generate_reactants(
         self,
         molecule: Molecule,
         mode: Literal['analog', 'expand'] = 'analog',
@@ -124,7 +124,7 @@ class LibraryDesigner:
             # Convert scores to probabilities
             probabilities = self.boltzmann(scores, temperature)
 
-            # Reorder analogs
+            # Weighted sample of building blocks
             samples_idx = torch.multinomial(probabilities, 200)
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
@@ -132,7 +132,7 @@ class LibraryDesigner:
 
             original_molecules = [molecule]
 
-            # Unbiased sample of building_blocks
+            # Unbiased sample of building blocks
             probabilities = torch.ones([1, len(self.building_blocks)])
             samples = torch.multinomial(probabilities, 200).tolist()
 
@@ -220,7 +220,7 @@ class LibraryDesigner:
             return self.reactions
         
         if molecule.reaction in self.reactions:
-            return self.reactions[molecule.reaction]
+            return [self.reactions[molecule.reaction]]
 
         # First, filter by reactions compatible with reactants
         match_reactants = [reaction for reaction in self.reactions
@@ -252,20 +252,19 @@ class LibraryDesigner:
                     if len(products) >= size:
                         return products
 
-                    # Verify reactants match
-                    if len(reactants_) == len(reaction.reactants):
+                    # Perform reaction
+                    if output := reaction.run(reactant_order):
+                        for product in output:
 
-                        # Perform reaction
-                        if output := reaction.run(reactant_order):
-                            for product in output:
-
-                                # Check if valid molecule
-                                if smiles := self.unique_sanitize(product):
-                                    products += [Molecule(
+                            # Check if valid molecule
+                            if smiles := self.unique_sanitize(product):
+                                products.append(
+                                    Molecule(
                                         smiles,
                                         reactants = reactant_order,
-                                        reaction = reaction.id
-                                    )]
+                                        reaction = reaction
+                                    )
+                                )
         return products
     
     def unique_sanitize(self, mol):
