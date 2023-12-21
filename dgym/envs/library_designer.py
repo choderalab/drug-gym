@@ -82,25 +82,23 @@ class LibraryDesigner:
         Returns a generator that samples analogs of the original molecules.
         """
         
-        def _generate_analogs(samples, r=0):
+        def _mask_analogs(analogs, r=1):
             """
             A generator that efficiently yields analogs.
 
             """
-            count = 0
-            while True:
+            while any(analogs):
                 
                 if mode == 'analog':
-                    combo_indices = [i for i in range(len(samples[0]))]
+                    combo_indices = [i for i in range(len(analogs))]
                     combos = self.random_combinations(combo_indices, r=r)
                     constant_mask, variable_mask = next(combos)
 
                 elif mode == 'expand':
-                    constant_mask, variable_mask = [0], [1]
-                
+                    constant_mask, variable_mask = [0], [0]
+
                 # Get variable reactants
-                variable = samples[count, variable_mask].tolist()
-                variable_reactants = [self.building_blocks[v] for v in variable]
+                variable_reactants = [analogs[i].pop(0) for i in variable_mask]
                 
                 # Get constant reactants
                 constant_reactants = [original_molecules[c].mol for c in constant_mask]
@@ -108,46 +106,40 @@ class LibraryDesigner:
                 # Yield reactants
                 reactants = [*constant_reactants, *variable_reactants]
                 yield reactants
-                
-                # Increment
-                count += 1
 
-        match mode:
-            
-            case 'analog':
+        if mode == 'analog':
 
-                original_molecules = molecule.reactants
+            original_molecules = molecule.reactants
 
-                # Score analogs of each original reactant
-                analogs = self.get_analog_indices_and_scores(original_molecules)
-                indices = list(analogs.iter_indices())
-                scores = list(analogs.iter_scores())
+            # Identify analogs of each original reactant
+            indices, scores = self.get_analog_indices_and_scores(original_molecules)
+            analogs = []
+            for indices_ in indices:
+                analogs.append([self.building_blocks[i] for i in indices_.tolist()])
 
-                # Convert scores to probabilities
-                probabilities = self.boltzmann(torch.tensor(scores), temperature)
+            # Add size similarity to score
+            scores += self.size_similarity(analogs, original_molecules)
 
-                # Weighted sample of indices
-                samples_idx = torch.multinomial(probabilities, 500)
-                samples = torch.gather(
-                    torch.tensor(indices),
-                    1, samples_idx
-                ).T
+            # Convert scores to probabilities
+            probabilities = self.boltzmann(scores, temperature)
 
-            case 'expand':
+            # Reorder analogs
+            samples = torch.multinomial(probabilities, 100).tolist()
+            for idx, (analogs_, samples_) in enumerate(zip(analogs, samples)):
+                analogs[idx] = [analogs_[index] for index in samples_]
 
-                original_molecules = [molecule]
+        elif mode == 'expand':
 
-                # Unbiased sample of indices
-                samples = torch.multinomial(
-                    torch.ones([2, len(self.building_blocks)]),
-                    500
-                ).T
-            
-            case _:
-                
-                raise Exception("`mode` must be one of 'retrosynthesize' or 'expand'.")
+            original_molecules = [molecule]
 
-        return _generate_analogs(samples)
+            # Unbiased sample of building_blocks
+            samples = torch.multinomial(
+                torch.ones([1, len(self.building_blocks)]),
+                100
+            ).tolist()
+            analogs = [self.building_blocks[i] for i in samples]
+
+        return _mask_analogs(analogs)
     
 
     def get_analog_indices_and_scores(self, molecules):
@@ -164,19 +156,41 @@ class LibraryDesigner:
             reorder=False
         )
         
-        return chemfp.simsearch(
+        results = chemfp.simsearch(
             queries = queries,
             targets = self.fingerprints,
             progress=False,
-            k=500
+            k=100
         )
 
+        indices = torch.tensor(list(results.iter_indices()))
+        scores = torch.tensor(list(results.iter_scores()))
+
+        return indices, scores
+    
+    def size_similarity(self, analogs, references):
+        """
+        Using L1-norm of building blocks with original molecules
+        """
+        def _absolute_sigmoid(n):
+            return 1 / (1 + abs(n))
+
+        similarity = []
+        for analogs_, reference in zip(analogs, references):
+            reference_size = reference.mol.GetNumAtoms()
+            similarity.append([
+                _absolute_sigmoid(a.GetNumAtoms() - reference_size)
+                for a in analogs_
+            ])
+        
+        return torch.tensor(similarity)
+    
     @staticmethod
-    def random_combinations(lst, r, k=500):
+    def random_combinations(lst, r, k=100):
         """
         Yields a random combination of r items in list.
         """
-        if r < 1:
+        if r == 0:
             yield [], lst
 
         all_combinations = list(itertools.combinations(lst, r))
@@ -227,13 +241,10 @@ class LibraryDesigner:
                         # Perform reaction
                         if output := reaction.run(reactant_order):
                             for product in output:
-                                
+
                                 # Check if valid molecule
                                 if smiles := self.unique_sanitize(product):
                                     products += [Molecule(smiles, reactants = reactant_order)]
-                        else:
-                            continue
-        
         return products
 
     def unique_sanitize(self, mol):
