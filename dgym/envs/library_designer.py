@@ -32,7 +32,8 @@ class AnalogGenerator:
         """
         Returns a generator that samples analogs of the original molecules.
         """
-        def _make_generator(sampler):
+        # @viewable
+        def _generator(sampler):
             for index in sampler:
                 yield Molecule(self.building_blocks[index])
 
@@ -65,7 +66,7 @@ class AnalogGenerator:
 
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
-        generators = [_make_generator(sampler) for sampler in samples]
+        generators = [_generator(sampler) for sampler in samples]
         return generators if return_list else generators[0]
 
     def fingerprint_similarity(self, molecules):
@@ -146,6 +147,60 @@ class LibraryDesigner:
 
     def reset_cache(self):
         self.cache = set()
+
+
+    def design(
+        self,
+        molecule: Molecule,
+        size: int,
+        mode: Literal['analog', 'expand'] = 'analog',
+        temperature: Optional[float] = 0.0
+    ) -> Iterable:
+        """
+        Run reactions based on the specified mode, returning a list of products.
+
+        Parameters:
+        - mode (str): The mode of operation ('analog' or 'expand').
+        - molecule (Molecule): The molecule to react.
+        - size (int): The desired number of products.
+        - library_designer (LibraryDesigner): An instance of a library designer.
+        - generator (Generator): A generator function for reactants.
+
+        Returns:
+        - list: A list of product molecules.
+        """
+
+        products = []
+
+        if mode == 'analog':
+            reactions = self.match_reactions(molecule)
+        elif mode == 'expand':
+            reactions = self.reactions
+
+        for reaction in reactions:
+
+            # Common reaction setup based on the mode
+            if mode == 'analog':
+                reactants = molecule.reactants
+            elif mode == 'expand':
+                reactants = [molecule, generator()]
+
+            with molecule.set_reactants(reactants):
+
+                # Reaction execution
+                if mode == 'analog':
+                    analogs = retrosynthesize(molecule, protect=False)
+                elif mode == 'expand':
+                    analogs = reaction.run(molecule.reactants, protect=False)
+
+                # Collecting products
+                for analog in analogs:
+                    if len(products) < size:
+                        products.append(analog)
+                    else:
+                        return products
+
+        return products
 
     def design(
         self,

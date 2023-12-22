@@ -4,7 +4,9 @@ import inspect
 import itertools
 from dgym.molecule import Molecule
 from collections import defaultdict
-from typing import Optional, List, Union, Any
+from collections.abc import Iterator
+from typing import Optional, List, Union, Any, Iterable
+from .utils import viewable
 from rdkit.Chem.rdChemReactions import ChemicalReaction
 
 class Reaction:
@@ -96,6 +98,56 @@ class Reaction:
 
         return False
 
+    @staticmethod    
+    def trace(reactants):
+        """
+        Trace every atom by its reactant of origin.
+        
+        """
+        def _trace_reactant(mol, idx):
+            for atom in mol.GetAtoms():
+                atom.SetIntProp('reactant_idx', idx)
+            return mol
+
+        for idx, reactant in enumerate(reactants):
+            reactant.mol = _trace_reactant(reactant.mol, idx)
+        
+        return reactants
+    
+    @staticmethod
+    def protect(product, reactants):
+
+        # Gather participating atoms
+        reacting_atoms = defaultdict(list)
+        passenger_atoms = defaultdict(list)
+        for atom in product.GetAtoms():
+            
+            # Handle directly reacting atoms
+            if atom.HasProp('old_mapno'):
+                
+                # RDKit uses 1-index
+                reactant_idx = atom.GetIntProp('old_mapno') - 1
+                reacting_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+            
+            # Gather passenger atoms
+            elif atom.HasProp('reactant_idx'):
+                reactant_idx = atom.GetIntProp('reactant_idx')
+                passenger_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+            
+        # Protect unnecessary atoms
+        for idx, reactant in enumerate(reactants):
+            for atom in reactant.mol.GetAtoms():
+                
+                atom_index = atom.GetIdx()
+                is_reacting = atom_index in reacting_atoms[idx]
+                is_passenger = atom_index in passenger_atoms[idx]
+                
+                # If atom is unnecessary for reaction
+                if not is_reacting and is_passenger:
+                    atom.SetProp('_protected', '1')
+
+        return reactants
+
 
 class LazyReaction(Reaction):
     
@@ -113,15 +165,16 @@ class LazyReaction(Reaction):
         """
         super().__init__(template, metadata, id)
     
+    # @viewable
     def run(self, reactants, protect=False, strict=False):
 
         # If any of the reagents are generators
-        if any(inspect.isgenerator(r) for r in reactants):
+        if any(isinstance(r, Iterator) for r in reactants):
             
             # Convert ordinary reagents to infinite generators
             sequences = [
                 itertools.repeat(x)
-                if not inspect.isgenerator(x) else x
+                if not isinstance(x, Iterator) else x
                 for x in reactants
             ]
 
@@ -134,8 +187,11 @@ class LazyReaction(Reaction):
 
     def run_single_step(self, reactants, protect=False, strict=False):
         
+        if len(reactants) != len(self.reactants):
+            return ()
+
         if protect:
-            reactants = trace_reactants(reactants)            
+            reactants = self.trace(reactants)            
         
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         
@@ -155,58 +211,9 @@ class LazyReaction(Reaction):
             if product := self.sanitize(product):
                 
                 if protect:
-                    reactants = protect_atoms(product, reactants)
+                    reactants = self.protect(product, reactants)
                 
                 yield Molecule(product, reaction = self, reactants = reactants)
         
             else:
                 continue
-
-# Utils
-def trace_reactants(reactants):
-    """
-    Tag every atom by its reactant of origin.
-    
-    """
-    def _trace_reactant(mol, idx):
-        for atom in mol.GetAtoms():
-            atom.SetIntProp('reactant_idx', idx)
-        return mol
-
-    for idx, reactant in enumerate(reactants):
-        reactant.mol = _trace_reactant(reactant.mol, idx)
-    
-    return reactants
-
-def protect_atoms(product, reactants):
-
-    # Gather participating atoms
-    reacting_atoms = defaultdict(list)
-    passenger_atoms = defaultdict(list)
-    for atom in product.GetAtoms():
-        
-        # Handle directly reacting atoms
-        if atom.HasProp('old_mapno'):
-            
-            # RDKit uses 1-index
-            reactant_idx = atom.GetIntProp('old_mapno') - 1
-            reacting_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
-        
-        # Gather passenger atoms
-        elif atom.HasProp('reactant_idx'):
-            reactant_idx = atom.GetIntProp('reactant_idx')
-            passenger_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
-        
-    # Protect unnecessary atoms
-    for idx, reactant in enumerate(reactants):
-        for atom in reactant.mol.GetAtoms():
-            
-            atom_index = atom.GetIdx()
-            is_reacting = atom_index in reacting_atoms[idx]
-            is_passenger = atom_index in passenger_atoms[idx]
-            
-            # If atom is unnecessary for reaction
-            if not is_reacting and is_passenger:
-                atom.SetProp('_protected', '1')
-
-    return reactants

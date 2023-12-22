@@ -133,3 +133,64 @@ def draw(hit, reaction, prods, rowsize=3):
     except:
         for p in prods:
             display(p)
+
+
+# Generators
+# -----------------------------------------------
+
+def viewable(generator):
+    return ViewableGenerator(generator)
+
+class ViewableGenerator:
+
+    def __init__(
+        self,
+        generator
+    ):
+        self.generator = generator
+
+    def view(self):
+        """
+        Returns a generator that yields elements from the internal list.
+
+        Yields
+        ------
+        element
+            The next element in the list.
+        """
+        self.generator, generator_view = itertools.tee(self.generator)
+        return generator_view
+    
+    @staticmethod
+    def __call__(*args, **kwargs):
+        return self.generator(*args, **kwargs)
+
+    def __iter__(self):
+        """
+        Returns a new iterator for the list each time.
+
+        Returns
+        -------
+        iterator
+        """
+        # Reset the iterator each time __iter__ is called
+        return iter(self.generator)
+
+    def __next__(self):
+        """
+        Returns the next item from the list.
+
+        Returns
+        -------
+        element
+            The next element in the list.
+
+        Raises
+        ------
+        StopIteration
+            If there are no more elements in the list.
+        """
+        return next(self.generator)
+
+    def __repr__(self):
+        return f'Viewable: {self.generator.__repr__()}'

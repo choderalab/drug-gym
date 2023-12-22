@@ -5,11 +5,8 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools
 from dgym.reaction import Reaction
 
-import os
-os.environ['CHEMFP_LICENSE'] = (
-    '20241121-columbia.edu@DAAAPLPPDDKGPECJIJJGFNBEPIIKHOOMFAOG'
-)
 import chemfp
+chemfp.set_license('20241121-columbia.edu@DAAAPLPPDDKGPECJIJJGFNBEPIIKHOOMFAOG')
 
 def fingerprints(path):
     return chemfp.load_fingerprints(path)

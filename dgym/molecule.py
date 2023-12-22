@@ -8,7 +8,9 @@ import dgl
 import rdkit
 import copy
 import torch
+import itertools
 from rdkit.Chem import Mol
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
 
@@ -191,6 +193,7 @@ class Molecule:
             Defaults to None.
         """
         original_reactants = self.reactants.copy()
+
         if index is not None:
             self.reactants[index] = new_reactant
         else:
