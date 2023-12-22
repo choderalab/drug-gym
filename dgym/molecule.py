@@ -9,6 +9,7 @@ import rdkit
 import copy
 import torch
 from rdkit.Chem import Mol
+from contextlib import contextmanager
 from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
 
 # =============================================================================
@@ -156,3 +157,48 @@ class Molecule:
             # sometimes throws AtomValenceException
             pass
         return self
+
+    @contextmanager
+    def set_reaction(self, new_reaction):
+        """
+        A context manager to temporarily set the reaction to a new state
+        and revert it back to the original state upon exit.
+
+        Parameters
+        ----------
+        new_reaction : Any
+            The new reaction state to be set temporarily.
+        """
+        original_reaction = self.reaction
+        self.reaction = new_reaction
+        try:
+            yield
+        finally:
+            self.reaction = original_reaction
+
+    @contextmanager
+    def set_reactant(self, new_reactant, index=None):
+        """
+        A context manager to temporarily set one or all reactants to a new state
+        and revert them back to the original state upon exit.
+
+        Parameters
+        ----------
+        new_reactant : Any
+            The new reactant(s) to be set temporarily.
+        index : int, optional
+            The index of the reactant to be replaced. If None, all reactants are replaced.
+            Defaults to None.
+        """
+        original_reactants = self.reactants.copy()
+        if index is not None:
+            self.reactants[index] = new_reactant
+        else:
+            if len(new_reactant) != len(self.reactants):
+                raise ValueError("Number of new reactants must match the original.")
+            self.reactants = new_reactant
+
+        try:
+            yield
+        finally:
+            self.reactants = original_reactants
