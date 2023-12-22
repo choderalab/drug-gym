@@ -13,6 +13,119 @@ from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
 import torch
 
+class AnalogGenerator:
+    
+    def __init__(
+        self,
+        building_blocks,
+        fingerprints: chemfp.arena.FingerprintArena
+    ) -> None:
+        
+        self.building_blocks = building_blocks
+        self.fingerprints = fingerprints
+    
+    def generate(
+        self,
+        molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
+        temperature: Optional[float] = 0.0
+    ):
+        """
+        Returns a generator that samples analogs of the original molecules.
+        """
+        def _make_generator(sampler):
+            for index in sampler:
+                yield Molecule(self.building_blocks[index])
+
+        if isinstance(molecules, Molecule):
+           molecules = [molecules]
+
+        if molecules:
+
+            # Identify analogs of each original molecule
+            indices, scores, sizes = self.fingerprint_similarity(molecules)
+
+            # Add size similarity to score
+            scores += self.size_similarity(molecules, sizes)
+
+            # Weighted sample of indices
+            if temperature == 0.0:
+                samples_idx = torch.argsort(scores, descending=True)
+            
+            else:
+                probabilities = self.boltzmann(scores, temperature)
+                samples_idx = torch.multinomial(probabilities, 200)
+
+            samples = torch.gather(indices, 1, samples_idx).tolist()
+
+        else:
+
+            # Unbiased sample of indices
+            probabilities = torch.ones([1, len(self.building_blocks)])
+            samples = torch.multinomial(probabilities, 200).tolist()
+
+        generators = [_make_generator(sampler) for sampler in samples]
+
+        return generators
+
+    def fingerprint_similarity(self, molecules):
+        
+        fingerprint_type = self.fingerprints.get_fingerprint_type()
+        fingerprints = [
+            (m.id, fingerprint_type.from_smi(m.smiles))
+            for m in molecules
+        ]
+        
+        queries = chemfp.load_fingerprints(
+            fingerprints,
+            metadata = fingerprint_type.get_metadata(),
+            reorder=False
+        )
+        
+        results = chemfp.simsearch(
+            queries = queries,
+            targets = self.fingerprints,
+            progress=False,
+            k=500
+        )
+
+        indices = torch.tensor(list(results.iter_indices()))
+        scores = torch.tensor(list(results.iter_scores()))
+
+        get_size = lambda ids: [int(i.split(' ')[-1]) for i in ids]
+        sizes = torch.tensor([get_size(ids) for ids in results.iter_ids()])
+
+        return indices, scores, sizes
+    
+    def size_similarity(self, molecules, sizes):
+        """
+        Using L1-norm of building blocks with original molecules
+        """
+        original_sizes = torch.tensor([m.mol.GetNumAtoms() for m in molecules])
+        l1_norm = sizes - original_sizes[:, None]
+        return 1 / (1 + abs(l1_norm))
+    
+    @staticmethod
+    def boltzmann(scores, temperature):
+        """
+        Applies the Boltzmann distribution to the given scores with a specified temperature.
+
+        Parameters
+        ----------
+        scores : torch.Tensor
+            The scores to which the Boltzmann distribution is applied.
+        temperature : float
+            The temperature parameter of the Boltzmann distribution.
+
+        Returns
+        -------
+        torch.Tensor
+            The probabilities resulting from the Boltzmann distribution.
+        """
+        temperature = max(temperature, 1e-2)  # Ensure temperature is not too low
+        scaled_scores = scores / temperature
+        probabilities = torch.softmax(scaled_scores, dim=-1)
+        return probabilities
+
 
 class LibraryDesigner:
 
@@ -73,135 +186,13 @@ class LibraryDesigner:
             product.inspiration = molecule
         
         return MoleculeCollection(products)
-
-
-    def generate_analogs(
-        self,
-        molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
-        temperature: Optional[float] = 0.0
-    ):
-        """
-        Returns a generator that samples analogs of the original molecules.
-        """
-        def _make_generator(sampler):
-            for index in sampler:
-                yield self.building_blocks[index]
-
-        if isinstance(molecules, Molecule):
-           molecules = [molecules]
-
-        if molecules:
-
-            # Identify analogs of each original reactant
-            indices, scores, sizes = self.fingerprint_similarity(molecules)
-
-            # Add size similarity to score
-            scores += self.size_similarity(molecules, sizes)
-
-            if temperature > 0.0:
-
-                # Convert scores to probabilities
-                probabilities = self.boltzmann(scores, temperature)
-
-                # Weighted sample of building blocks
-                samples_idx = torch.multinomial(probabilities, 200)
-            
-            else:
-                samples_idx = torch.argsort(scores, descending=True)
-
-            samples = torch.gather(indices, 1, samples_idx).tolist()
-
-        else:
-
-            # Unbiased sample of building blocks
-            probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 200).tolist()
-
-        generators = [_make_generator(sampler) for sampler in samples]
-
-        return generators
-
-    def fingerprint_similarity(self, molecules):
-        
-        fingerprint_type = self.fingerprints.get_fingerprint_type()
-        fingerprints = [
-            (m.id, fingerprint_type.from_smi(m.smiles))
-            for m in molecules
-        ]
-        
-        queries = chemfp.load_fingerprints(
-            fingerprints,
-            metadata = fingerprint_type.get_metadata(),
-            reorder=False
-        )
-        
-        results = chemfp.simsearch(
-            queries = queries,
-            targets = self.fingerprints,
-            progress=False,
-            k=500
-        )
-
-        indices = torch.tensor(list(results.iter_indices()))
-        scores = torch.tensor(list(results.iter_scores()))
-
-        get_size = lambda ids: [int(i.split(' ')[-1]) for i in ids]
-        sizes = torch.tensor([get_size(ids) for ids in results.iter_ids()])
-
-        return indices, scores, sizes
-    
-    def size_similarity(self, molecules, sizes):
-        """
-        Using L1-norm of building blocks with original molecules
-        """
-        original_sizes = torch.tensor([m.mol.GetNumAtoms() for m in molecules])
-        l1_norm = sizes - original_sizes[:, None]
-        return 1 / (1 + abs(l1_norm))
-    
-    @staticmethod
-    def random_combinations(lst, r, k=100):
-        """
-        Yields a random combination of r items in list.
-        """
-        if r == 0:
-            yield [], lst
-
-        all_combinations = list(itertools.combinations(lst, r))
-        selected_combinations = random.choices(all_combinations, k=k)
-        for combo in selected_combinations:
-            nonselected_items = tuple(item for item in lst if item not in combo)
-            yield combo, nonselected_items
-
-    @staticmethod
-    def boltzmann(scores, temperature):
-        """
-        Applies the Boltzmann distribution to the given scores with a specified temperature.
-
-        Parameters
-        ----------
-        scores : torch.Tensor
-            The scores to which the Boltzmann distribution is applied.
-        temperature : float
-            The temperature parameter of the Boltzmann distribution.
-
-        Returns
-        -------
-        torch.Tensor
-            The probabilities resulting from the Boltzmann distribution.
-        """
-        temperature = max(temperature, 1e-2)  # Ensure temperature is not too low
-        scaled_scores = scores / temperature
-        probabilities = torch.softmax(scaled_scores, dim=-1)
-        return probabilities
     
     def match_reactions(self, molecule):
         """
         Finds the most specific reactions for the given molecule
         """
         if molecule.reaction in self.reactions:
-            reaction = self.reactions[molecule.reaction]
-            reactants = molecule.reactants
-            return [(reaction, reactants)]
+            return [(molecule.reaction, molecule.reactants)]
 
         # First, filter by reactions compatible with reactants
         match_reactants_only = []

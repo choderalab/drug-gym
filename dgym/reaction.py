@@ -3,6 +3,7 @@ import random
 import inspect
 import itertools
 from dgym.molecule import Molecule
+from collections import defaultdict
 from typing import Optional, List, Union, Any
 from rdkit.Chem.rdChemReactions import ChemicalReaction
 
@@ -109,35 +110,94 @@ class LazyReaction(Reaction):
         """
         super().__init__(template, metadata, id)
     
-    def run(self, reagents):
+    def run(self, reactants, protect=False, strict=False):
 
         # If any of the reagents are generators
-        if any(inspect.isgenerator(r) for r in reagents):
+        if any(inspect.isgenerator(r) for r in reactants):
             
             # Convert ordinary reagents to infinite generators
             sequences = [
                 itertools.repeat(x)
                 if not inspect.isgenerator(x) else x
-                for x in reagents
+                for x in reactants
             ]
 
             # Run reactants lazily
             for combination in zip(*sequences):
-                yield from self.run_single_step(combination)
+                yield from self.run_single_step(combination, protect=protect)
         
         else:
-            yield from self.run_single_step(reagents)
+            yield from self.run_single_step(reactants, protect=protect)
+
+    def run_single_step(self, reactants, protect=False):
         
-    def run_single_step(self, reagents):
-        mols = [r.mol if isinstance(r, Molecule) else r for r in reagents]
+        if protect:
+            reactants = trace_reactants(reactants)
+        
+        mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         output = self.template.RunReactants(mols)
-        yield from self.parse_output(output, reagents)
+        yield from self.parse_output(output, reactants, protect=protect)
         
-    def parse_output(self, output, reactants):
+    def parse_output(self, output, reactants, protect=False):
+        
         output = self.flatten_and_randomize(output)
-        cache = set()
         for product in output:
+        
             if product := self.sanitize(product):
+                
+                if protect:
+                    reactants = protect_atoms(product, reactants)
+                
                 yield Molecule(product, reaction = self, reactants = reactants)
+        
             else:
                 continue
+
+# Utils
+def trace_reactants(reactants):
+    """
+    Tag every atom by its reactant of origin.
+    
+    """
+    def _trace_reactant(mol, idx):
+        for atom in mol.GetAtoms():
+            atom.SetIntProp('reactant_idx', idx)
+        return mol
+
+    for idx, reactant in enumerate(reactants):
+        reactant.mol = _trace_reactant(reactant.mol, idx)
+    
+    return reactants
+
+def protect_atoms(product, reactants):
+
+    # Gather participating atoms
+    reacting_atoms = defaultdict(list)
+    passenger_atoms = defaultdict(list)
+    for atom in product.GetAtoms():
+        
+        # Handle directly reacting atoms
+        if atom.HasProp('old_mapno'):
+            
+            # RDKit uses 1-index
+            reactant_idx = atom.GetIntProp('old_mapno') - 1
+            reacting_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+        
+        # Gather passenger atoms
+        elif atom.HasProp('reactant_idx'):
+            reactant_idx = atom.GetIntProp('reactant_idx')
+            passenger_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+        
+    # Protect unnecessary atoms
+    for idx, reactant in enumerate(reactants):
+        for atom in reactant.mol.GetAtoms():
+            
+            atom_index = atom.GetIdx()
+            is_reacting = atom_index in reacting_atoms[idx]
+            is_passenger = atom_index in passenger_atoms[idx]
+            
+            # If atom is unnecessary for reaction
+            if not is_reacting and is_passenger:
+                atom.SetProp('_protected', '1')
+
+    return reactants

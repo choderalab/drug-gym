@@ -50,7 +50,7 @@ class Molecule:
         id_attr: Optional[str] = 'smiles',
         reaction: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
-        annotations: Optional[dict] = None,
+        annotations: Optional[dict] = {},
     ) -> None:
         
         if isinstance(mol, str):
@@ -66,15 +66,13 @@ class Molecule:
         self.reaction = reaction
         self.inspiration = inspiration
         self._id_attr = id_attr
-        self.smiles = rdkit.Chem.CanonSmiles(
-            rdkit.Chem.MolToSmiles(self.mol)
-        )
-        
-        if annotations is None:
-            annotations = {}
         self.annotations = annotations
-        self.update_annotations()
 
+    @property
+    def smiles(self):
+        if not hasattr(self, '_smiles'):
+            self._smiles = rdkit.Chem.MolToSmiles(self.mol)
+        return self._smiles
 
     @property
     def id(self):
