@@ -142,7 +142,8 @@ class LazyReaction(Reaction):
         if strict:
             output = self.template.RunReactants(mols)
         else:
-            output = (self.template.RunReactants(ms) for ms in itertools.permutations(mols))
+            output = (self.template.RunReactants(mols_)
+                      for mols_ in itertools.permutations(mols))
         
         yield from self.parse_output(output, reactants, protect=protect)
         

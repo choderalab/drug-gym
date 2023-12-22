@@ -36,10 +36,18 @@ class AnalogGenerator:
             for index in sampler:
                 yield Molecule(self.building_blocks[index])
 
-        if isinstance(molecules, Molecule):
-           molecules = [molecules]
+        return_list = isinstance(molecules, list)
+        
+        if molecules is None:
 
-        if molecules:
+            # Unbiased sample of indices
+            probabilities = torch.ones([1, len(self.building_blocks)])
+            samples = torch.multinomial(probabilities, 200).tolist()
+        
+        else:
+            
+            if isinstance(molecules, Molecule):
+                molecules = [molecules]
 
             # Identify analogs of each original molecule
             indices, scores, sizes = self.fingerprint_similarity(molecules)
@@ -57,15 +65,8 @@ class AnalogGenerator:
 
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
-        else:
-
-            # Unbiased sample of indices
-            probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 200).tolist()
-
         generators = [_make_generator(sampler) for sampler in samples]
-
-        return generators
+        return generators if return_list else generators[0]
 
     def fingerprint_similarity(self, molecules):
         
