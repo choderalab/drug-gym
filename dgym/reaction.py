@@ -44,16 +44,19 @@ class Reaction:
     @staticmethod
     def flatten_and_randomize(nested_tuples, randomize=True):
         
-        flattened_items = []
-        for item in nested_tuples:
-            if isinstance(item, tuple):
-                flattened_items.extend(item)
-            else:
-                flattened_items.append(item)
+        def _flatten(items):
+            """Helper function to recursively flatten nested items."""
+            for x in items:
+                if isinstance(x, tuple):
+                    yield from _flatten(x)
+                else:
+                    yield x
+
+        flattened_items = list(_flatten(nested_tuples))
 
         if randomize:
             random.shuffle(flattened_items)
-    
+
         for item in flattened_items:
             yield item
         
@@ -75,23 +78,23 @@ class Reaction:
             reactants = product.reactants
 
         if not product and not reactants:
-            return []
+            return False
 
         # If the length of reactants matches
         if len(reactants) != len(self.reactants):
-            return []
+            return False
         
         # If the identity of products match
         for reactant_order in itertools.permutations(reactants):
             if output := self.run(reactant_order):
                 if any(
                     product.smiles == o.smiles
-                    if product else list(reactant_order)
+                    if product else True
                     for o in output
                 ):
-                    return list(reactant_order)
+                    return True
 
-        return []
+        return False
 
 
 class LazyReaction(Reaction):
@@ -124,18 +127,23 @@ class LazyReaction(Reaction):
 
             # Run reactants lazily
             for combination in zip(*sequences):
-                yield from self.run_single_step(combination, protect=protect)
+                yield from self.run_single_step(combination, protect=protect, strict=strict)
         
         else:
-            yield from self.run_single_step(reactants, protect=protect)
+            yield from self.run_single_step(reactants, protect=protect, strict=strict)
 
-    def run_single_step(self, reactants, protect=False):
+    def run_single_step(self, reactants, protect=False, strict=False):
         
         if protect:
-            reactants = trace_reactants(reactants)
+            reactants = trace_reactants(reactants)            
         
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
-        output = self.template.RunReactants(mols)
+        
+        if strict:
+            output = self.template.RunReactants(mols)
+        else:
+            output = (self.template.RunReactants(ms) for ms in itertools.permutations(mols))
+        
         yield from self.parse_output(output, reactants, protect=protect)
         
     def parse_output(self, output, reactants, protect=False):

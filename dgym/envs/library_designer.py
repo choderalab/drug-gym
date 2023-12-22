@@ -11,7 +11,7 @@ from typing import Union, Iterable, Optional, Literal
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
-import torch
+import torch        
 
 class AnalogGenerator:
     
@@ -24,7 +24,7 @@ class AnalogGenerator:
         self.building_blocks = building_blocks
         self.fingerprints = fingerprints
     
-    def generate(
+    def __call__(
         self,
         molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
         temperature: Optional[float] = 0.0
@@ -192,21 +192,23 @@ class LibraryDesigner:
         Finds the most specific reactions for the given molecule
         """
         if molecule.reaction in self.reactions:
-            return [(molecule.reaction, molecule.reactants)]
+            return [molecule.reaction]
 
         # First, filter by reactions compatible with reactants
-        match_reactants_only = []
-        for reaction in self.reactions:
-            if reactants := reaction.is_compatible(reactants = molecule.reactants):
-                match_reactants_only += [(reaction, reactants)]
+        match_reactants = [
+            reaction
+            for reaction in self.reactions
+            if reaction.is_compatible(reactants = molecule.reactants)
+        ]
 
         # Next, filter those reactions by compatibility with product
-        match = []
-        for reaction, _ in match_reactants_only:
-            if reactants := reaction.is_compatible(product = molecule):
-                match += [(reaction, reactants)]
+        match = [
+            reaction
+            for reaction in match_reactants
+            if reaction.is_compatible(product = molecule)
+        ]
         
-        return match if match else (match_reactants_only if match_reactants_only else [])
+        return match if match else (match_reactants if match_reactants else [])
 
     def enumerate_products(self, reactants, reactions, size):
 
