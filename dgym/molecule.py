@@ -177,7 +177,7 @@ class Molecule:
             self.reaction = original_reaction
 
     @contextmanager
-    def set_reactant(self, new_reactant, index=None):
+    def set_reactants(self, new_reactant, index=None):
         """
         A context manager to temporarily set one or all reactants to a new state
         and revert them back to the original state upon exit.
