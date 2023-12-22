@@ -434,7 +434,7 @@ class MoleculeCollection(Collection):
 class ReactionCollection(Collection):
     
     def __init__(self, reactions: Optional[List] = []) -> None:
-        assert all(isinstance(reaction, Reaction) for reaction in reactions)
+        # assert all(isinstance(reaction, Reaction) for reaction in reactions)
         super().__init__(reactions)
 
     @classmethod

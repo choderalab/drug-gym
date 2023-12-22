@@ -77,7 +77,7 @@ class LibraryDesigner:
 
     def generate_analogs(
         self,
-        molecule: Optional[Molecule] = None,
+        molecules: Optional[Iterable[Molecule]] = None,
         temperature: Optional[float] = 0.0
     ):
         """
@@ -87,15 +87,13 @@ class LibraryDesigner:
             for index in sampler:
                 yield self.building_blocks[index]
 
-        if molecule:
-
-            original_molecules = molecule.reactants
+        if molecules:
 
             # Identify analogs of each original reactant
-            indices, scores, sizes = self.fingerprint_similarity(original_molecules)
+            indices, scores, sizes = self.fingerprint_similarity(molecules)
 
             # Add size similarity to score
-            scores += self.size_similarity(original_molecules, sizes)
+            scores += self.size_similarity(molecules, sizes)
 
             # Convert scores to probabilities
             probabilities = self.boltzmann(scores, temperature)
