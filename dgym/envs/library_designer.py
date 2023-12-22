@@ -75,43 +75,19 @@ class LibraryDesigner:
         return MoleculeCollection(products)
 
 
-    def generate_reactants(
+    def generate_analogs(
         self,
-        molecule: Molecule,
-        mode: Literal['analog', 'expand'] = 'analog',
+        molecule: Optional[Molecule] = None,
         temperature: Optional[float] = 0.0
     ):
         """
         Returns a generator that samples analogs of the original molecules.
         """
-        
-        def _mask_analogs(samples, r=1):
-            """
-            A generator that efficiently yields analogs.
+        def _make_generator(sampler):
+            for index in sampler:
+                yield self.building_blocks[index]
 
-            """
-            while any(samples):
-                
-                if mode == 'analog':
-                    combo_indices = [i for i in range(len(samples))]
-                    combos = self.random_combinations(combo_indices, r=r)
-                    constant_mask, variable_mask = next(combos)
-
-                elif mode == 'expand':
-                    constant_mask, variable_mask = [0], [0]
-
-                # Get variable reactants
-                variable = [samples[i].pop(0) for i in variable_mask]
-                variable_reactants = [self.building_blocks[v] for v in variable]
-
-                # Get constant reactants
-                constant_reactants = [original_molecules[c] for c in constant_mask]
-                
-                # Yield reactants
-                reactants = [*constant_reactants, *variable_reactants]
-                yield reactants
-
-        if mode == 'analog':
+        if molecule:
 
             original_molecules = molecule.reactants
 
@@ -128,16 +104,15 @@ class LibraryDesigner:
             samples_idx = torch.multinomial(probabilities, 200)
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
-        elif mode == 'expand':
-
-            original_molecules = [molecule]
+        else:
 
             # Unbiased sample of building blocks
             probabilities = torch.ones([1, len(self.building_blocks)])
             samples = torch.multinomial(probabilities, 200).tolist()
 
-        return _mask_analogs(samples)
-    
+        generators = [_make_generator(sampler) for sampler in samples]
+
+        return generators
 
     def fingerprint_similarity(self, molecules):
         
@@ -252,19 +227,21 @@ class LibraryDesigner:
                     if len(products) >= size:
                         return products
 
-                    # Perform reaction
-                    if output := reaction.run(reactant_order):
-                        for product in output:
+                    if len(reactants_) == len(reaction.reactants):
 
-                            # Check if valid molecule
-                            if smiles := self.unique_sanitize(product):
-                                products.append(
-                                    Molecule(
-                                        smiles,
-                                        reactants = reactant_order,
-                                        reaction = reaction
+                        # Perform reaction
+                        if output := reaction.run(reactant_order):
+                            for product in output:
+
+                                # Check if valid molecule
+                                if smiles := self.unique_sanitize(product):
+                                    products.append(
+                                        Molecule(
+                                            smiles,
+                                            reactants = reactant_order,
+                                            reaction = reaction
+                                        )
                                     )
-                                )
         return products
     
     def unique_sanitize(self, mol):
