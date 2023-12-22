@@ -30,7 +30,7 @@ class Reaction:
         self.reactants = list(template.GetReactants())
         self.metadata = metadata
     
-    def run(self, reagents) -> List[Molecule]:
+    def run(self, reagents):
         raise NotImplementedError
 
     def annotate_reactants(self, classes):
@@ -73,26 +73,24 @@ class Reaction:
         if reactants is None:
             reactants = product.reactants
 
-        # If neither product nor reactant are provided
         if not product and not reactants:
-            return False
+            return []
 
         # If the length of reactants matches
         if len(reactants) != len(self.reactants):
-            return False
+            return []
         
         # If the identity of products match
         for reactant_order in itertools.permutations(reactants):
             if output := self.run(reactant_order):
-                if not product:
-                    return True
-                elif product:
-                    return any(
-                        product.smiles == o.smiles
-                        for o in output
-                    )
+                if any(
+                    product.smiles == o.smiles
+                    if product else list(reactant_order)
+                    for o in output
+                ):
+                    return list(reactant_order)
 
-        return False
+        return []
 
 
 class LazyReaction(Reaction):
@@ -111,8 +109,8 @@ class LazyReaction(Reaction):
         """
         super().__init__(template, metadata, id)
     
-    def run(self, reagents, sanitize=True):
-        
+    def run(self, reagents):
+
         # If any of the reagents are generators
         if any(inspect.isgenerator(r) for r in reagents):
             

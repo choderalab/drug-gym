@@ -77,7 +77,7 @@ class LibraryDesigner:
 
     def generate_analogs(
         self,
-        molecules: Optional[Iterable[Molecule]] = None,
+        molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
         temperature: Optional[float] = 0.0
     ):
         """
@@ -87,6 +87,9 @@ class LibraryDesigner:
             for index in sampler:
                 yield self.building_blocks[index]
 
+        if isinstance(molecules, Molecule):
+           molecules = [molecules]
+
         if molecules:
 
             # Identify analogs of each original reactant
@@ -95,11 +98,17 @@ class LibraryDesigner:
             # Add size similarity to score
             scores += self.size_similarity(molecules, sizes)
 
-            # Convert scores to probabilities
-            probabilities = self.boltzmann(scores, temperature)
+            if temperature > 0.0:
 
-            # Weighted sample of building blocks
-            samples_idx = torch.multinomial(probabilities, 200)
+                # Convert scores to probabilities
+                probabilities = self.boltzmann(scores, temperature)
+
+                # Weighted sample of building blocks
+                samples_idx = torch.multinomial(probabilities, 200)
+            
+            else:
+                samples_idx = torch.argsort(scores, descending=True)
+
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
         else:
@@ -185,32 +194,28 @@ class LibraryDesigner:
         probabilities = torch.softmax(scaled_scores, dim=-1)
         return probabilities
     
-    def specify_reactions(self, molecule, mode):
+    def match_reactions(self, molecule):
         """
         Finds the most specific reactions for the given molecule
         """
-        if mode == 'expand':
-            return self.reactions
-        
         if molecule.reaction in self.reactions:
-            return [self.reactions[molecule.reaction]]
+            reaction = self.reactions[molecule.reaction]
+            reactants = molecule.reactants
+            return [(reaction, reactants)]
 
         # First, filter by reactions compatible with reactants
-        match_reactants = [reaction for reaction in self.reactions
-                           if reaction.is_compatible(reactants = molecule.reactants)]
+        match_reactants_only = []
+        for reaction in self.reactions:
+            if reactants := reaction.is_compatible(reactants = molecule.reactants):
+                match_reactants_only += [(reaction, reactants)]
 
         # Next, filter those reactions by compatibility with product
-        if match_reactants_and_products := [reaction for reaction in match_reactants
-                                            if reaction.is_compatible(molecule)]:
-            reactions = dg.collection.ReactionCollection(match_reactants_and_products)
-
-        elif match_reactants:
-            reactions = dg.collection.ReactionCollection(match_reactants)
-
-        else:
-            reactions = self.reactions
+        match = []
+        for reaction, _ in match_reactants_only:
+            if reactants := reaction.is_compatible(product = molecule):
+                match += [(reaction, reactants)]
         
-        return reactions
+        return match if match else (match_reactants_only if match_reactants_only else [])
 
     def enumerate_products(self, reactants, reactions, size):
 
