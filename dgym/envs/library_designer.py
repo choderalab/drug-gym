@@ -150,6 +150,7 @@ class LibraryDesigner:
         size: int,
         mode: Literal['analog', 'expand'] = 'analog',
         temperature: Optional[float] = 0.0,
+        config: dict = {},
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
