@@ -6,6 +6,7 @@ from rdkit import Chem
 from collections import defaultdict
 from functools import wraps
 from inspect import ismethod
+from typing import Iterable
 
 __all__ = [
     'sort_fingerprints',
@@ -134,9 +135,36 @@ def draw(hit, reaction, prods, rowsize=3):
             display(p)
 
 
+# General utility
+# -----------------------------------------------
+def apply_recursive(iterable, function):
+    """
+    Apply a function to elements in a nested object structure if they are of a specific type.
+
+    Parameters
+    ----------
+    obj : any
+        The object to be traversed and modified.
+    func : function
+        The function to apply to elements of the target type.
+    target_type : type
+        The type of elements to which the function should be applied.
+
+    Returns
+    -------
+    any
+        The modified object with the function applied to elements of the target type.
+    """
+    try:
+        return function(iterable)
+    except:
+        if isinstance(iterable, Iterable):
+            return [apply_recursive(item, function) for item in iterable]
+
+    return iterable
+
 # Generators
 # -----------------------------------------------
-
 def viewable(func):
     
     @wraps(func)
@@ -187,10 +215,6 @@ class ViewableGenerator:
         self.generator, generator_view = itertools.tee(self.generator)
         return generator_view
     
-    # @staticmethod
-    # def __call__(*args, **kwargs):
-    #     return self.generator(*args, **kwargs)
-
     def __iter__(self):
         """
         Returns the iterator for the generator.

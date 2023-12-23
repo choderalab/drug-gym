@@ -1,3 +1,4 @@
+import dgym as dg
 import rdkit
 import random
 import inspect
@@ -169,12 +170,12 @@ class LazyReaction(Reaction):
     def run(self, reactants, protect=False, strict=False):
 
         # If any of the reagents are generators
-        if any(isinstance(r, Iterator) for r in reactants):
+        if any(isinstance(r, Iterable) for r in reactants):
             
             # Convert ordinary reagents to infinite generators
             sequences = [
                 itertools.repeat(x)
-                if not isinstance(x, Iterator) else x
+                if not isinstance(x, Iterable) else x
                 for x in reactants
             ]
 
@@ -193,6 +194,7 @@ class LazyReaction(Reaction):
         if protect:
             reactants = self.trace(reactants)
         
+        # Convert to RDKit mols to run reaction
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         
         if strict:

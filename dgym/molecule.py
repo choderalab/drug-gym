@@ -13,7 +13,8 @@ from rdkit.Chem import Mol
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
-from .utils import ViewableGenerator
+import dgym as dg
+from dgym.utils import ViewableGenerator
 
 # =============================================================================
 # MODULE CLASSES
@@ -193,22 +194,11 @@ class Molecule:
             The index of the reactant to be replaced. If None, all reactants are replaced.
             Defaults to None.
         """
-        def _process_generators(obj):
-            if isinstance(obj, ViewableGenerator):
-                obj = obj.view()
-            elif isinstance(obj, list):
-                obj = [
-                    o.view() if isinstance(o, ViewableGenerator)
-                    else _process_generators(o)
-                    for o in obj
-                ]
-            return obj
-
         # Backup original reactants
         original_reactants = self.reactants.copy()
 
         # Make view of all generators
-        new_reactant = _process_generators(new_reactant)
+        new_reactant = dg.utils.apply_recursive(new_reactant, lambda x: x.view())
 
         # Replace reactants
         if index is not None:
