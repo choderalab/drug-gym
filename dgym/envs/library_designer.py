@@ -12,6 +12,7 @@ from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
 import torch        
+from ..utils import viewable
 
 class AnalogGenerator:
     
@@ -32,7 +33,7 @@ class AnalogGenerator:
         """
         Returns a generator that samples analogs of the original molecules.
         """
-        # @viewable
+        @viewable
         def _generator(sampler):
             for index in sampler:
                 yield Molecule(self.building_blocks[index])

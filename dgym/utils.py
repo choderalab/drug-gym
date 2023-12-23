@@ -4,6 +4,8 @@ import itertools
 import pandas as pd
 from rdkit import Chem
 from collections import defaultdict
+from functools import wraps
+from inspect import ismethod
 
 __all__ = [
     'sort_fingerprints',
@@ -12,11 +14,8 @@ __all__ = [
     'match_reactions'
 ]
 
-import os
-os.environ['CHEMFP_LICENSE'] = (
-    '20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF'
-)
 import chemfp
+chemfp.set_license('20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF')
 
 
 # Sort fingerprints according to building blocks.
@@ -138,16 +137,43 @@ def draw(hit, reaction, prods, rowsize=3):
 # Generators
 # -----------------------------------------------
 
-def viewable(generator):
-    return ViewableGenerator(generator)
+def viewable(func):
+    
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if ismethod(func):
+            # If the function is a bound method, pass 'self' separately
+            return ViewableGenerator(args[0], func, *args[1:], **kwargs)
+        else:
+            # If the function is a standalone function or staticmethod
+            return ViewableGenerator(None, func, *args, **kwargs)
+    return wrapper
 
 class ViewableGenerator:
 
-    def __init__(
-        self,
-        generator
-    ):
-        self.generator = generator
+    def __init__(self, instance, func, *args, **kwargs):
+        """
+        Initializes the GeneratorWrapper with an optional class instance, function/method, and arguments.
+
+        Parameters
+        ----------
+        instance : object or None
+            The instance of the class where the original method is defined, or None for standalone functions.
+        func : callable
+            The original generator-producing function, method, or staticmethod.
+        args : tuple
+            Arguments to pass to the function or method.
+        kwargs : dict
+            Keyword arguments to pass to the function or method.
+        """
+        self.instance = instance
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        if self.instance is not None:
+            self.generator = self.func(self.instance, *self.args, **self.kwargs)
+        else:
+            self.generator = self.func(*self.args, **self.kwargs)
 
     def view(self):
         """
@@ -161,34 +187,19 @@ class ViewableGenerator:
         self.generator, generator_view = itertools.tee(self.generator)
         return generator_view
     
-    @staticmethod
-    def __call__(*args, **kwargs):
-        return self.generator(*args, **kwargs)
+    # @staticmethod
+    # def __call__(*args, **kwargs):
+    #     return self.generator(*args, **kwargs)
 
     def __iter__(self):
         """
-        Returns a new iterator for the list each time.
-
-        Returns
-        -------
-        iterator
+        Returns the iterator for the generator.
         """
-        # Reset the iterator each time __iter__ is called
-        return iter(self.generator)
+        return self.generator
 
     def __next__(self):
         """
-        Returns the next item from the list.
-
-        Returns
-        -------
-        element
-            The next element in the list.
-
-        Raises
-        ------
-        StopIteration
-            If there are no more elements in the list.
+        Returns the next item from the generator.
         """
         return next(self.generator)
 

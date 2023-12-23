@@ -165,7 +165,7 @@ class LazyReaction(Reaction):
         """
         super().__init__(template, metadata, id)
     
-    # @viewable
+    @viewable
     def run(self, reactants, protect=False, strict=False):
 
         # If any of the reagents are generators
@@ -191,7 +191,7 @@ class LazyReaction(Reaction):
             return ()
 
         if protect:
-            reactants = self.trace(reactants)            
+            reactants = self.trace(reactants)
         
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         
