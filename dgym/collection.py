@@ -195,8 +195,8 @@ class Collection(torch.utils.data.Dataset):
         >>> len(collection)
         2
         """
-        if isinstance(other, list):
-            return self.__class__(self._items + other)
+        if isinstance(other, Iterable):
+            return self.__class__(self._items + list(other))
         elif isinstance(other, Collection):
             return self.__class__(self._items + other._items)
         else:
@@ -323,14 +323,15 @@ class MoleculeCollection(Collection):
             molecule.erase_annotations()
         return self
 
-    def update_annotations(self, other_annotations):
+    def update_annotations(self, other_annotations=None):
         """Update the metadata. """
-        if isinstance(other_annotations, list):
-            for idx, molecule in enumerate(self.molecules):
-                molecule.update_annotations(other_annotations[idx])
-        elif isinstance(other_annotations, dict):
-            for idx, molecule in enumerate(self.molecules):
-                molecule.update_annotations(other_annotations)
+        for idx, _ in enumerate(self.molecules):
+            if isinstance(other_annotations, list):
+                self.molecules[idx].update_annotations(other_annotations[idx])
+            elif isinstance(other_annotations, dict):
+                self.molecules[idx].update_annotations(other_annotations)
+            else:
+                self.molecules[idx].update_annotations()
         return self
 
     @property

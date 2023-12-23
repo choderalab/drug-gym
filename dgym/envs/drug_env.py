@@ -55,7 +55,6 @@ class DrugEnv(gym.Env):
         super().__init__()
         
         self.library_designer = library_designer
-        self.library_designer.reset_cache()
 
         self.budget = budget
 
@@ -86,8 +85,6 @@ class DrugEnv(gym.Env):
             library = MoleculeCollection()
         
         self._library_0 = library.clone()
-        self._library_0.update_annotations({'design': 0})
-        
         self.library = self._library_0.clone()
         self.reward_history = []
 
@@ -163,7 +160,6 @@ class DrugEnv(gym.Env):
         Returns the library of molecules.
         """
         batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
-        self.design_cycle += 1
         
         # subset valid molecules
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
@@ -174,12 +170,10 @@ class DrugEnv(gym.Env):
         for molecule in molecules:
             new_molecules += self.library_designer.design(
                 molecule,
-                batch_sizes[num_analogs],
-                temperature
+                size=batch_sizes[num_analogs],
+                mode='analog',
+                temperature=temperature
             )
-
-        # update library annotations with design cycle
-        new_molecules.update_annotations({'design': self.design_cycle})
 
         return new_molecules
 
@@ -198,7 +192,6 @@ class DrugEnv(gym.Env):
 
     def get_observation(self):
         return self.library
-        # return OrderedDict({'design': self.library, 'order': self.})
 
     def get_reward(self):
         utility = self.utility_function(self.library)

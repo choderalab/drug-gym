@@ -134,13 +134,14 @@ class Molecule:
 
     def erase_annotations(self) -> Any:
         """Erase the metadata. """
-        self.metadata = None
+        self.annotations = {}
         return self
 
     def update_annotations(self, other_annotations: Optional[dict] = None) -> Any:
         """Update annotations. """
 
         self.annotations.update(self.mol.GetPropsAsDict())
+        self.annotations.update({'design_cycle': self.design_cycle})
 
         if 'smiles' not in self.annotations:
             self.annotations.update({'smiles': self.smiles})
@@ -161,7 +162,24 @@ class Molecule:
             # sometimes throws AtomValenceException
             pass
         return self
+    
+    @property
+    def design_cycle(self):
+        """
+        Count the design cycle for this Molecule instance.
 
+        The design cycle is determined by recursively counting the number of inspirations leading up to this molecule.
+
+        Returns
+        -------
+        int
+            The count of the design cycle.
+        """
+        if not self.inspiration:
+            return 0
+        else:
+            return 1 + self.inspiration.design_cycle
+    
     @contextmanager
     def set_reaction(self, new_reaction):
         """

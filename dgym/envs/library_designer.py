@@ -190,6 +190,7 @@ class LibraryDesigner:
 
                     # Run reaction
                     for analog in analogs:
+                        analog.inspiration = molecule
                         if len(products) < size:
                             products.add(analog)
                         else:
