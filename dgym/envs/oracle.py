@@ -41,10 +41,7 @@ class Oracle:
 
         # identify uncached molecules
         not_in_cache = lambda m: m.smiles not in self.cache
-        if uncached_molecules := filter(not_in_cache, molecules):
-
-            # # remove duplicates
-            # uncached_molecules = set(uncached_molecules)
+        if uncached_molecules := set(filter(not_in_cache, molecules)):
 
             # make predictions
             smiles, scores = self.predict(uncached_molecules, **kwargs)
@@ -94,8 +91,9 @@ class DGLOracle(Oracle):
         
         # perform inference
         scores = self.model(graph_batch, feats_batch).flatten().tolist()
-        
-        return molecules.smiles, scores
+        smiles = [m.smiles for m in molecules]
+
+        return smiles, scores
 
 
 class RDKitOracle(Oracle):
@@ -112,7 +110,8 @@ class RDKitOracle(Oracle):
 
     def predict(self, molecules: MoleculeCollection):
         scores = [self.descriptor(m.mol) for m in molecules]
-        return molecules.smiles, scores
+        smiles = [m.smiles for m in molecules]
+        return smiles, scores
 
 
 class DockingOracle(Oracle):
@@ -359,8 +358,9 @@ class NeuralOracle(Oracle):
 
         # clip to limit of detection
         scores = torch.clamp(preds, 4.0, None).ravel().tolist()
+        smiles = [m.smiles for m in molecules]
 
-        return molecules.smiles, scores
+        return smiles, scores
 
     def model_factory(self, config=None):
         """

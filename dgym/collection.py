@@ -369,6 +369,8 @@ class MoleculeCollection(Collection):
                 for r in reactant_names
                 if r in record.GetPropNames()
             ]
+            if not reactants:
+                reactants = [Molecule(record)]
             m = Molecule(record, reactants)
             return m
         
