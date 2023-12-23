@@ -7,7 +7,7 @@ import numpy as np
 
 def plot(deck, utility_function, plot_cycle=True):
 
-    design_cycle = deck.annotations['design'] if plot_cycle else None
+    design_cycle = [d.design_cycle for d in deck] if plot_cycle else None
 
     oracles = utility_function.oracles
 
