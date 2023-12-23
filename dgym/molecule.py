@@ -63,7 +63,7 @@ class Molecule:
 
         reactants = list(reactants)
         for idx, reactant in enumerate(reactants):
-            if isinstance(reactant, Mol):
+            if isinstance(reactant, (Mol, str)):
                 reactants[idx] = Molecule(reactant)
 
         self.mol = mol

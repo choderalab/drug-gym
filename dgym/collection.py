@@ -8,7 +8,7 @@ import torch
 import pandas as pd
 from rdkit import Chem
 from dgym.molecule import Molecule
-from dgym.reaction import Reaction
+from dgym.reaction import LazyReaction
 from typing import Union, Iterable, Optional, List, Any, Callable
 
 # =============================================================================
@@ -456,7 +456,7 @@ class ReactionCollection(Collection):
 
         def _make_reaction(row):
             smirks = row[smarts_col]
-            r = Reaction(smirks, id=row['reaction_name'])
+            r = LazyReaction(smirks, id=row['reaction_name'])
             r = r.annotate_reactants(row[classes_col])
             return r
 

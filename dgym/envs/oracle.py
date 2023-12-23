@@ -41,10 +41,10 @@ class Oracle:
 
         # identify uncached molecules
         not_in_cache = lambda m: m.smiles not in self.cache
-        if uncached_molecules := molecules.filter(not_in_cache):
+        if uncached_molecules := filter(not_in_cache, molecules):
 
-            # remove duplicates
-            uncached_molecules = uncached_molecules.unique()
+            # # remove duplicates
+            # uncached_molecules = set(uncached_molecules)
 
             # make predictions
             smiles, scores = self.predict(uncached_molecules, **kwargs)

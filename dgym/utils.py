@@ -137,7 +137,7 @@ def draw(hit, reaction, prods, rowsize=3):
 
 # General utility
 # -----------------------------------------------
-def apply_recursive(iterable, function):
+def apply_recursive(object, function):
     """
     Apply a function to elements in a nested object structure if they are of a specific type.
 
@@ -156,12 +156,106 @@ def apply_recursive(iterable, function):
         The modified object with the function applied to elements of the target type.
     """
     try:
-        return function(iterable)
+        return function(object)
     except:
-        if isinstance(iterable, Iterable):
-            return [apply_recursive(item, function) for item in iterable]
+        if isinstance(object, Iterable):
+            return [apply_recursive(item, function) for item in object]
 
-    return iterable
+    return object
+
+class OrderedSet:
+
+    def __init__(self):
+        self.elements = []  # List to store ordered elements
+        self.set = set()    # Set to ensure uniqueness
+
+    def add(self, element):
+        """Add an element to the ordered set.
+
+        Parameters
+        ----------
+        element : Any
+            The element to be added to the set.
+
+        Returns
+        -------
+        None
+        """
+        if element not in self.set:
+            self.elements.append(element)
+            self.set.add(element)
+
+    def remove(self, element):
+        """Remove an element from the ordered set if it exists.
+
+        Parameters
+        ----------
+        element : Any
+            The element to be removed from the set.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        KeyError
+            If the element is not in the set.
+        """
+        if element in self.set:
+            self.elements.remove(element)
+            self.set.remove(element)
+        else:
+            raise KeyError(f"Element {element} not found in OrderedSet.")
+
+    def __iter__(self):
+        """Return an iterator for the ordered set.
+
+        Returns
+        -------
+        Iterator
+            An iterator over the elements of the ordered set.
+        """
+        return iter(self.elements)
+
+    def __contains__(self, element):
+        """Check if an element is in the ordered set.
+
+        Parameters
+        ----------
+        element : Any
+            The element to check for in the set.
+
+        Returns
+        -------
+        bool
+            True if the element is in the set, False otherwise.
+        """
+        return element in self.set
+
+    def __len__(self):
+        """Return the number of elements in the ordered set.
+
+        Returns
+        -------
+        int
+            The number of elements in the set.
+        """
+        return len(self.elements)
+
+    def __repr__(self):
+        """Return the string representation of the ordered set.
+
+        Returns
+        -------
+        str
+            The string representation of the ordered set.
+        """
+        return f"OrderedSet({self.elements})"
+    
+    def __getitem__(self, index):
+        return self.elements[index]
+
 
 # Generators
 # -----------------------------------------------

@@ -12,9 +12,10 @@ from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
 import torch        
-from ..utils import viewable
+from ..utils import viewable, OrderedSet
+from collections.abc import Iterator
 
-class AnalogGenerator:
+class Generator:
     
     def __init__(
         self,
@@ -135,27 +136,20 @@ class LibraryDesigner:
     def __init__(
         self,
         reactions: list,
-        building_blocks,
-        fingerprints: Optional[chemfp.arena.FingerprintArena]
+        generator,
     ) -> None:
 
         self.reactions = reactions
-        self.building_blocks = building_blocks
-        self.fingerprints = fingerprints
-        self.cache = set()
+        self.generator = generator
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
-
-    def reset_cache(self):
-        self.cache = set()
-
 
     def design(
         self,
         molecule: Molecule,
         size: int,
         mode: Literal['analog', 'expand'] = 'analog',
-        temperature: Optional[float] = 0.0
+        temperature: Optional[float] = 0.0,
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
@@ -170,79 +164,67 @@ class LibraryDesigner:
         Returns:
         - list: A list of product molecules.
         """
-
-        products = []
-
         if mode == 'analog':
             reactions = self.match_reactions(molecule)
+            reactants = molecule.reactants
+            reactants = [reactants[0], self.generator(reactants[1], temperature=temperature)]
+            max_depth = None
+
         elif mode == 'expand':
             reactions = self.reactions
+            reactants = [molecule, self.generator()]
+            max_depth = 1
 
+        # Perform reactions
+        products = OrderedSet()
         for reaction in reactions:
 
-            # Common reaction setup based on the mode
-            if mode == 'analog':
-                reactants = molecule.reactants
-            elif mode == 'expand':
-                reactants = [molecule, generator()]
+            with molecule.set_reaction(reaction):
 
-            with molecule.set_reactants(reactants):
+                # Replace reactants with analog generators
+                with molecule.set_reactants(reactants):
+                    
+                    # Lazy load molecule analogs
+                    analogs = self.retrosynthesize(molecule, protect=False, max_depth=max_depth)
 
-                # Reaction execution
-                if mode == 'analog':
-                    analogs = retrosynthesize(molecule, protect=False)
-                elif mode == 'expand':
-                    analogs = reaction.run(molecule.reactants, protect=False)
-
-                # Collecting products
-                for analog in analogs:
-                    if len(products) < size:
-                        products.append(analog)
-                    else:
-                        return products
-
+                    # Run reaction
+                    for analog in analogs:
+                        if len(products) < size:
+                            products.add(analog)
+                        else:
+                            return products
         return products
 
-    def design(
+    def retrosynthesize(
         self,
-        molecule: Molecule,
-        size: int,
-        mode: Literal['analog', 'expand'] = 'analog',
-        temperature: Optional[float] = 0.0
-    ) -> Iterable:
-        """
-        Given a set of reagents, enumerate candidate molecules.
+        molecule,
+        protect = False,
+        max_depth = None,
+        _depth = 0
+    ):
+        # Base cases
+        if _depth == max_depth:
+            return molecule
 
-        Parameters
-        ----------
-        molecule : dg.Molecule
-            The hit from which analogs are enumerated.
-        num_analogs : int
-            Number of analogs to enumerate (for each compatible reaction).
-
-        Returns
-        -------
-        all_products : list of enumerated products
-
-        """
-        # Get analogs of the molecule reactants
-        reactants = self.generate_reactants(
-            molecule,
-            mode=mode,
-            temperature=temperature
-        )
-
-        # Get most specific possible reactions
-        reactions = self.specify_reactions(molecule, mode=mode)
-
-        # Enumerate possible products given repertoire of reactions
-        products = self.enumerate_products(reactants, reactions, size=size)
-
-        # Add inspiration
-        for product in products:
-            product.inspiration = molecule
+        if isinstance(molecule, Iterator):
+            return molecule
         
-        return MoleculeCollection(products)
+        if not molecule.reactants:
+            return molecule
+        
+        # Recursive case: Retrosynthesize each reactant
+        retrosynthesized_reactants = [
+            self.retrosynthesize(reactant, protect, max_depth, _depth + 1)
+            for reactant in molecule.reactants
+        ]
+
+        if molecule.reaction is None:
+            molecule.reaction = self.match_reactions(molecule)[0]
+
+        # Use reaction to reconstruct the original molecule from its reactants
+        output = molecule.reaction.run(retrosynthesized_reactants, protect=protect)
+        
+        return output
     
     def match_reactions(self, molecule):
         """
