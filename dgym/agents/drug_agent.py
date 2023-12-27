@@ -25,7 +25,7 @@ class DrugAgent:
         action = self.construct_action()
         
         # When ideating, only choose among annotated molecules
-        if action['name'] == 'ideation':
+        if action['name'] == 'ideate':
             observations = observations.annotated
 
         # check index error
@@ -72,6 +72,7 @@ class SequentialDrugAgent(DrugAgent):
 
         for seq in sequence:
             seq.setdefault('parameters', {})
+
         self.sequence = sequence
         self._iter_sequence = itertools.cycle(sequence)
 
@@ -102,3 +103,26 @@ class NoisySequentialDrugAgent(SequentialDrugAgent):
         utility = self.utility_function(observations)
         utility += np.random.normal(0, self.noise, len(utility))
         return utility
+    
+class MultiStepDrugAgent(SequentialDrugAgent):
+
+    def __init__(
+        self,
+        num_steps, # TODO - find something more elegant
+        sequence,
+        *args,
+        **kwargs
+    ) -> None:
+        
+        for step in range(num_steps):
+            assert sequence[step]['name'] == 'ideate'
+        
+        super().__init__(sequence, *args, **kwargs)
+
+        self.num_steps = num_steps
+
+    # def policy(self, observations):
+    #     """
+    #     """
+    #     utility = self.utility_function(observations)
+    #     sorted_utility = np.argsort(utility)[::-1]

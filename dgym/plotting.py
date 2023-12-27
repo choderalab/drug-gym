@@ -16,7 +16,7 @@ def plot(deck, utility_functions, plot_cycle=True):
         hue = design_cycle
     )
 
-    # add evaluator boundaries
+    # add utility boundaries
     ideal = g.ax_joint.add_patch(
         make_box(
             ranges=[utility_functions[0].ideal, utility_functions[1].ideal],
