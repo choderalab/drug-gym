@@ -100,5 +100,5 @@ class NoisySequentialDrugAgent(SequentialDrugAgent):
     
     def policy(self, observations):
         utility = self.utility_function(observations)
-        utility += np.random.normal(0, 1, len(utility))
+        utility += np.random.normal(0, self.noise, len(utility))
         return utility
