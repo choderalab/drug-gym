@@ -188,7 +188,8 @@ class DrugEnv(gym.Env):
         results = assay(molecules, **params)
         
         # update library annotations for molecules measured
-        molecules.update_annotations([{assay.name: r} for r in results])
+        for molecule, result in zip(molecules, results):
+            molecule.update_annotations({assay.name: result})
 
     def get_observation(self):
         return self.library

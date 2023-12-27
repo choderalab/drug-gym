@@ -55,7 +55,7 @@ class Molecule:
         id_attr: Optional[str] = 'smiles',
         reaction: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
-        annotations: Optional[dict] = {},
+        annotations: Optional[dict] = None,
     ) -> None:
         
         if isinstance(mol, str):
@@ -71,7 +71,7 @@ class Molecule:
         self.reaction = reaction
         self.inspiration = inspiration
         self._id_attr = id_attr
-        self.annotations = annotations
+        self.annotations = annotations if annotations else {}
 
     @property
     def smiles(self):
