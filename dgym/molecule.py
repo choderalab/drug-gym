@@ -52,7 +52,7 @@ class Molecule:
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
         reactants: Optional[Iterable] = [],
-        id_attr: Optional[str] = 'smiles',
+        name_attr: Optional[str] = 'smiles',
         reaction: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
@@ -70,7 +70,7 @@ class Molecule:
         self.reactants = reactants
         self.reaction = reaction
         self.inspiration = inspiration
-        self._id_attr = id_attr
+        self._name_attr = name_attr
         self.annotations = annotations if annotations else {}
 
     @property
@@ -80,8 +80,8 @@ class Molecule:
         return self._smiles
 
     @property
-    def id(self):
-        return getattr(self, self._id_attr, None)
+    def name(self):
+        return getattr(self, self._name_attr, None)
 
     def _repr_html_(self):
         return self.mol._repr_html_()

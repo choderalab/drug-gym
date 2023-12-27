@@ -62,7 +62,7 @@ class DrugEnv(gym.Env):
         self.max_molecules = self.budget
 
         # Define assays
-        self.assays = assays
+        self.assays = {a.name: a for a in assays}
 
         # Define utility function
         self.utility_function = utility_function
@@ -92,9 +92,6 @@ class DrugEnv(gym.Env):
         # TODO - figure out the logic for the case when the budget is smaller than the initial library
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
         self.valid_actions[:len(self.library)] = True
-
-        # Keep track of design cycles
-        self.design_cycle = 0
 
 
     def step(self, action):
@@ -134,13 +131,13 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
-        action_type, molecules, parameters = action.values()
+        action_name, parameters, molecules = action.values()
         
         # Perform action
-        if action_type == 0:
+        if action_name == 'ideate':
             self.library += self.design_library(molecules, **parameters)
-        elif action_type >= 1:
-            self.perform_order(action_type - 1, molecules, *parameters)
+        else:
+            self.perform_order(action_name, molecules, *parameters)
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -155,32 +152,30 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def design_library(self, molecule_indices, num_analogs, temperature):
+    def design_library(self, molecule_indices, size, temperature):
         """
         Returns the library of molecules.
         """
-        batch_sizes = {0: 1, 1: 10, 2: 96, 3: 384} # make more elegant?
-        
         # subset valid molecules
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
         
         # design new library
-        new_molecules = MoleculeCollection()
+        new_molecules = []
         for molecule in molecules:
             new_molecules += self.library_designer.design(
                 molecule,
-                size=batch_sizes[num_analogs],
                 mode='analog',
+                size=size,
                 temperature=temperature
             )
 
         return new_molecules
 
-    def perform_order(self, assay_index, molecule_indices, **params) -> None:
+    def perform_order(self, assay_name, molecule_indices, **params) -> None:
 
         # subset assay and molecules
-        assay = self.assays[assay_index]
+        assay = self.assays[assay_name]
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
         
@@ -195,8 +190,9 @@ class DrugEnv(gym.Env):
         return self.library
 
     def get_reward(self):
-        utility = self.utility_function(self.library)
-        return max(utility)
+        utility = self.utility_function(self.library.annotated)
+        reward = max([*utility, -float('inf')])
+        return reward
 
     def check_terminated(self):
         # Implement the logic for checking if the episode is done

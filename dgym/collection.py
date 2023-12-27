@@ -47,11 +47,15 @@ class Collection(torch.utils.data.Dataset):
 
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
-        self._lookup = {item.id: item for item in self._items}
+        self._lookup = {item.name: item for item in self._items}
 
     @property
     def annotations(self):
         return pd.DataFrame([item.annotations for item in self._items])
+
+    @property
+    def annotated(self):
+        return [i for i in self._items if i.annotations]
     
     @property
     def lookup(self):
@@ -74,7 +78,7 @@ class Collection(torch.utils.data.Dataset):
         >>> Molecule("C") in collection
         False
         """
-        return (item is not None) and (item.id in self.lookup)
+        return (item is not None) and (item.name in self.lookup)
 
     def filter(self, by: Callable):
         return self.__class__([item for item in self._items if by(item)])
@@ -137,7 +141,7 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, str):
             return self.__class__([self.lookup[key]])
         elif isinstance(key, type(self._items[0])):
-            return self.lookup[key.id]
+            return self.lookup[key.name]
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
         elif isinstance(key, Iterable):

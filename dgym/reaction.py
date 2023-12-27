@@ -16,7 +16,7 @@ class Reaction:
         self,
         template: Union[str, ChemicalReaction],
         metadata: Optional[dict] = None,
-        id: Optional[str] = None
+        name: Optional[str] = None
     ) -> None:
         """
         Parameters
@@ -27,7 +27,7 @@ class Reaction:
         if isinstance(template, str):
             template = rdkit.Chem.AllChem.ReactionFromSmarts(template)
 
-        self.id = id
+        self.name = name
         self.template = template
         self.products = list(template.GetProducts())
         self.agents = list(template.GetAgents())

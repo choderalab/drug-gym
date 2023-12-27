@@ -40,7 +40,6 @@ class Generator:
                 yield Molecule(self.building_blocks[index])
 
         return_list = isinstance(molecules, list)
-        
         if molecules is None:
 
             # Unbiased sample of indices
@@ -75,7 +74,7 @@ class Generator:
         
         fingerprint_type = self.fingerprints.get_fingerprint_type()
         fingerprints = [
-            (m.id, fingerprint_type.from_smi(m.smiles))
+            (m.name, fingerprint_type.from_smi(m.smiles))
             for m in molecules
         ]
         
@@ -167,6 +166,7 @@ class LibraryDesigner:
         """
         if mode == 'analog':
             reactions = self.match_reactions(molecule)
+            random.shuffle(molecule.reactants) # TODO make a flag
             reactants = molecule.reactants
             reactants = [reactants[0], self.generator(reactants[1], temperature=temperature)]
             max_depth = None

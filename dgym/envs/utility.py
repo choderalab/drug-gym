@@ -5,65 +5,15 @@ from typing import Optional, Callable
 
 
 class UtilityFunction:
-    """
-    Example
-    -------
-
-    >>> # Define evaluators for log S and log P
-    >>> log_S_evaluator = PropertyEvaluator(
-    >>>     ideal=(-2, 0),
-    >>>     acceptable=(-4, 0.5)
-    >>> )
-    >>>
-    >>> # Define evaluators for log P
-    >>> log_P_evaluator = PropertyEvaluator(
-    >>>     ideal=(1, 4),
-    >>>     acceptable=(0, 5)
-    >>> )
-    >>>
-    >>> utility = UtilityFunction(
-    >>>     evaluators = [log_S_evaluator, log_P_evaluator],
-    >>>     strategy = lambda x: np.prod(x)
-    >>> )
-    >>> 
-    >>> assert utility.score([0, 5]) == 0.5458775937413701
-
-    """
-    def __init__(self, oracles, evaluators, strategy: Callable):
-        
-        # Check correspondence of oracles and evaluators
-        assert len(oracles) == len(evaluators)
-        assert all(isinstance(oracle, Oracle) for oracle in oracles)
-        assert all(isinstance(evaluator, Evaluator) for evaluator in evaluators)
-
-        self.oracles = oracles
-        self.evaluators = evaluators
-        self.strategy = strategy
-
-    def score(self, molecules):
-        """Compute the score for molecules based on their properties."""
-        if not molecules:
-            return None
-        
-        scores = [
-            evaluator.score(oracle(molecules))
-            for evaluator, oracle in zip(self.evaluators, self.oracles)
-        ]
-
-        return self.strategy(scores)
-
-    def plot(self, deck, **kwargs):
-        return dg.plotting.plot(deck, self, **kwargs)
-
-    def __call__(self, values):
-        return self.score(values)
-
-
-class Evaluator:
     
-    def __init__(self, ideal, acceptable):
+    def __init__(self, oracle, ideal, acceptable):
+
+        self.oracle = oracle
         self.ideal = np.array(ideal)
         self.acceptable = np.array(acceptable)
+
+    def __call__(self, molecules):
+        return self.score(self.oracle(molecules))
 
     def score(self, value):
         is_scalar = np.isscalar(value)
@@ -79,10 +29,10 @@ class Evaluator:
         raise NotImplementedError
 
 
-class ClassicEvaluator(Evaluator):
+class ClassicUtilityFunction(UtilityFunction):
     
-    def __init__(self, ideal, acceptable):
-        super().__init__(ideal, acceptable)
+    def __init__(self, oracle, ideal, acceptable):
+        super().__init__(oracle, ideal, acceptable)
  
         self._lower_slope = self._slope(self.acceptable[0], 0.5, self.ideal[0], 1)
         self._upper_slope = self._slope(self.ideal[1], 1, self.acceptable[1], 0.5)
