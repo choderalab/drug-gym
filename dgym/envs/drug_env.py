@@ -58,8 +58,8 @@ class DrugEnv(gym.Env):
 
         self.budget = budget
 
-        # For now, max library size is equivalent to budget
-        self.max_molecules = self.budget
+        # For now, max library size is set to a very large number
+        self.max_molecules = 100_000
 
         # Define assays
         self.assays = {a.name: a for a in assays}
@@ -89,7 +89,8 @@ class DrugEnv(gym.Env):
         self.reward_history = []
 
         # Initialize the action mask
-        # TODO - figure out the logic for the case when the budget is smaller than the initial library
+        # TODO - figure out the logic here
+        # the idea is to prevent agent from selecting molecules that don't yet exist
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
         self.valid_actions[:] = True
 
