@@ -10,14 +10,23 @@ class DrugAgent:
 
     def __init__(
         self,
+        utility_function,
         branch_factor=5,
         epsilon=0.1,
     ) -> None:
 
+        self.utility_function = utility_function
         self.branch_factor = branch_factor
         self.epsilon = epsilon
 
     def act(self, observations, mask=None):
+
+        # Construct action
+        action = self.construct_action()
+        
+        # When ideating, only choose among annotated molecules
+        if action['name'] == 'ideation':
+            observations = observations.annotated
 
         # check index error
         branches = min([self.branch_factor, len(observations)])
@@ -38,9 +47,7 @@ class DrugAgent:
             else:
                 molecules.append(sorted_utility[i])
 
-        # Construct action
-        action = self.construct_action(molecules)
-        action.setdefault('parameters', {})
+        # Add molecules to action
         action.update({'molecules': molecules})
 
         return action
@@ -57,17 +64,14 @@ class SequentialDrugAgent(DrugAgent):
     def __init__(
         self,
         sequence,
-        utility_function,
-        branch_factor=5,
-        epsilon=0.2,
+        *args,
+        **kwargs
     ) -> None:
 
-        super().__init__(
-            branch_factor = branch_factor,
-            epsilon = epsilon,
-        )
+        super().__init__(*args, **kwargs)
 
-        self.utility_function = utility_function
+        for seq in sequence:
+            seq.setdefault('parameters', {})
         self.sequence = sequence
         self._iter_sequence = itertools.cycle(sequence)
 
@@ -77,9 +81,24 @@ class SequentialDrugAgent(DrugAgent):
         # convert scores to utility
         return self.utility_function(observations)
 
-    def construct_action(self, molecules):
+    def construct_action(self):
         return next(self._iter_sequence).copy()
 
     def learn(self, previous_observation, action, reward, observation, done):
         """Implement your learning algorithm here"""
         pass
+
+class NoisySequentialDrugAgent(SequentialDrugAgent):
+
+    def __init__(
+        self, noise, *args, **kwargs
+    ) -> None:
+        
+        super().__init__(*args, **kwargs)
+
+        self.noise = noise
+    
+    def policy(self, observations):
+        utility = self.utility_function(observations)
+        utility += np.random.normal(0, 1, len(utility))
+        return utility

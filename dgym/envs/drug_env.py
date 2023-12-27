@@ -49,7 +49,7 @@ class DrugEnv(gym.Env):
         budget: int = 10_000,
         assays: list = [],
         library: Optional[MoleculeCollection] = None,
-        utility_function: Optional[UtilityFunction] = None,
+        utility_function: Optional[Callable] = None,
     ) -> None:
         
         super().__init__()
