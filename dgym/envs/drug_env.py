@@ -91,7 +91,7 @@ class DrugEnv(gym.Env):
         # Initialize the action mask
         # TODO - figure out the logic for the case when the budget is smaller than the initial library
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
-        self.valid_actions[:len(self.library)] = True
+        self.valid_actions[:] = True
 
 
     def step(self, action):
@@ -200,7 +200,7 @@ class DrugEnv(gym.Env):
 
     def check_truncated(self):
         # Implement the logic for checking if the episode is done
-        return len(self.library) >= self.budget
+        return len(self.library.annotated) >= self.budget
 
     def reset(self):
         self.design_cycle = 0

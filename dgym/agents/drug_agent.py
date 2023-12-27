@@ -78,7 +78,7 @@ class SequentialDrugAgent(DrugAgent):
         return self.utility_function(observations)
 
     def construct_action(self, molecules):
-        return next(self._iter_sequence)
+        return next(self._iter_sequence).copy()
 
     def learn(self, previous_observation, action, reward, observation, done):
         """Implement your learning algorithm here"""

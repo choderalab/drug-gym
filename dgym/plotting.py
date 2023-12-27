@@ -5,30 +5,27 @@ import matplotlib.cm as cm
 import seaborn as sns
 import numpy as np
 
-def plot(deck, utility_function, plot_cycle=True):
+def plot(deck, utility_functions, plot_cycle=True):
 
     design_cycle = [d.design_cycle for d in deck] if plot_cycle else None
 
-    oracles = utility_function.oracles
-
     # create basic plot
     g = sns.jointplot(
-        x=oracles[0](deck),
-        y=oracles[1](deck),
-        hue=design_cycle
+        x = utility_functions[0].oracle(deck),
+        y = utility_functions[1].oracle(deck),
+        hue = design_cycle
     )
 
     # add evaluator boundaries
-    evals = utility_function.evaluators
     ideal = g.ax_joint.add_patch(
         make_box(
-            ranges=[evals[0].ideal, evals[1].ideal],
+            ranges=[utility_functions[0].ideal, utility_functions[1].ideal],
             color='green', label='Ideal'
         )
     )
     acceptable = g.ax_joint.add_patch(
         make_box(
-            ranges=[evals[0].acceptable, evals[1].acceptable],
+            ranges=[utility_functions[0].acceptable, utility_functions[1].acceptable],
             color='#c0c0c0', label='Acceptable'
         )
     )
@@ -43,8 +40,8 @@ def plot(deck, utility_function, plot_cycle=True):
     )
 
     # labels
-    plt.xlabel(oracles[0].name)
-    plt.ylabel(oracles[1].name)
+    plt.xlabel(utility_functions[0].oracle.name)
+    plt.ylabel(utility_functions[1].oracle.name)
 
     # formatting
     g.fig.set_figwidth(6)
