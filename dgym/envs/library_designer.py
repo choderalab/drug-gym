@@ -130,7 +130,7 @@ class Generator:
         return probabilities
 
 
-class LibraryDesigner:
+class Designer:
 
     def __init__(
         self,
@@ -149,7 +149,7 @@ class LibraryDesigner:
         size: int,
         mode: Literal['analog', 'expand'] = 'analog',
         temperature: Optional[float] = 0.0,
-        config: dict = {},
+        config: dict = {}, # TODO
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
@@ -166,7 +166,7 @@ class LibraryDesigner:
         """
         if mode == 'analog':
             reactions = self.match_reactions(molecule)
-            random.shuffle(molecule.reactants) # TODO make a flag
+            random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants
             reactants = [reactants[0], self.generator(reactants[1], temperature=temperature)]
             max_depth = None
@@ -179,14 +179,11 @@ class LibraryDesigner:
         # Perform reactions
         products = OrderedSet()
         for reaction in reactions:
-
             with molecule.set_reaction(reaction):
-
-                # Replace reactants with analog generators
                 with molecule.set_reactants(reactants):
                     
                     # Lazy load molecule analogs
-                    analogs = self.retrosynthesize(molecule, protect=False, max_depth=max_depth)
+                    analogs = self.retrosynthesize(molecule, max_depth=max_depth)
 
                     # Run reaction
                     for analog in analogs:
@@ -195,6 +192,7 @@ class LibraryDesigner:
                             products.add(analog)
                         else:
                             return products
+        
         return products
 
     def retrosynthesize(

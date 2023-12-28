@@ -26,8 +26,15 @@ class DrugAgent:
         action = self.construct_action()
         
         # When ideating, only choose among annotated molecules
+        # TODO - only choose among latest cycle molecules?
         if action['name'] == 'ideate':
+
+            # Only annotated molecules
             observations = observations.annotated
+
+            # Only latest-cycle
+            current_cycle = max(o.design_cycle for o in observations)
+            observations = [o for o in observations if o.design_cycle == current_cycle]
 
         # check index error
         branches = min([self.branch_factor, len(observations)])
@@ -104,7 +111,7 @@ class NoisySequentialDrugAgent(SequentialDrugAgent):
         utility = self.utility_function(observations)
         utility += np.random.normal(0, self.noise, len(utility))
         return utility
-    
+
 class MultiStepDrugAgent(SequentialDrugAgent):
 
     def __init__(
@@ -125,16 +132,44 @@ class MultiStepDrugAgent(SequentialDrugAgent):
     def policy(self, observations):
         """
         """
-        # Only look-ahead when selecting to assay
-        if all(o.annotations for o in observations):
-            molecules = []
-            for molecule in observations:
-                for _ in range(self.num_steps - 1):
-                    molecules.append(self.designer.design(molecule, 10))
+        # Only lookahead if ideating
+        if any(not obs.annotations for obs in observations) \
+            or self.num_steps < 2:
+            return self.utility_function(observations)
 
-        utility = [
-            self.agg_func(self.utility_function(m))
-            for m in molecules
-        ]
+        aggregated_scores = []
+        for obs in observations:
+            all_scores = self.multi_step_lookahead(obs)
+            aggregated_score = self.agg_func(all_scores)
+            aggregated_scores.append(aggregated_score)
         
-        return utility
+        return aggregated_scores
+    
+    def multi_step_lookahead(self, molecule):
+        """
+        Perform a multi-step lookahead to explore molecule analogs.
+
+        Parameters
+        ----------
+        molecule : Molecule
+            The starting molecule for the design process.
+        depth : int
+            The number of steps to look ahead.
+
+        Returns
+        -------
+        list of float
+            A list of evaluation scores from all analogs generated up to the given depth.
+        """
+        # Starting with the initial molecule
+        molecules = [molecule]
+
+        # Explore for each depth level
+        for _ in range(self.num_steps - 1):
+            new_molecules = []
+            for molecule in molecules:
+                new_molecules.extend(self.designer.design(molecule, 10))
+            molecules = new_molecules
+
+        # Evaluate all molecules and return their scores
+        return self.utility_function(molecules)
