@@ -5,6 +5,7 @@ from rdkit import Chem
 from typing import Optional
 from collections.abc import Callable
 import itertools
+import dgym as dg
 
 class DrugAgent:
 
@@ -108,21 +109,32 @@ class MultiStepDrugAgent(SequentialDrugAgent):
 
     def __init__(
         self,
-        num_steps, # TODO - find something more elegant
-        sequence,
+        num_steps,
+        designer,
+        agg_func = np.mean,
         *args,
         **kwargs
     ) -> None:
         
-        for step in range(num_steps):
-            assert sequence[step]['name'] == 'ideate'
-        
-        super().__init__(sequence, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.num_steps = num_steps
+        self.designer = designer
+        self.agg_func = agg_func
 
-    # def policy(self, observations):
-    #     """
-    #     """
-    #     utility = self.utility_function(observations)
-    #     sorted_utility = np.argsort(utility)[::-1]
+    def policy(self, observations):
+        """
+        """
+        # Only look-ahead when selecting to assay
+        if all(o.annotations for o in observations):
+            molecules = []
+            for molecule in observations:
+                for _ in range(self.num_steps - 1):
+                    molecules.append(self.designer.design(molecule, 10))
+
+        utility = [
+            self.agg_func(self.utility_function(m))
+            for m in molecules
+        ]
+        
+        return utility
