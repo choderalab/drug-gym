@@ -153,7 +153,7 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def design_library(self, molecule_indices, size, temperature):
+    def design_library(self, molecule_indices, *args, **kwargs):
         """
         Returns the library of molecules.
         """
@@ -167,8 +167,8 @@ class DrugEnv(gym.Env):
             new_molecules += self.library_designer.design(
                 molecule,
                 mode='analog',
-                size=size,
-                temperature=temperature
+                *args,
+                **kwargs
             )
 
         return new_molecules

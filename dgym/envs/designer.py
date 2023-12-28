@@ -183,6 +183,7 @@ class Designer:
         size: int,
         mode: Literal['analog', 'expand'] = 'analog',
         temperature: Optional[float] = 0.0,
+        strict: bool = False,
         config: dict = {}, # TODO
     ) -> Iterable:
         """
@@ -202,7 +203,10 @@ class Designer:
             reactions = self.match_reactions(molecule)
             random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants
-            reactants = [reactants[0], self.generator(reactants[1], temperature=temperature)]
+            reactants = [
+                reactants[0],
+                self.generator(reactants[1], temperature=temperature, strict=strict)
+            ]
             max_depth = None
 
         elif mode == 'expand':
