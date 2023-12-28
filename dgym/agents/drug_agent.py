@@ -52,8 +52,8 @@ class DrugAgent:
 
         # Gather indices
         branches = min([self.branch_factor, len(observations)])
-        molecules = self.exploration_strategy(utility, size=branches)
-        molecules = [indices[m] for m in molecules]
+        pending = self.exploration_strategy(utility, size=branches)
+        molecules = [indices[p] for p in pending]
         print(molecules)
 
         # Add molecules to action
