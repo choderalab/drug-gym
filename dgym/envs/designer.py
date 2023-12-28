@@ -34,13 +34,6 @@ class Generator:
         """
         Returns a generator that samples analogs of the original molecules.
         """
-        @viewable
-        def _generator(sampler, original):
-            for index in sampler:
-                molecule = Molecule(self.building_blocks[index])
-                if molecule := self.substruct_match(molecule, original):
-                    yield molecule
-
         return_list = isinstance(molecules, list)
         if molecules is None:
 
@@ -69,9 +62,18 @@ class Generator:
 
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
-        generators = [_generator(sampler, molecules[0]) for sampler in samples]
+        generators = [
+            self._generator_factory(sampler, molecule)
+            for sampler, molecule in zip(samples, molecules)
+        ]
+        
         return generators if return_list else generators[0]
 
+    @viewable
+    def _generator_factory(self, sampler, original=None):
+        for index in sampler:
+            return Molecule(self.building_blocks[index])
+    
     def fingerprint_similarity(self, molecules):
         
         fingerprint_type = self.fingerprints.get_fingerprint_type()
@@ -89,8 +91,8 @@ class Generator:
         results = chemfp.simsearch(
             queries = queries,
             targets = self.fingerprints,
-            progress=False,
-            k=500
+            progress = False,
+            k = 500
         )
 
         indices = torch.tensor(list(results.iter_indices()))
@@ -131,20 +133,40 @@ class Generator:
         probabilities = torch.softmax(scaled_scores, dim=-1)
         return probabilities
     
-    @staticmethod
-    def substruct_match(mol1, mol2, protect=True):
-        
-        if isinstance(mol1, Molecule):
-            mol1 = mol1.mol
-        if isinstance(mol2, Molecule):
-            mol2 = mol2.mol
+class StrictGenerator(Generator):
 
-        if match := mol1.GetSubstructMatch(mol2):
+    def __init__(
+        self,
+        building_blocks,
+        fingerprints: chemfp.arena.FingerprintArena
+    ) -> None:
+        
+        self.building_blocks = building_blocks
+        self.fingerprints = fingerprints
+
+    @viewable
+    def _generator_factory(self, sampler, original):
+        for index in sampler:
+            building_block = self.building_blocks[index]
+            if molecule := self.substruct_match(building_block, original):
+                yield molecule
+
+    @staticmethod
+    def substruct_match(new, old, protect=True):
+        """
+        Enforces old molecule is a substructure of new molecule.
+        """
+        if isinstance(new, Molecule):
+            new = new.mol
+        if isinstance(old, Molecule):
+            old = old.mol
+
+        if match := new.GetSubstructMatch(old):
             if protect:
-                for atom in mol1.GetAtoms():
+                for atom in new.GetAtoms():
                     if atom.GetIdx() not in match:
                         atom.SetProp('_protected', '1')
-        return mol1
+            return new
 
 
 class Designer:
