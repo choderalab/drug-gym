@@ -136,12 +136,18 @@ class Designer:
         self,
         generator: Generator,
         reactions: list,
+        cache: bool = False,
     ) -> None:
 
         self.generator = generator
         self.reactions = reactions
+        self.cache = cache
+        self._cache = set()
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
+
+    def reset_cache(self):
+        self._cache = set()
 
     def design(
         self,
@@ -177,7 +183,7 @@ class Designer:
             max_depth = 1
 
         # Perform reactions
-        products = OrderedSet()
+        products = OrderedSet()        
         for reaction in reactions:
             with molecule.set_reaction(reaction):
                 with molecule.set_reactants(reactants):
@@ -189,7 +195,10 @@ class Designer:
                     for analog in analogs:
                         analog.inspiration = molecule
                         if len(products) < size:
+                            if self.cache and analog in self._cache:
+                                continue
                             products.add(analog)
+                            self._cache.add(analog)
                         else:
                             return products
         

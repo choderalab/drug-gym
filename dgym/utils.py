@@ -165,9 +165,12 @@ def apply_recursive(object, function):
 
 class OrderedSet:
 
-    def __init__(self):
-        self.elements = []  # List to store ordered elements
-        self.set = set()    # Set to ensure uniqueness
+    def __init__(self, iterable = []):
+        self.elements = []
+        self.set = set()
+
+        for element in iterable:
+            self.add(element)
 
     def add(self, element):
         """Add an element to the ordered set.
@@ -241,7 +244,7 @@ class OrderedSet:
         int
             The number of elements in the set.
         """
-        return len(self.elements)
+        return len(self.set)
 
     def __repr__(self):
         """Return the string representation of the ordered set.
@@ -251,7 +254,7 @@ class OrderedSet:
         str
             The string representation of the ordered set.
         """
-        return f"OrderedSet({self.elements})"
+        return f"OrderedSet({self.set})"
     
     def __getitem__(self, index):
         return self.elements[index]
