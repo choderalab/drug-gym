@@ -25,8 +25,6 @@ class DrugAgent:
         # Construct action
         action = self.construct_action()
         
-        # When ideating, only choose among annotated molecules
-        # TODO - only choose among latest cycle molecules?
         if action['name'] == 'ideate':
 
             # Only annotated molecules
@@ -133,13 +131,13 @@ class MultiStepDrugAgent(SequentialDrugAgent):
         """
         """
         # Only lookahead if ideating
-        if any(not obs.annotations for obs in observations) \
+        if any(not o.annotations for o in observations) \
             or self.num_steps < 2:
             return self.utility_function(observations)
 
         aggregated_scores = []
-        for obs in observations:
-            all_scores = self.multi_step_lookahead(obs)
+        for observation in observations:
+            all_scores = self.multi_step_lookahead(observation)
             aggregated_score = self.agg_func(all_scores)
             aggregated_scores.append(aggregated_score)
         

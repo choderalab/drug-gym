@@ -134,12 +134,12 @@ class Designer:
 
     def __init__(
         self,
+        generator: Generator,
         reactions: list,
-        generator,
     ) -> None:
 
-        self.reactions = reactions
         self.generator = generator
+        self.reactions = reactions
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
 
