@@ -29,7 +29,8 @@ class Generator:
     def __call__(
         self,
         molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
-        temperature: Optional[float] = 0.0
+        temperature: Optional[float] = 0.0,
+        strict: bool = False
     ):
         """
         Returns a generator that samples analogs of the original molecules.
@@ -63,16 +64,23 @@ class Generator:
             samples = torch.gather(indices, 1, samples_idx).tolist()
 
         generators = [
-            self._generator_factory(sampler, molecule)
+            self._generator_factory(sampler, molecule, strict=strict)
             for sampler, molecule in zip(samples, molecules)
         ]
         
         return generators if return_list else generators[0]
 
     @viewable
-    def _generator_factory(self, sampler, original=None):
+    def _generator_factory(self, sampler, original=None, strict=False):
+        
         for index in sampler:
-            return Molecule(self.building_blocks[index])
+            building_block = self.building_blocks[index]
+            
+            if strict:
+                building_block = self.substruct_match(building_block, original)
+            
+            if building_block:
+                yield Molecule(building_block)
     
     def fingerprint_similarity(self, molecules):
         
@@ -133,24 +141,6 @@ class Generator:
         probabilities = torch.softmax(scaled_scores, dim=-1)
         return probabilities
     
-class StrictGenerator(Generator):
-
-    def __init__(
-        self,
-        building_blocks,
-        fingerprints: chemfp.arena.FingerprintArena
-    ) -> None:
-        
-        self.building_blocks = building_blocks
-        self.fingerprints = fingerprints
-
-    @viewable
-    def _generator_factory(self, sampler, original):
-        for index in sampler:
-            building_block = self.building_blocks[index]
-            if molecule := self.substruct_match(building_block, original):
-                yield molecule
-
     @staticmethod
     def substruct_match(new, old, protect=True):
         """
@@ -167,7 +157,6 @@ class StrictGenerator(Generator):
                     if atom.GetIdx() not in match:
                         atom.SetProp('_protected', '1')
             return new
-
 
 class Designer:
 

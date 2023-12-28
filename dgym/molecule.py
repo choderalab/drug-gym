@@ -162,10 +162,7 @@ class Molecule:
             # sometimes throws AtomValenceException
             pass
         return self
-    
-    # def __getattr__(self, name: str) -> Any:
-    #     return getattr(self.mol, name)
-    
+        
     @property
     def design_cycle(self):
         """
