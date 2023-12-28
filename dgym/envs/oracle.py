@@ -8,6 +8,7 @@ import torch
 import dgllife
 import numpy as np
 from typing import Union, Optional
+from collections import defaultdict
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from contextlib import contextmanager
@@ -16,6 +17,7 @@ from dgym.collection import MoleculeCollection
 
 class OracleCache(dict):
     def __missing__(self, key):
+        self[key] = float('nan')
         return float('nan')
 
 class Oracle:

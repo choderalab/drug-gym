@@ -6,19 +6,20 @@ from typing import Optional
 from collections.abc import Callable
 import itertools
 import dgym as dg
+from .exploration import ExplorationStrategy
 
 class DrugAgent:
 
     def __init__(
         self,
-        utility_function,
-        branch_factor=5,
-        epsilon=0.1,
+        utility_function: Callable,
+        exploration_strategy: ExplorationStrategy,
+        branch_factor: int = 5,
     ) -> None:
 
         self.utility_function = utility_function
         self.branch_factor = branch_factor
-        self.epsilon = epsilon
+        self.exploration_strategy = exploration_strategy
 
     def act(self, observations, mask=None):
 
@@ -27,15 +28,19 @@ class DrugAgent:
         
         if action['name'] == 'ideate':
 
-            # Only annotated molecules
-            observations = observations.annotated
-
             # Only latest-cycle
             current_cycle = max(o.design_cycle for o in observations)
-            observations = [o for o in observations if o.design_cycle == current_cycle]
 
-        # check index error
-        branches = min([self.branch_factor, len(observations)])
+            # Only annotated molecules
+            indices = []
+            for idx in range(len(observations)):
+                if observations[idx].annotations and \
+                   observations[idx].design_cycle == current_cycle:
+                   indices.append(idx)
+            observations = observations[indices]
+        
+        else:
+            indices = list(range(len(observations)))
 
         # Extract action utility from the policy
         utility = self.policy(observations)
@@ -44,14 +49,11 @@ class DrugAgent:
         if mask:
             utility[~mask] = -1e8
 
-        # Epsilon greedy selection
-        molecules = []
-        sorted_utility = np.argsort(utility)[::-1]
-        for i in range(branches):
-            if np.random.rand() < self.epsilon:
-                molecules.append(np.random.choice(len(utility)))
-            else:
-                molecules.append(sorted_utility[i])
+        # Gather indices
+        branches = min([self.branch_factor, len(observations)])
+        molecules = self.exploration_strategy(utility, size=branches)
+        molecules = [indices[m] for m in molecules]
+        print(molecules)
 
         # Add molecules to action
         action.update({'molecules': molecules})
