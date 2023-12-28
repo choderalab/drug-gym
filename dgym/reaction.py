@@ -128,12 +128,13 @@ class Reaction:
                 
                 # RDKit uses 1-index
                 reactant_idx = atom.GetIntProp('old_mapno') - 1
-                reacting_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+                reacting_atoms[reactant_idx].append(atom.GetIntProp('react_atom_idx'))
             
             # Gather passenger atoms
             elif atom.HasProp('reactant_idx'):
+                
                 reactant_idx = atom.GetIntProp('reactant_idx')
-                passenger_atoms[reactant_idx] += [atom.GetIntProp('react_atom_idx')]
+                passenger_atoms[reactant_idx].append(atom.GetIntProp('react_atom_idx'))
             
         # Protect unnecessary atoms
         for idx, reactant in enumerate(reactants):
