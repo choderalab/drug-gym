@@ -34,8 +34,9 @@ class DrugAgent:
             # Only annotated molecules
             indices = []
             for idx in range(len(observations)):
-                if observations[idx].annotations and \
-                   observations[idx].design_cycle == current_cycle:
+                if observations[idx].annotations:
+                # if observations[idx].annotations and \
+                #    observations[idx].design_cycle == current_cycle:
                    indices.append(idx)
             observations = observations[indices]
         
