@@ -183,7 +183,7 @@ class Designer:
             max_depth = 1
 
         # Perform reactions
-        products = OrderedSet()        
+        products = OrderedSet()
         for reaction in reactions:
             with molecule.set_reaction(reaction):
                 with molecule.set_reactants(reactants):
