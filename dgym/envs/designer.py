@@ -181,17 +181,17 @@ class Designer:
         self,
         molecule: Molecule,
         size: int,
-        mode: Literal['analog', 'expand'] = 'analog',
+        mode: Literal['replace', 'grow'] = 'replace',
         temperature: Optional[float] = 0.0,
         strict: bool = False,
         config: dict = {}, # TODO,
-        replace_index = 0
+        replace = 0
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
 
         Parameters:
-        - mode (str): The mode of operation ('analog' or 'expand').
+        - mode (str): The mode of operation ('replace' or 'grow').
         - molecule (Molecule): The molecule to react.
         - size (int): The desired number of products.
         - library_designer (LibraryDesigner): An instance of a library designer.
@@ -200,12 +200,12 @@ class Designer:
         Returns:
         - list: A list of product molecules.
         """
-        if mode == 'analog':
+        if mode == 'replace':
             reactions = self.match_reactions(molecule)
             random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants.copy()
-            reactants[replace_index] = self.generator(
-                reactants[replace_index],
+            reactants[replace] = self.generator(
+                reactants[replace],
                 temperature=temperature,
                 strict=strict
             )
@@ -216,7 +216,7 @@ class Designer:
             # ]
             max_depth = None
 
-        elif mode == 'expand':
+        elif mode == 'grow':
             reactions = self.reactions
             reactants = [molecule, self.generator()]
             max_depth = 1

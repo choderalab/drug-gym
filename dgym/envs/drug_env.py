@@ -166,7 +166,7 @@ class DrugEnv(gym.Env):
         for molecule in molecules:
             new_molecules += self.library_designer.design(
                 molecule,
-                mode='analog',
+                mode='replace',
                 *args,
                 **kwargs
             )
