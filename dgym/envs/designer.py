@@ -207,7 +207,7 @@ class Designer:
             reactants[replace] = self.generator(
                 reactants[replace],
                 temperature=temperature,
-                strict=strict
+                strict=strict,
             )
             # reactants = [
             #     reactants[0],
