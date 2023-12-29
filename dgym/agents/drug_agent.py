@@ -41,7 +41,19 @@ class DrugAgent:
             observations = observations[indices]
         
         else:
+
             indices = list(range(len(observations)))
+
+            # # Only latest-cycle
+            # current_cycle = max(o.design_cycle for o in observations)
+
+            # # Only molecules from current cycle
+            # indices = []
+            # for idx in range(len(observations)):
+            #     if observations[idx].design_cycle == current_cycle:
+            #        indices.append(idx)
+            
+            # observations = observations[indices]
 
         # Extract action utility from the policy
         utility = self.policy(observations)
