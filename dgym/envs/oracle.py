@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from meeko import MoleculePreparation, PDBQTWriterLegacy
 from dgym.collection import MoleculeCollection
 
+
 class OracleCache(dict):
     def __missing__(self, key):
         self[key] = float('nan')
@@ -57,6 +58,53 @@ class Oracle:
     def predict(self, molecules: MoleculeCollection):
         raise NotImplementedError
 
+
+class NoisyOracle(Oracle):
+    def __init__(self, oracle: Oracle, sigma: float = 0.1) -> None:
+        """
+        Initialize a NoisyOracle decorator for an Oracle instance.
+
+        Parameters:
+        - oracle (Oracle): The oracle instance to wrap.
+        - sigma (float, optional): The standard deviation of the Gaussian noise to add to the oracle's predictions.
+        """
+        super().__init__()
+        self.oracle = oracle
+        self.sigma = sigma
+
+    def get_predictions(
+        self,
+        molecules: Union[MoleculeCollection, list],
+        **kwargs
+    ):
+        """
+        Get predictions from the oracle and add Gaussian noise.
+
+        Parameters:
+        - molecules (Union[MoleculeCollection, list]): The molecules for which to predict values.
+        - kwargs: Additional keyword arguments passed to the oracle's predict method.
+
+        Returns:
+        - List[float]: The noisy predictions for the given molecules.
+        """
+        # Utilize the wrapped oracle to get predictions
+        predictions = self.oracle.get_predictions(molecules, **kwargs)
+
+        # Add Gaussian noise to each prediction
+        noisy_predictions = [p + np.random.normal(0, self.sigma) for p in predictions]
+
+        return noisy_predictions
+
+    def reset_cache(self):
+        """
+        Resets the cache for both the NoisyOracle and the wrapped oracle.
+
+        Returns:
+        - NoisyOracle: self for method chaining.
+        """
+        super().reset_cache()
+        self.oracle.reset_cache()
+        return self
 
 
 class DGLOracle(Oracle):

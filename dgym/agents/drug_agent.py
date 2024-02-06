@@ -110,20 +110,6 @@ class SequentialDrugAgent(DrugAgent):
         """Implement your learning algorithm here"""
         pass
 
-class NoisySequentialDrugAgent(SequentialDrugAgent):
-
-    def __init__(
-        self, noise, *args, **kwargs
-    ) -> None:
-        
-        super().__init__(*args, **kwargs)
-
-        self.noise = noise
-    
-    def policy(self, observations):
-        utility = self.utility_function(observations)
-        utility += np.random.normal(0, self.noise, len(utility))
-        return utility
 
 class MultiStepDrugAgent(SequentialDrugAgent):
 
@@ -158,6 +144,48 @@ class MultiStepDrugAgent(SequentialDrugAgent):
         
         return aggregated_scores
     
+    def multi_step_lookahead(self, molecule):
+        """
+        Perform a multi-step lookahead to explore molecule analogs.
+
+        Parameters
+        ----------
+        molecule : Molecule
+            The starting molecule for the design process.
+        depth : int
+            The number of steps to look ahead.
+
+        Returns
+        -------
+        list of float
+            A list of evaluation scores from all analogs generated up to the given depth.
+        """
+        # Starting with the initial molecule
+        molecules = [molecule]
+
+        # Explore for each depth level
+        for _ in range(self.num_steps - 1):
+            new_molecules = []
+            for molecule in molecules:
+                new_molecules.extend(self.designer.design(molecule, 10))
+            molecules = new_molecules
+
+        # Evaluate all molecules and return their scores
+        return self.utility_function(molecules)
+
+
+class MCTSDrugAgent(MultiStepDrugAgent):
+
+    def __init__(
+        self,
+        *args,
+        **kwargs
+    ) -> None:
+        
+        super().__init__(*args, **kwargs)
+
+        self.nodes = dict()
+
     def multi_step_lookahead(self, molecule):
         """
         Perform a multi-step lookahead to explore molecule analogs.
