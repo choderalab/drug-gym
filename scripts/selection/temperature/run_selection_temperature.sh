@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection_noise.py"
+PYTHON_SCRIPT="./selection_temperature.py"
 
 # Define the output directory for results
 OUT_DIR="./out"
@@ -30,7 +30,7 @@ for TEMP_INT in $(seq $START $INCREMENT $END); do
         bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 1:00 \
              -o "$OUT_DIR/logs/temp_${TEMP}_trial_${TRIAL}.stdout" \
              -eo "$OUT_DIR/logs/temp_${TEMP}_trial_${TRIAL}.stderr" \
-             python3 "$PYTHON_SCRIPT" --sigma "$TEMP" --out_dir "$OUT_DIR"
+             python3 "$PYTHON_SCRIPT" --temperature "$TEMP" --out_dir "$OUT_DIR"
     done
     
     echo "Completed all trials for noise level: $NOISE"
