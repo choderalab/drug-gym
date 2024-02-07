@@ -2,7 +2,7 @@ import argparse
 import dgym as dg
 
 # load all data
-path = '../../../dgym-data'
+path = '../../../../dgym-data'
 
 deck = dg.MoleculeCollection.load(
     f'{path}/DSi-Poised_Library_annotated.sdf',
@@ -19,7 +19,7 @@ building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock
 fingerprints = dg.datasets.fingerprints(f'{path}/out/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
 # Docking oracles
-from dgym.envs.oracle import DockingOracle, NoisyOracle
+from dgym.envs.oracle import DockingOracle
 from dgym.envs.utility import ClassicUtilityFunction
 
 config = {
@@ -51,18 +51,6 @@ docking_utility = ClassicUtilityFunction(
     acceptable=(7.125, 9.5)
 )
 
-# Create noisy evaluator
-noisy_docking_oracle = NoisyOracle(
-    docking_oracle,
-    sigma=0.1
-)
-
-noisy_docking_utility = ClassicUtilityFunction(
-    noisy_docking_oracle,
-    ideal=(7.5, 9.5),
-    acceptable=(7.125, 9.5)
-)
-
 import pandas as pd
 from dgym.molecule import Molecule
 from dgym.envs.designer import Designer, Generator
@@ -84,31 +72,31 @@ drug_env = DrugEnv(
     designer,
     library = initial_library,
     assays = [docking_oracle],
-    budget = 300,
+    budget = 500,
     utility_function = docking_utility,
 )
 
+# Parse command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("--temperature", type=float, help="Creativity of the molecular designs")
+parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
+
+args = parser.parse_args()
+
+# Run the experiment
 sequence = [
-    {'name': 'ideate', 'parameters': {'temperature': 0.1, 'size': 10, 'strict': False}},
-    {'name': 'ideate', 'parameters': {'temperature': 0.0, 'size': 10, 'strict': True}},
+    {'name': 'ideate', 'parameters': {'temperature': args.temperature, 'size': 10, 'strict': False}},
+    {'name': 'ideate', 'parameters': {'temperature': args.temperature, 'size': 10, 'strict': True}},
     {'name': 'ADAM17 affinity'},
 ]
 
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
-    utility_function = noisy_docking_utility,
+    utility_function = docking_utility,
     exploration_strategy = EpsilonGreedy(epsilon = 0.0),
     branch_factor = 2
 )
 
-# Parse command line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--sigma", type=float, help="Spread of the noise distribution")
-parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
-
-args = parser.parse_args()
-
-drug_agent.utility_function.oracle.sigma = args.sigma
 experiment = Experiment(drug_agent, drug_env)
 result = experiment.run(**vars(args))
 
@@ -117,6 +105,6 @@ import json
 import uuid
 from utils import serialize_with_class_names
 
-file_path = f'{args.out_dir}/selection_noise_{uuid.uuid4()}.json'
+file_path = f'{args.out_dir}/selection_temp[erature_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection.py"
+PYTHON_SCRIPT="./selection_noise.py"
 
 # Define the output directory for results
 OUT_DIR="./out"
@@ -15,7 +15,7 @@ END=20  # For noise levels up to 2
 INCREMENT=1
 
 # Number of trials to run for each noise level
-NUM_TRIALS=5
+NUM_TRIALS=50
 
 # Generate noise levels from 0 to 2 with a step of 0.1
 for NOISE_INT in $(seq $START $INCREMENT $END); do
