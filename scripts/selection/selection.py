@@ -108,9 +108,9 @@ args = parser.parse_args()
 
 drug_agent.utility_function.oracle.sigma = args.sigma
 experiment = Experiment(drug_agent, drug_env)
-result = experiment.run()
-
-import pdb; pdb.set_trace()
+result = experiment.run(**vars(args))
 
 # Check if file already exists
 file_path = f'./out/selection_noise_{args.sigma}.tsv'
+
+import pdb; pdb.set_trace()
