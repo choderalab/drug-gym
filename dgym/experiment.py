@@ -1,4 +1,5 @@
-from tqdm.notebook import tqdm
+import numpy as np
+from tqdm import tqdm
 
 class Experiment:
     
@@ -7,22 +8,27 @@ class Experiment:
         self.drug_agent = drug_agent
         self.drug_env = drug_env
     
-    def run(self, num_trials, progress=False, **kwargs):
-        
+    def run(self, num_trials=1, progress=False, **kwargs):
+
         results = []
         for trial in tqdm(range(num_trials)):
 
-            observations, info = drug_env.reset()
+            observations, info = self.drug_env.reset()
 
             if progress:
-                pbar = tqdm(total = drug_env.budget)
+                pbar = tqdm(total = self.drug_env.budget)
             
             while True:
-                action = drug_agent.act(observations)
-                observations, _, terminated, truncated, _ = drug_env.step(action)
+                action = self.drug_agent.act(observations)
+                observations, _, terminated, truncated, _ = self.drug_env.step(action)
                 
+                try:
+                    print(np.nanmax(observations.annotations['ADAM17 affinity']))
+                except:
+                    pass
+
                 if progress:
-                    pbar.n = len(drug_env.library)
+                    pbar.n = len(self.drug_env.library)
                     pbar.update()
                 
                 if terminated or truncated:
@@ -30,12 +36,12 @@ class Experiment:
 
             result = {
                 'trial': trial,
-                **vars(drug_agent),
+                **vars(self.drug_agent),
                 **kwargs
             }
 
             if terminated:
-                cost = len(drug_env.library)
+                cost = len(self.drug_env.library)
                 result.update({'cost': cost, 'outcome': 1})
 
             if truncated:

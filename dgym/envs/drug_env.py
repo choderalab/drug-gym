@@ -45,7 +45,7 @@ class DrugEnv(gym.Env):
 
     def __init__(
         self,
-        library_designer,
+        designer,
         budget: int = 10_000,
         assays: list = [],
         library: Optional[MoleculeCollection] = None,
@@ -54,7 +54,7 @@ class DrugEnv(gym.Env):
         
         super().__init__()
         
-        self.library_designer = library_designer
+        self.designer = designer
 
         self.budget = budget
 
@@ -164,7 +164,7 @@ class DrugEnv(gym.Env):
         # design new library
         new_molecules = []
         for molecule in molecules:
-            new_molecules += self.library_designer.design(
+            new_molecules += self.designer.design(
                 molecule,
                 mode='replace',
                 *args,
@@ -206,4 +206,5 @@ class DrugEnv(gym.Env):
     def reset(self):
         self.design_cycle = 0
         self.library = self._library_0.clone()
+        self.designer.reset_cache()
         return self.get_observation(), {}
