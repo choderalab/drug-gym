@@ -11,13 +11,13 @@ mkdir -p "$OUT_DIR"
 
 # Define start, end, and increment for noise levels
 START=0
-END=20
+END=20  # For noise levels up to 2
 INCREMENT=1
 
 # Number of trials to run for each noise level
 NUM_TRIALS=5
 
-# Generate noise levels from 0 to 1 with a step of 0.1
+# Generate noise levels from 0 to 2 with a step of 0.1
 for NOISE_INT in $(seq $START $END $INCREMENT); do
     NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
     echo "Running trials for noise level: $NOISE"
@@ -26,15 +26,11 @@ for NOISE_INT in $(seq $START $END $INCREMENT); do
     for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for noise $NOISE"
         
-        # Call the Python script with the current noise level
-        # Redirecting stdout and stderr to log files
-        python3 "$PYTHON_SCRIPT" --out_dir "$OUT_DIR" --sigma "$NOISE" > "logs/noise_${NOISE}_trial_${TRIAL}.stdout" 2> "logs/noise_${NOISE}_trial_${TRIAL}.stderr"
-        
-        if [ $? -eq 0 ]; then
-            echo "Trial $TRIAL for noise $NOISE completed successfully."
-        else
-            echo "Trial $TRIAL for noise $NOISE failed. Check logs for details."
-        fi
+        # Submit the job with bsub
+        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 1:00 \
+             -o "$OUT_DIR/logs/noise_${NOISE}_trial_${TRIAL}.stdout" \
+             -eo "$OUT_DIR/logs/noise_${NOISE}_trial_${TRIAL}.stderr" \
+             python3 "$PYTHON_SCRIPT" --sigma "$NOISE" --out_dir "$OUT_DIR"
     done
     
     echo "Completed all trials for noise level: $NOISE"
