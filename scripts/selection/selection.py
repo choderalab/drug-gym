@@ -104,7 +104,7 @@ drug_agent = SequentialDrugAgent(
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--sigma", type=float, help="Spread of the noise distribution")
-parser.add_argument("--out_dir", type=float, help="Where to put the resulting JSONs")
+parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
 
 args = parser.parse_args()
 

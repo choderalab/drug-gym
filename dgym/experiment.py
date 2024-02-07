@@ -45,7 +45,8 @@ class Experiment:
                 result.update({'cost': cost, 'outcome': 1})
 
             if truncated:
-                result.update({'outcome': 0})
+                cost = len(self.drug_env.library)
+                result.update({'cost': cost, 'outcome': 0})
 
             results.append(result)
 

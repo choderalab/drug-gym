@@ -18,7 +18,7 @@ INCREMENT=1
 NUM_TRIALS=5
 
 # Generate noise levels from 0 to 2 with a step of 0.1
-for NOISE_INT in $(seq $START $END $INCREMENT); do
+for NOISE_INT in $(seq $START $INCREMENT $END); do
     NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
     echo "Running trials for noise level: $NOISE"
     
