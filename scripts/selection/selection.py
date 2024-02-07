@@ -104,6 +104,8 @@ drug_agent = SequentialDrugAgent(
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--sigma", type=float, help="Spread of the noise distribution")
+parser.add_argument("--out_dir", type=float, help="Where to put the resulting JSONs")
+
 args = parser.parse_args()
 
 drug_agent.utility_function.oracle.sigma = args.sigma
@@ -114,6 +116,7 @@ result = experiment.run(**vars(args))
 import json
 import uuid
 from utils import serialize_with_class_names
-file_path = f'./out/selection_noise_{uuid.uuid4()}.json'
+
+file_path = f'{args.out_dir}/selection_noise_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))
