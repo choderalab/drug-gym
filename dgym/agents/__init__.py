@@ -1,1 +1,1 @@
-from .drug_agent import DrugAgent, SequentialDrugAgent, NoisySequentialDrugAgent, MultiStepDrugAgent
+from .drug_agent import DrugAgent, SequentialDrugAgent, MultiStepDrugAgent
