@@ -110,7 +110,10 @@ drug_agent.utility_function.oracle.sigma = args.sigma
 experiment = Experiment(drug_agent, drug_env)
 result = experiment.run(**vars(args))
 
-# Check if file already exists
-file_path = f'./out/selection_noise_{args.sigma}.tsv'
-
-import pdb; pdb.set_trace()
+# Export results
+import json
+import uuid
+from utils import serialize_with_class_names
+file_path = f'./out/selection_noise_{uuid.uuid4()}.json'
+result_serialized = serialize_with_class_names(result)
+json.dump(result_serialized, open(file_path, 'w'))
