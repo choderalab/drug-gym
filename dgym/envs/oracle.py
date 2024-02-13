@@ -293,24 +293,23 @@ class DockingOracle(Oracle):
             # compute PDBQT
             try:
                 pdbqt = self._get_pdbqt(mol)
+                
+                # write PDBQTs to disk
+                path = os.path.join(
+                    directory,
+                    f'ligand_{idx}.pdbqt'
+                )
+                with open(path, 'w') as file:
+                    file.write(pdbqt)
+                paths.append(path)
+
+                # write ligand text file
+                ligands_txt = ' '.join(paths)
+                path = os.path.join(directory, 'ligands.txt')
+                with open(path, 'w') as file:
+                    file.write(ligands_txt)
             except:
                 failed.append(mol)
-
-            path = os.path.join(
-                directory,
-                f'ligand_{idx}.pdbqt'
-            )
-
-            # write PDBQTs to disk
-            with open(path, 'w') as file:
-                file.write(pdbqt)
-            paths.append(path)
-
-        # write ligand text file
-        ligands_txt = ' '.join(paths)
-        path = os.path.join(directory, 'ligands.txt')
-        with open(path, 'w') as file:
-            file.write(ligands_txt)
 
         return failed
 
