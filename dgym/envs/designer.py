@@ -113,7 +113,7 @@ class Generator:
     
     def size_similarity(self, molecules, sizes):
         """
-        Using L1-norm of building blocks with original molecules
+        Normalized L1-norm of building blocks with original molecules
         """
         original_sizes = torch.tensor([m.mol.GetNumAtoms() for m in molecules])
         l1_norm = sizes - original_sizes[:, None]
