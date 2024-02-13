@@ -23,6 +23,7 @@ chemfp.set_license('20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF')
 # -----------------------------------------------
 def compute_fingerprints(sdf_path: str = './', out_path: str = './out'):
     
+    # TODO - make this work with SDF file path or SDFSupplier
     path = "./Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf"
 
     # define fingerprint encoder
