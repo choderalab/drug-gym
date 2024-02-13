@@ -58,10 +58,11 @@ class Generator:
             # Add size similarity to score
             scores += self.size_similarity(molecules)
 
-            # Weighted sample of indices - TODO set multinomial seed
+            # Weighted sample of indices
             if temperature == 0.0:
                 samples = torch.topk(scores, 1_000)[1].tolist()
             
+            # TODO set random seed
             else:
                 probabilities = self.boltzmann(scores, temperature)
                 samples = torch.multinomial(probabilities, 1_000).tolist()
