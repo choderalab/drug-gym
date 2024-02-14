@@ -57,6 +57,7 @@ class DrugEnv(gym.Env):
         self.designer = designer
 
         self.budget = budget
+        self.timestep = 0
 
         # For now, max library size is set to a very large number
         self.max_molecules = 100_000
@@ -84,6 +85,9 @@ class DrugEnv(gym.Env):
         if library is None:
             library = MoleculeCollection()
         
+        # for molecule in library:
+        #     molecule.update_annotations({'timestep': self.timestep})
+
         self._library_0 = library.clone()
         self.library = self._library_0.clone()
         self.reward_history = []
@@ -132,6 +136,7 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
+        self.timestep += 1
         action_name, parameters, molecules = action.values()
         
         # Perform action
@@ -170,6 +175,9 @@ class DrugEnv(gym.Env):
                 *args,
                 **kwargs
             )
+        
+        # for new_molecule in new_molecules:
+        #     new_molecule.update_annotations({'timestep': self.timestep})
 
         return new_molecules
 

@@ -36,17 +36,17 @@ class Experiment:
 
             result = {
                 'trial': trial,
+                'cost': len(self.drug_env.library),
+                'timestep': self.drug_env.library.timestep,
                 **vars(self.drug_agent),
                 **kwargs
             }
 
             if terminated:
-                cost = len(self.drug_env.library)
-                result.update({'cost': cost, 'outcome': 1})
+                result.update({'outcome': 1})
 
             if truncated:
-                cost = len(self.drug_env.library)
-                result.update({'cost': cost, 'outcome': 0})
+                result.update({'outcome': 0})
 
             results.append(result)
 

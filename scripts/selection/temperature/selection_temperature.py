@@ -34,12 +34,8 @@ config = {
     'size_x': 22.5,
     'size_y': 22.5,
     'size_z': 22.5,
-    'exhaustiveness': 128,
-    'max_step': 20,
-    'num_modes': 9,
-    'search_mode': 'fast',
+    'search_mode': 'balanced',
     'scoring': 'gnina',
-    'refine_step': 3,
     'seed': 5
 }
 

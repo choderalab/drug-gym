@@ -45,7 +45,7 @@ class Generator:
 
             # Unbiased sample of indices
             probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 200).tolist()
+            samples = torch.multinomial(probabilities, 1_000).tolist()
         
         else:
             
@@ -219,6 +219,11 @@ class Designer:
         elif mode == 'grow':
             reactions = self.reactions
             reactants = [molecule, self.generator()]
+            max_depth = 1
+
+        elif mode == 'random':
+            reactions = self.reactions
+            reactants = [self.generator(), self.generator()]
             max_depth = 1
 
         # Perform reactions
