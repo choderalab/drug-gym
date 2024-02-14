@@ -18,6 +18,11 @@ reactions = dg.ReactionCollection.from_json(
 building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
 fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
+import torch
+import pyarrow.parquet as pq
+table = pq.read_table(f'{path}/sizes.parquet')[0]
+sizes = torch.tensor(table.to_numpy())
+
 # Docking oracles
 from dgym.envs.oracle import DockingOracle
 from dgym.envs.utility import ClassicUtilityFunction
@@ -60,7 +65,7 @@ from dgym.agents.exploration import EpsilonGreedy
 from dgym.experiment import Experiment
 
 designer = Designer(
-    Generator(building_blocks, fingerprints),
+    Generator(building_blocks, fingerprints, sizes),
     reactions,
     cache = True
 )
