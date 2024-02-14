@@ -210,7 +210,7 @@ class DrugEnv(gym.Env):
     def check_truncated(self):
         # Implement the logic for checking if the episode is done
         return len(self.library) >= self.budget \
-            or self.timestep >= 25
+            or self.timestep >= 40
 
     def reset(self):
         self.design_cycle = 0
