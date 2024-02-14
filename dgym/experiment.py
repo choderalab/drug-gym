@@ -37,7 +37,7 @@ class Experiment:
             result = {
                 'trial': trial,
                 'cost': len(self.drug_env.library),
-                'timestep': self.drug_env.library.timestep,
+                'timestep': self.drug_env.timestep,
                 **vars(self.drug_agent),
                 **kwargs
             }
