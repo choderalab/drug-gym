@@ -57,7 +57,7 @@ class DrugEnv(gym.Env):
         self.designer = designer
 
         self.budget = budget
-        self.timestep = 0
+        self.time_elapsed = 0
 
         # For now, max library size is set to a very large number
         self.max_molecules = 100_000
@@ -86,7 +86,7 @@ class DrugEnv(gym.Env):
             library = MoleculeCollection()
         
         # for molecule in library:
-        #     molecule.update_annotations({'timestep': self.timestep})
+        #     molecule.update_annotations({'timestep': self.time_elapsed})
 
         self._library_0 = library.clone()
         self.library = self._library_0.clone()
@@ -136,7 +136,7 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
-        self.timestep += 1
+        self.time_elapsed += 1
         action_name, parameters, molecules = action.values()
         
         # Perform action
@@ -177,7 +177,7 @@ class DrugEnv(gym.Env):
             )
         
         # for new_molecule in new_molecules:
-        #     new_molecule.update_annotations({'timestep': self.timestep})
+        #     new_molecule.update_annotations({'timestep': self.time_elapsed})
 
         return new_molecules
 
@@ -210,7 +210,7 @@ class DrugEnv(gym.Env):
     def check_truncated(self):
         # Implement the logic for checking if the episode is done
         return len(self.library) >= self.budget \
-            or self.timestep >= 40
+            or self.time_elapsed >= 40
 
     def reset(self):
         self.design_cycle = 0

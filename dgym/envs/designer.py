@@ -60,12 +60,12 @@ class Generator:
 
             # Weighted sample of indices
             if temperature == 0.0:
-                samples = torch.topk(scores, 1_000)[1].tolist()
+                samples = torch.topk(scores, 200_000)[1].tolist()
             
             # TODO set random seed
             else:
                 probabilities = self.boltzmann(scores, temperature)
-                samples = torch.multinomial(probabilities, 1_000).tolist()
+                samples = torch.multinomial(probabilities, 200_000).tolist()
 
         generators = [
             self._generator_factory(sampler, molecule, strict=strict)
