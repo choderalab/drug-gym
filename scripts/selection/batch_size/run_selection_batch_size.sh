@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection_temperature.py"
+PYTHON_SCRIPT="./selection_batch_size.py"
 
 # Generate a timestamp for the current time
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -17,29 +17,26 @@ LOGS_DIR="${RUN_DIR}/logs"
 mkdir -p "$RUN_DIR"
 mkdir -p "$LOGS_DIR"
 
-# Define start, end, and increment for temperature levels
-START=0
-END=20
-INCREMENT=1
+# Define specific batch sizes
+BATCH_SIZES=(1 5 10 20 96 192 384)
 
-# Number of trials to run for each level
+# Number of trials to run for each batch size
 NUM_TRIALS=50
 
-# Generate temperature levels from START to END with a step of INCREMENT
-for TEMP_INT in $(seq $START $INCREMENT $END); do
-    TEMP=$(echo "scale=2; $TEMP_INT / 20" | bc)
-    echo "Running trials for temperature level: $TEMP"
+# Iterate over each batch size
+for BATCH_SIZE in "${BATCH_SIZES[@]}"; do
+    echo "Running trials for batch size: $BATCH_SIZE"
 
-    # Run multiple trials for this temperature level
+    # Run multiple trials for this batch size
     for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
-        echo "Trial $TRIAL for temperature $TEMP"
+        echo "Trial $TRIAL for batch size $BATCH_SIZE"
 
         # Submit the job with bsub
         bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:05 \
-             -o "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stdout" \
-             -eo "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stderr" \
-             python3 "$PYTHON_SCRIPT" --temperature "$TEMP" --out_dir "$RUN_DIR"
+             -o "${LOGS_DIR}/batch_size_${BATCH_SIZE}_trial_${TRIAL}.stdout" \
+             -eo "${LOGS_DIR}/batch_size_${BATCH_SIZE}_trial_${TRIAL}.stderr" \
+             python3 "$PYTHON_SCRIPT" --batch_size "$BATCH_SIZE" --out_dir "$RUN_DIR"
     done
 
-    echo "Completed all trials for temperature level: $TEMP"
+    echo "Completed all trials for batch size: $BATCH_SIZE"
 done
