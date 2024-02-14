@@ -20,11 +20,16 @@ class Generator:
     def __init__(
         self,
         building_blocks,
-        fingerprints: chemfp.arena.FingerprintArena
+        fingerprints,
+        sizes,
+        path: str ='./out/'
     ) -> None:
+        
+        # TODO lazy-load fingerprints and sizes
         
         self.building_blocks = building_blocks
         self.fingerprints = fingerprints
+        self.sizes = sizes
     
     def __call__(
         self,
@@ -48,20 +53,19 @@ class Generator:
                 molecules = [molecules]
 
             # Identify analogs of each original molecule
-            indices, scores, sizes = self.fingerprint_similarity(molecules)
+            scores = self.fingerprint_similarity(molecules)
 
             # Add size similarity to score
-            scores += self.size_similarity(molecules, sizes)
+            scores += self.size_similarity(molecules)
 
             # Weighted sample of indices
             if temperature == 0.0:
-                samples_idx = torch.argsort(scores, descending=True)
+                samples = torch.topk(scores, 1_000)[1].tolist()
             
+            # TODO set random seed
             else:
                 probabilities = self.boltzmann(scores, temperature)
-                samples_idx = torch.multinomial(probabilities, 200)
-
-            samples = torch.gather(indices, 1, samples_idx).tolist()
+                samples = torch.multinomial(probabilities, 1_000).tolist()
 
         generators = [
             self._generator_factory(sampler, molecule, strict=strict)
@@ -100,23 +104,19 @@ class Generator:
             queries = queries,
             targets = self.fingerprints,
             progress = False,
-            k = 500
+            threshold = 0.0,
         )
 
-        indices = torch.tensor(list(results.iter_indices()))
-        scores = torch.tensor(list(results.iter_scores()))
+        scores = torch.tensor(results.to_csr().A)
 
-        get_size = lambda ids: [int(i.split(' ')[-1]) for i in ids]
-        sizes = torch.tensor([get_size(ids) for ids in results.iter_ids()])
-
-        return indices, scores, sizes
+        return scores
     
-    def size_similarity(self, molecules, sizes):
+    def size_similarity(self, molecules):
         """
-        Using L1-norm of building blocks with original molecules
+        Normalized L1-norm of building blocks with original molecules
         """
         original_sizes = torch.tensor([m.mol.GetNumAtoms() for m in molecules])
-        l1_norm = sizes - original_sizes[:, None]
+        l1_norm = self.sizes - original_sizes[:, None]
         return 1 / (1 + abs(l1_norm))
     
     @staticmethod
