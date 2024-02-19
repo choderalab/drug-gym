@@ -18,6 +18,7 @@ class Experiment:
             if progress:
                 pbar = tqdm(total = self.drug_env.budget)
             
+            print(self.drug_env.assays['ADAM17 affinity'](observations)[0])
             while True:
                 action = self.drug_agent.act(observations)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
