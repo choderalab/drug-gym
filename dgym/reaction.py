@@ -188,8 +188,10 @@ class LazyReaction(Reaction):
             yield from self.run_single_step(reactants, protect=protect, strict=strict)
 
     def run_single_step(self, reactants, protect=False, strict=False):
-        
-        if len(reactants) != len(self.reactants):
+
+        # check if reaction is even going to run
+        if len(reactants) != len(self.reactants) \
+            or not all(reactants):
             return ()
 
         if protect:

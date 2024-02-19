@@ -78,12 +78,11 @@ class Generator:
     def _generator_factory(self, sampler, original=None, strict=False):
         
         for index in sampler:
-            building_block = self.building_blocks[index]
-            
-            if strict:
-                building_block = self.substruct_match(building_block, original)
-            
-            if building_block:
+            if building_block := self.building_blocks[index]:
+
+                if strict:
+                    building_block = self.substruct_match(building_block, original)
+
                 yield Molecule(building_block)
     
     def fingerprint_similarity(self, molecules):

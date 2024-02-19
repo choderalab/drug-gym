@@ -66,18 +66,9 @@ designer = Designer(
     cache = True
 )
 
-# select first molecule
 import random
-def select_molecule(deck):
-    initial_index = random.randint(0, len(deck))
-    initial_molecule = deck[initial_index]
-    return initial_molecule
-
-initial_molecule = select_molecule(deck)
-while len(initial_molecule.reactants) != 2:
-    initial_molecule = select_molecule(deck)
-
-initial_library = dg.MoleculeCollection([initial_molecule]) # 659
+initial_index = random.randint(0, len(deck))
+initial_library = dg.MoleculeCollection([deck[initial_index]]) # 659
 initial_library.update_annotations()
 
 drug_env = DrugEnv(
@@ -114,7 +105,10 @@ drug_agent = SequentialDrugAgent(
 )
 
 experiment = Experiment(drug_agent, drug_env)
-result = experiment.run(**vars(args))
+try:
+    result = experiment.run(**vars(args))
+except:
+    import pdb; pdb.set_trace()
 
 # Export results
 import json

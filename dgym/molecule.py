@@ -131,6 +131,9 @@ class Molecule:
 
     def __hash__(self):
         return hash(self.smiles)
+    
+    def __bool__(self):
+        return self.mol is not None
 
     def erase_annotations(self) -> Any:
         """Erase the metadata. """
