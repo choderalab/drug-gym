@@ -18,7 +18,7 @@ mkdir -p "$RUN_DIR"
 mkdir -p "$LOGS_DIR"
 
 # Define specific batch sizes
-BATCH_SIZES=(1 5 10 20 96 192 384)
+BATCH_SIZES=(1 8 12 16 24 48 96 192 384)
 
 # Number of trials to run for each batch size
 NUM_TRIALS=50
