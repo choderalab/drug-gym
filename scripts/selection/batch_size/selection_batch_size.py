@@ -66,7 +66,9 @@ designer = Designer(
     cache = True
 )
 
-initial_library = dg.MoleculeCollection([deck[659]])
+import random
+initial_index = random.randint(0, len(deck))
+initial_library = dg.MoleculeCollection([deck[initial_index]]) # 659
 initial_library.update_annotations()
 
 drug_env = DrugEnv(
@@ -85,9 +87,13 @@ parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSON
 args = parser.parse_args()
 
 # Run the experiment
+batch_total = args.batch_size
+batch_part_one = batch_total // 2
+batch_part_two = batch_total - batch_part_one
+
 sequence = [
-    {'name': 'ideate', 'parameters': {'temperature': 0.5, 'size': args.batch_size, 'strict': False}},
-    {'name': 'ideate', 'parameters': {'temperature': 0.5, 'size': args.batch_size, 'strict': True}},
+    {'name': 'ideate', 'parameters': {'temperature': 0.5, 'size': batch_part_one, 'strict': False}},
+    {'name': 'ideate', 'parameters': {'temperature': 0.5, 'size': batch_part_two, 'strict': True}},
     {'name': 'ADAM17 affinity'},
 ]
 
@@ -95,7 +101,7 @@ drug_agent = SequentialDrugAgent(
     sequence = sequence,
     utility_function = docking_utility,
     exploration_strategy = EpsilonGreedy(epsilon = 0.0),
-    branch_factor = 2
+    branch_factor = 1
 )
 
 experiment = Experiment(drug_agent, drug_env)
@@ -106,6 +112,6 @@ import json
 import uuid
 from utils import serialize_with_class_names
 
-file_path = f'{args.out_dir}/selection_batch_size{uuid.uuid4()}.json'
+file_path = f'{args.out_dir}/selection_batch_size_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))
