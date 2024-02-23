@@ -48,8 +48,8 @@ docking_oracle = DockingOracle(
 
 docking_utility = ClassicUtilityFunction(
     docking_oracle,
-    ideal=(8.5, 9.5),
-    acceptable=(7.125, 9.5)
+    ideal=(8.5, 11),
+    acceptable=(7.125, 11)
 )
 
 import pandas as pd

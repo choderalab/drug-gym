@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection_batch_size.py"
+PYTHON_SCRIPT="./selection_exploration.py"
 
 # Generate a timestamp for the current time
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -26,13 +26,13 @@ INCREMENT=1
 NUM_TRIALS=50
 
 # Generate epsilon levels from 0 to 1 with a step of 0.1
-for EPSILON_INT in $(seq $START $INCREMENT $END); do
-    EPSILON=$(echo "scale=2; $EPSILON_INT / 10" | bc)
-    echo "Running trials for noise level: $EPSILON"
-
-    # Run multiple trials for this batch size
-    for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
-        echo "Trial $TRIAL for batch size $EPSILON"
+# Run multiple trials for this batch size
+for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
+    echo "Trial $TRIAL"
+    
+    for EPSILON_INT in $(seq $START $INCREMENT $END); do
+        EPSILON=$(echo "scale=2; $EPSILON_INT / 10" | bc)
+        echo "Running $TRIAL trial for noise level: $EPSILON"
 
         # Submit the job with bsub
         bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:05 \
