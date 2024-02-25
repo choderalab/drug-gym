@@ -86,7 +86,7 @@ def get_drug_env(
     # select first molecule
     import random
     def select_molecule(deck):
-        initial_index = random.randint(0, len(deck))
+        initial_index = random.randint(0, len(deck) - 1)
         initial_molecule = deck[initial_index]
         if len(initial_molecule.reactants) == 2 \
             and designer.match_reactions(initial_molecule):

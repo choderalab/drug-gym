@@ -39,6 +39,7 @@ class Experiment:
                 'trial': trial,
                 'cost': len(self.drug_env.library),
                 'time_elapsed': self.drug_env.time_elapsed,
+                'annotations': self.drug_env.library.annotations.to_dict(),
                 **vars(self.drug_agent),
                 **kwargs
             }
