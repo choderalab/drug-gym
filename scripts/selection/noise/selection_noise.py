@@ -119,19 +119,6 @@ def get_drug_env(
 
     return drug_env
 
-sequence = [
-    {'name': 'ideate', 'parameters': {'temperature': 0.1, 'size': 10, 'strict': False}},
-    {'name': 'ideate', 'parameters': {'temperature': 0.0, 'size': 10, 'strict': True}},
-    {'name': 'ADAM17 affinity'},
-]
-
-drug_agent = SequentialDrugAgent(
-    sequence = sequence,
-    utility_function = noisy_docking_utility,
-    exploration_strategy = EpsilonGreedy(epsilon = 0.0),
-    branch_factor = 1
-)
-
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--sigma", type=float, help="Spread of the noise distribution")
@@ -155,6 +142,19 @@ drug_env = get_drug_env(
     reactions, building_blocks, fingerprints, sizes,
     docking_oracle,
     docking_utility
+)
+
+sequence = [
+    {'name': 'ideate', 'parameters': {'temperature': 0.1, 'size': 10, 'strict': False}},
+    {'name': 'ideate', 'parameters': {'temperature': 0.0, 'size': 10, 'strict': True}},
+    {'name': 'ADAM17 affinity'},
+]
+
+drug_agent = SequentialDrugAgent(
+    sequence = sequence,
+    utility_function = noisy_docking_utility,
+    exploration_strategy = EpsilonGreedy(epsilon = 0.0),
+    branch_factor = 1
 )
 
 drug_agent.utility_function.oracle.sigma = args.sigma
