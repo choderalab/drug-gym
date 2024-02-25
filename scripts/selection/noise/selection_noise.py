@@ -1,22 +1,39 @@
 import argparse
 import dgym as dg
 
-# load all data
+def get_data(path):
+
+    deck = dg.MoleculeCollection.load(
+        f'{path}/DSi-Poised_Library_annotated.sdf',
+        reactant_names=['reagsmi1', 'reagsmi2', 'reagsmi3']
+    )
+
+    reactions = dg.ReactionCollection.from_json(
+        path = f'{path}/All_Rxns_rxn_library.json',
+        smarts_col = 'reaction_string',
+        classes_col = 'functional_groups'
+    )
+
+    building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
+    fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
+
+    import torch
+    import pyarrow.parquet as pq
+    table = pq.read_table(f'{path}/sizes.parquet')[0]
+    sizes = torch.tensor(table.to_numpy())
+
+    return deck, reactions, building_blocks, fingerprints, sizes
+
+
+# Load all data
 path = '../../../../dgym-data'
-
-deck = dg.MoleculeCollection.load(
-    f'{path}/DSi-Poised_Library_annotated.sdf',
-    reactant_names=['reagsmi1', 'reagsmi2', 'reagsmi3']
-)
-
-reactions = dg.ReactionCollection.from_json(
-    path = f'{path}/All_Rxns_rxn_library.json',
-    smarts_col = 'reaction_string',
-    classes_col = 'functional_groups'
-)
-
-building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
-fingerprints = dg.datasets.fingerprints(f'{path}/out/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
+(
+    deck,
+    reactions,
+    building_blocks,
+    fingerprints,
+    sizes
+) = get_data(path)
 
 # Docking oracles
 from dgym.envs.oracle import DockingOracle, NoisyOracle
@@ -29,12 +46,8 @@ config = {
     'size_x': 22.5,
     'size_y': 22.5,
     'size_z': 22.5,
-    'exhaustiveness': 128,
-    'max_step': 20,
-    'num_modes': 9,
-    'search_mode': 'fast',
+    'search_mode': 'balanced',
     'scoring': 'gnina',
-    'refine_step': 3,
     'seed': 5
 }
 
@@ -47,46 +60,64 @@ docking_oracle = DockingOracle(
 
 docking_utility = ClassicUtilityFunction(
     docking_oracle,
-    ideal=(7.5, 9.5),
-    acceptable=(7.125, 9.5)
+    ideal=(8.5, 11),
+    acceptable=(7.125, 11)
 )
 
 # Create noisy evaluator
 noisy_docking_oracle = NoisyOracle(
     docking_oracle,
-    sigma=0.1
+    sigma=0.7
 )
 
 noisy_docking_utility = ClassicUtilityFunction(
     noisy_docking_oracle,
-    ideal=(7.5, 9.5),
-    acceptable=(7.125, 9.5)
+    ideal=(8.5, 11),
+    acceptable=(7.125, 11)
 )
 
-import pandas as pd
-from dgym.molecule import Molecule
-from dgym.envs.designer import Designer, Generator
-from dgym.envs.drug_env import DrugEnv
-from dgym.agents import SequentialDrugAgent
-from dgym.agents.exploration import EpsilonGreedy
-from dgym.experiment import Experiment
+def get_drug_env(
+        deck,
+        reactions, building_blocks, fingerprints, sizes,
+        docking_oracle,
+        docking_utility
+    ):
+    
+    import pandas as pd
+    from dgym.molecule import Molecule
+    from dgym.envs.designer import Designer, Generator
+    from dgym.envs.drug_env import DrugEnv
 
-designer = Designer(
-    Generator(building_blocks, fingerprints),
-    reactions,
-    cache = True
-)
+    designer = Designer(
+        Generator(building_blocks, fingerprints, sizes),
+        reactions,
+        cache = True
+    )
 
-initial_library = dg.MoleculeCollection([deck[659]])
-initial_library.update_annotations()
+    # select first molecule
+    import random
+    def select_molecule(deck):
+        initial_index = random.randint(0, len(deck) - 1)
+        initial_molecule = deck[initial_index]
+        if len(initial_molecule.reactants) == 2 \
+            and designer.match_reactions(initial_molecule):
+            return initial_molecule
+        else:
+            return select_molecule(deck)
 
-drug_env = DrugEnv(
-    designer,
-    library = initial_library,
-    assays = [docking_oracle],
-    budget = 500,
-    utility_function = docking_utility,
-)
+    initial_molecules = [select_molecule(deck) for _ in range(5)]
+    initial_library = dg.MoleculeCollection(initial_molecules) # 659
+    initial_library.update_annotations()
+
+    drug_env = DrugEnv(
+        designer,
+        library = initial_library,
+        assays = [docking_oracle],
+        budget = 500,
+        utility_function = docking_utility,
+    )
+
+    return drug_env
 
 sequence = [
     {'name': 'ideate', 'parameters': {'temperature': 0.1, 'size': 10, 'strict': False}},
@@ -98,7 +129,7 @@ drug_agent = SequentialDrugAgent(
     sequence = sequence,
     utility_function = noisy_docking_utility,
     exploration_strategy = EpsilonGreedy(epsilon = 0.0),
-    branch_factor = 2
+    branch_factor = 1
 )
 
 # Parse command line arguments
@@ -107,6 +138,24 @@ parser.add_argument("--sigma", type=float, help="Spread of the noise distributio
 parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
 
 args = parser.parse_args()
+
+# Run experiment
+from dgym.experiment import Experiment
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+
+import pandas as pd
+from dgym.molecule import Molecule
+from dgym.envs.designer import Designer, Generator
+from dgym.envs.drug_env import DrugEnv
+
+# Get environment
+drug_env = get_drug_env(
+    deck,
+    reactions, building_blocks, fingerprints, sizes,
+    docking_oracle,
+    docking_utility
+)
 
 drug_agent.utility_function.oracle.sigma = args.sigma
 experiment = Experiment(drug_agent, drug_env)

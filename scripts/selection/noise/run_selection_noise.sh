@@ -17,17 +17,16 @@ INCREMENT=1
 # Number of trials to run for each noise level
 NUM_TRIALS=50
 
-# Generate noise levels from 0 to 2 with a step of 0.1
-for NOISE_INT in $(seq $START $INCREMENT $END); do
-    NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
-    echo "Running trials for noise level: $NOISE"
-    
-    # Run multiple trials for this noise level
-    for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
+# Run multiple trials for this noise level
+for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
+
+    # Generate noise levels from 0 to 2 with a step of 0.1
+    for NOISE_INT in $(seq $START $INCREMENT $END); do
+        NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
         echo "Trial $TRIAL for noise $NOISE"
         
         # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 1:00 \
+        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:30 \
              -o "$OUT_DIR/logs/noise_${NOISE}_trial_${TRIAL}.stdout" \
              -eo "$OUT_DIR/logs/noise_${NOISE}_trial_${TRIAL}.stderr" \
              python3 "$PYTHON_SCRIPT" --sigma "$NOISE" --out_dir "$OUT_DIR"
