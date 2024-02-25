@@ -1,5 +1,5 @@
 # Number of machines (processors)
-num_machines=40
+num_machines=17
 
 # Outer loop to submit jobs
 for machine_id in $(seq 0 $((num_machines - 1))); do

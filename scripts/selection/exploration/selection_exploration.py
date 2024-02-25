@@ -24,7 +24,7 @@ def get_data(path):
 
     return deck, reactions, building_blocks, fingerprints, sizes
 
-def get_oracles(path, sigma=0.1):
+def get_oracles(path, sigma=0.5):
 
     # Docking oracles
     from dgym.envs.oracle import DockingOracle, NoisyOracle
@@ -148,7 +148,7 @@ path = '../../../../dgym-data'
 ) = get_data(path)
 
 # Make oracles
-docking_oracle, docking_utility, noisy_docking_utility = get_oracles(path)
+docking_oracle, docking_utility, noisy_docking_utility = get_oracles(path, sigma=0.5)
 
 # Get environment
 drug_env = get_drug_env(
@@ -159,7 +159,7 @@ drug_env = get_drug_env(
 )
 
 # Get agent
-drug_agent = get_drug_agent(docking_utility, args)
+drug_agent = get_drug_agent(noisy_docking_utility, args)
 
 # Run experiment
 from dgym.experiment import Experiment
