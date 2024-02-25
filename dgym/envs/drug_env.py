@@ -136,7 +136,6 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
-        self.time_elapsed += 1
         action_name, parameters, molecules = action.values()
         
         # Perform action
@@ -176,8 +175,9 @@ class DrugEnv(gym.Env):
                 **kwargs
             )
         
-        # for new_molecule in new_molecules:
-        #     new_molecule.update_annotations({'timestep': self.time_elapsed})
+        self.time_elapsed += 1
+        for new_molecule in new_molecules:
+            new_molecule.update_annotations({'timestep': self.time_elapsed})
 
         return new_molecules
 
@@ -199,8 +199,17 @@ class DrugEnv(gym.Env):
         return self.library
 
     def get_reward(self):
-        utility = self.utility_function(self.library.annotated)
-        reward = max([*utility, -float('inf')])
+        
+        # Convert annotations into utility
+        is_annotated = lambda m: all(a in m.annotations for a in self.assays)
+        annotated = self.library.filter(is_annotated)
+        
+        # Compute reward
+        reward = -float('inf')
+        if annotated:
+            utility = self.utility_function(annotated)
+            reward = max([*utility, reward])
+
         return reward
 
     def check_terminated(self):

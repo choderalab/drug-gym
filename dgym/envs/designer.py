@@ -201,17 +201,17 @@ class Designer:
         """
         if mode == 'replace':
             reactions = self.match_reactions(molecule)
-            random.shuffle(molecule.reactants) # TODO make a toggle
+            # random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants.copy()
-            reactants[replace] = self.generator(
-                reactants[replace],
-                temperature=temperature,
-                strict=strict,
-            )
-            # reactants = [
-            #     self.generator(reactants[0], temperature=temperature, strict=strict),
-            #     self.generator(reactants[1], temperature=temperature, strict=strict)
-            # ]
+            # reactants[replace] = self.generator(
+            #     reactants[replace],
+            #     temperature=temperature,
+            #     strict=strict,
+            # )
+            reactants = [
+                self.generator(reactants[0], temperature=temperature, strict=strict),
+                self.generator(reactants[1], temperature=temperature, strict=strict)
+            ]
             max_depth = None
 
         elif mode == 'grow':

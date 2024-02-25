@@ -1,7 +1,8 @@
 import dgym as dg
 import numpy as np
+from dgym.molecule import Molecule
 from dgym.envs.oracle import Oracle
-from typing import Optional, Callable
+from typing import Optional, Callable, Iterable
 
 
 class UtilityFunction:
@@ -12,15 +13,19 @@ class UtilityFunction:
         self.ideal = np.array(ideal)
         self.acceptable = np.array(acceptable)
 
-    def __call__(self, molecules):
-        return self.score(self.oracle(molecules))
+    def __call__(self, input):
+        
+        if isinstance(input[0], Molecule):
+            input = self.oracle(input)
+        
+        return self.score(input)
 
     def score(self, value):
         is_scalar = np.isscalar(value)
         value = np.asarray(value)
         scores = np.where(
             (self.ideal[0] <= value) & (value <= self.ideal[1]), 
-            1, 
+            1,
             self.score_acceptable(value)
         )
         return scores.item() if is_scalar else scores
