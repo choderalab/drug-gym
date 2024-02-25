@@ -136,11 +136,13 @@ class MultiStepDrugAgent(SequentialDrugAgent):
             or self.num_steps < 2:
             return self.utility_function(observations)
 
-        aggregated_scores = []
+        leaves = []
         for observation in observations:
-            all_scores = self.multi_step_lookahead(observation)
-            aggregated_score = self.agg_func(all_scores)
-            aggregated_scores.append(aggregated_score)
+            leaves_ = self.multi_step_lookahead(observation)
+            leaves.extend(leaves_)
+        
+        scores = self.utility_function(leaves).reshape(len(observations), -1)
+        aggregated_scores = self.agg_func(scores, axis=1)
         
         return aggregated_scores
     
@@ -170,8 +172,7 @@ class MultiStepDrugAgent(SequentialDrugAgent):
                 new_molecules.extend(self.designer.design(molecule, 10))
             molecules = new_molecules
 
-        # Evaluate all molecules and return their scores
-        return self.utility_function(molecules)
+        return molecules
 
 
 class MCTSDrugAgent(MultiStepDrugAgent):
