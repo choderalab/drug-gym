@@ -149,7 +149,7 @@ class Molecule:
             self.annotations.update({'design_cycle': self.design_cycle})
         if 'reactants' not in self.annotations:
             self.annotations.update({'reactants': [r.smiles for r in self.reactants]})
-        if 'inspiration' not in self.annotations:
+        if 'inspiration' not in self.annotations and self.inspiration:
             self.annotations.update({'inspiration': self.inspiration.smiles})
         if 'smiles' not in self.annotations:
             self.annotations.update({'smiles': self.smiles})
