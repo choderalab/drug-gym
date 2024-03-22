@@ -145,6 +145,8 @@ class Molecule:
 
         self.annotations.update(self.mol.GetPropsAsDict())
         self.annotations.update({'design_cycle': self.design_cycle})
+        self.annotations.update({'inspiration': self.inspiration})
+        self.annotations.update({'reactants': [r.smiles for r in self.reactants]})
 
         if 'smiles' not in self.annotations:
             self.annotations.update({'smiles': self.smiles})
@@ -157,7 +159,7 @@ class Molecule:
                 self.mol.SetProp(str(key), str(value))
 
         return self
-
+    
     def update_cache(self):
         try:
             self.mol.UpdatePropertyCache()
