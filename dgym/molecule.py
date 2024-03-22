@@ -145,7 +145,7 @@ class Molecule:
 
         self.annotations.update(self.mol.GetPropsAsDict())
         self.annotations.update({'design_cycle': self.design_cycle})
-        self.annotations.update({'inspiration': self.inspiration})
+        self.annotations.update({'inspiration': self.inspiration.smiles})
         self.annotations.update({'reactants': [r.smiles for r in self.reactants]})
 
         if 'smiles' not in self.annotations:
