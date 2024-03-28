@@ -193,13 +193,14 @@ drug_agent = SequentialDrugAgent(
 )
 
 experiment = Experiment(drug_agent, drug_env)
-result = experiment.run(**vars(args))
+
+file_path = f'{args.out_dir}/selection_targets_{args.target_index}_{uuid.uuid4()}.json'
+result = experiment.run(**vars(args), out=file_path)
 
 # Export results
 import json
 import uuid
 from utils import serialize_with_class_names
 
-file_path = f'{args.out_dir}/selection_targets_{args.target_index}_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))

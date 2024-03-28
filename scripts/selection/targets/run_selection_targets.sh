@@ -23,7 +23,7 @@ END=58  # For noise levels up to 2
 INCREMENT=1
 
 # Number of trials to run for each target
-NUM_TRIALS=50
+NUM_TRIALS=1
 
 # Run multiple trials for this noise level
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
@@ -33,10 +33,10 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for target $TARGET"
         
         # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:30 \
+        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:10 \
              -o "${LOGS_DIR}/logs/target_${TARGET}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/logs/target_${TARGET}_trial_${TRIAL}.stderr" \
-             python3 "$PYTHON_SCRIPT" --sigma "$TARGET" --out_dir "$RUN_DIR"
+             python3 "$PYTHON_SCRIPT" --target_index "$TARGET" --out_dir "$RUN_DIR"
     done
     
     echo "Completed all trials for target index: $TARGET"

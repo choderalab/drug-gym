@@ -28,7 +28,6 @@ class Experiment:
                 pbar = tqdm(total = self.drug_env.budget)
             
             while True:
-                
                 action = self.drug_agent.act(observations)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
                 result = self.get_result(trial, out=out, **kwargs)
