@@ -1,5 +1,8 @@
+import json
 import numpy as np
 from tqdm import tqdm
+from typing import Optional
+from dgym.utils import serialize_with_class_names
 
 class Experiment:
     
@@ -8,7 +11,13 @@ class Experiment:
         self.drug_agent = drug_agent
         self.drug_env = drug_env
     
-    def run(self, num_trials=1, progress=False, **kwargs):
+    def run(
+        self,
+        num_trials=1,
+        progress=True,
+        out: Optional[str] = None,
+        **kwargs
+    ):
 
         results = []
         for trial in tqdm(range(num_trials)):
@@ -18,16 +27,12 @@ class Experiment:
             if progress:
                 pbar = tqdm(total = self.drug_env.budget)
             
-            # print(self.drug_env.assays['ABL1 affinity'](observations)[0])
             while True:
+                
                 action = self.drug_agent.act(observations)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
+                result = self.get_result(trial, out=out, **kwargs)
                 
-                # try:
-                #     print(np.nanmax(observations.annotations['ABL1 affinity']))
-                # except:
-                #     pass
-
                 if progress:
                     pbar.n = len(self.drug_env.library)
                     pbar.update()
@@ -35,21 +40,29 @@ class Experiment:
                 if terminated or truncated:
                     break
 
-            result = {
-                'trial': trial,
-                'cost': len(self.drug_env.library),
-                'time_elapsed': self.drug_env.time_elapsed,
-                'annotations': self.drug_env.library.annotations.to_dict(),
-                **vars(self.drug_agent),
-                **kwargs
-            }
-
             if terminated:
                 result.update({'outcome': 1})
-
+            
             if truncated:
                 result.update({'outcome': 0})
 
             results.append(result)
 
         return results
+
+    def get_result(self, trial: int, out: Optional[str] = None, **kwargs):
+        
+        result = {
+            'trial': trial,
+            'cost': len(self.drug_env.library),
+            'time_elapsed': self.drug_env.time_elapsed,
+            'annotations': self.drug_env.library.annotations.to_dict(),
+            **vars(self.drug_agent),
+            **kwargs
+        }
+        
+        if out:
+            result_serialized = serialize_with_class_names(result)
+            json.dump(result_serialized, open(out, 'w'))
+            
+        return result
