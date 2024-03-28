@@ -18,15 +18,15 @@ class Experiment:
             if progress:
                 pbar = tqdm(total = self.drug_env.budget)
             
-            print(self.drug_env.assays['ADAM17 affinity'](observations)[0])
+            # print(self.drug_env.assays['ABL1 affinity'](observations)[0])
             while True:
                 action = self.drug_agent.act(observations)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
                 
-                try:
-                    print(np.nanmax(observations.annotations['ADAM17 affinity']))
-                except:
-                    pass
+                # try:
+                #     print(np.nanmax(observations.annotations['ABL1 affinity']))
+                # except:
+                #     pass
 
                 if progress:
                     pbar.n = len(self.drug_env.library)
