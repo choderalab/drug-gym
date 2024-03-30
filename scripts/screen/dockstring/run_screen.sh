@@ -39,8 +39,8 @@ for SCORER in "${SCORERS[@]}"; do
             
             # Submit the job with bsub
             bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:10 \
-                 -o "${LOGS_DIR}/logs/${SCORER}_target_${TARGET}_trial_${TRIAL}.stdout" \
-                 -eo "${LOGS_DIR}/logs/${SCORER}_target_${TARGET}_trial_${TRIAL}.stderr" \
+                 -o "${LOGS_DIR}/${SCORER}_target_${TARGET}_trial_${TRIAL}.stdout" \
+                 -eo "${LOGS_DIR}/${SCORER}_target_${TARGET}_trial_${TRIAL}.stderr" \
                  python3 "$PYTHON_SCRIPT" --target_index "$TARGET" --out_dir "$RUN_DIR" --scorer "$SCORER"
         done
         

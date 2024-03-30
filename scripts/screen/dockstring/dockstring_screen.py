@@ -110,9 +110,8 @@ def get_oracle(path: str, target_index: int, scorer: str):
     from dgym.envs.oracle import DockingOracle
     
     # Create noiseless evaluators
-    name, receptor_path, config = get_docking_config(path, target_index)
-    docking_oracle = DockingOracle(
-        name, receptor_path=receptor_path, config=config, scorer=scorer)
+    name, receptor_path, config = get_docking_config(path, target_index, scorer=scorer)
+    docking_oracle = DockingOracle(name, receptor_path=receptor_path, config=config)
     return docking_oracle
 
 
