@@ -68,7 +68,7 @@ def get_molecules(
             molecule = designer.design(molecule, 1, temperature=1.0)[0]
         
         # generate a bunch of analogs
-        analogs = designer.design(molecule, 5, temperature=0.0)
+        analogs = designer.design(molecule, 15, temperature=0.0)
         molecules.extend(analogs)
 
     return molecules
