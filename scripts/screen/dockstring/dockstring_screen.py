@@ -159,6 +159,9 @@ smiles = [m.smiles for m in molecules]
 smiles_scores = list(zip(smiles, scores))
 results_df = pd.DataFrame(smiles_scores, columns=['smiles', 'affinity'])
 
+results_df['target'] = docking_oracle.name
+results_df['scorer'] = args.scorer
+
 # Write to disk
 import os
 
