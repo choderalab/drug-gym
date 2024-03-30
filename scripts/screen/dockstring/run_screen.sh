@@ -25,21 +25,27 @@ INCREMENT=1
 # Number of trials to run for each target
 NUM_TRIALS=3
 
-# Run multiple trials for this noise level
-for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
+# Define an array of scorers
+SCORERS=("vina" "vinardo" "gnina")
 
-    # Generate noise levels from 0 to 2 with a step of 0.1
-    for TARGET in $(seq $START $INCREMENT $END); do
-        echo "Trial $TRIAL for target $TARGET"
+# Run multiple trials for each scorer
+for SCORER in "${SCORERS[@]}"; do
+    echo "Running trials for scorer: $SCORER"
+    for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
+
+        # Generate noise levels from 0 to 2 with a step of 0.1
+        for TARGET in $(seq $START $INCREMENT $END); do
+            echo "Trial $TRIAL for target $TARGET with scorer $SCORER"
+            
+            # Submit the job with bsub
+            bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:10 \
+                 -o "${LOGS_DIR}/logs/${SCORER}_target_${TARGET}_trial_${TRIAL}.stdout" \
+                 -eo "${LOGS_DIR}/logs/${SCORER}_target_${TARGET}_trial_${TRIAL}.stderr" \
+                 python3 "$PYTHON_SCRIPT" --target_index "$TARGET" --out_dir "$RUN_DIR" --scorer "$SCORER"
+        done
         
-        # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:10 \
-             -o "${LOGS_DIR}/logs/target_${TARGET}_trial_${TRIAL}.stdout" \
-             -eo "${LOGS_DIR}/logs/target_${TARGET}_trial_${TRIAL}.stderr" \
-             python3 "$PYTHON_SCRIPT" --target_index "$TARGET" --out_dir "$RUN_DIR"
+        echo "Completed all trials for target index: $TARGET with scorer $SCORER"
     done
-    
-    echo "Completed all trials for target index: $TARGET"
 done
 
-echo "All trials completed."
+echo "All trials for all scorers completed."

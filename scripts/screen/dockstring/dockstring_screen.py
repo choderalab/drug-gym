@@ -73,7 +73,7 @@ def get_molecules(
 
     return molecules
 
-def get_docking_config(path, target_index):
+def get_docking_config(path, target_index, scorer):
     
     import os
 
@@ -95,7 +95,7 @@ def get_docking_config(path, target_index):
     receptor_path = f'{path}/dockstring_targets/{target_file}'
     config = {
         'search_mode': 'balanced',
-        'scoring': 'gnina',
+        'scoring': scorer,
         'seed': 5,
         'size_x': 15.0,
         'size_y': 15.0,
@@ -105,13 +105,14 @@ def get_docking_config(path, target_index):
     
     return name, receptor_path, config
 
-def get_oracle(path: str, target_index: int):
+def get_oracle(path: str, target_index: int, scorer: str):
     
     from dgym.envs.oracle import DockingOracle
     
     # Create noiseless evaluators
     name, receptor_path, config = get_docking_config(path, target_index)
-    docking_oracle = DockingOracle(name, receptor_path=receptor_path, config=config)
+    docking_oracle = DockingOracle(
+        name, receptor_path=receptor_path, config=config, scorer=scorer)
     return docking_oracle
 
 
@@ -119,6 +120,7 @@ def get_oracle(path: str, target_index: int):
 parser = argparse.ArgumentParser()
 parser.add_argument("--target_index", type=int, help="The index of the docking target")
 parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
+parser.add_argument("--scorer", type=str, help="Which mode for scoring. `vina`, `vinardo`, or `gnina`.")
 
 args = parser.parse_args()
 
@@ -147,7 +149,8 @@ molecules = get_molecules(
 )
 
 # Get oracle
-docking_oracle = get_oracle(path=path, target_index=args.target_index)
+docking_oracle = get_oracle(
+    path=path, target_index=args.target_index, scorer=args.scorer)
 
 # Score molecules
 scores = docking_oracle(molecules)
@@ -160,7 +163,7 @@ results_df = pd.DataFrame(smiles_scores, columns=['smiles', 'affinity'])
 # Write to disk
 import os
 
-file_path = f'{args.out_dir}/screen_targets_{args.target_index}.json'
+file_path = f'{args.out_dir}/screen_targets_{args.target_index}_{args.scorer}.json'
 results_df.to_csv(
     file_path,
     mode = 'a',
