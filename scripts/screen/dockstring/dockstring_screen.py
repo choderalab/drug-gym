@@ -162,7 +162,7 @@ results_df = pd.DataFrame(smiles_scores, columns=['smiles', 'affinity'])
 # Write to disk
 import os
 
-file_path = f'{args.out_dir}/screen_targets_{args.target_index}_{args.scorer}.json'
+file_path = f'{args.out_dir}/screen_targets_{args.target_index}_{args.scorer}.tsv'
 results_df.to_csv(
     file_path,
     mode = 'a',
