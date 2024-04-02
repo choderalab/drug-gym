@@ -248,7 +248,8 @@ class DockingOracle(Oracle):
                 energies = [float(process_affinity(a)) for a in affinity_strs]
 
                 # compute boltzmann sum
-                score = self._boltzmann_sum(energies)
+                # score = self._boltzmann_sum(energies)
+                score = min(energies)
 
                 # append to affinities
                 scores.append(score)
