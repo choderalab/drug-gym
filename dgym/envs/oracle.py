@@ -36,20 +36,23 @@ class Oracle:
     def get_predictions(
         self,
         molecules: Union[MoleculeCollection, list],
+        use_cache: bool = True,
         **kwargs
     ):
 
         if isinstance(molecules, list):
             molecules = MoleculeCollection(molecules)
+        
+        pending_molecules = molecules
 
         # identify uncached molecules
-        not_in_cache = lambda m: m.smiles not in self.cache
-        if uncached_molecules := set(filter(not_in_cache, molecules)):
-
-            # make predictions
-            smiles, scores = self.predict(uncached_molecules, **kwargs)
-
-            # cache results
+        if use_cache:
+            not_in_cache = lambda m: m.smiles not in self.cache
+            pending_molecules = set(filter(not_in_cache, pending_molecules))
+        
+        # make and cache predictions
+        if pending_molecules:
+            smiles, scores = self.predict(pending_molecules, **kwargs)
             self.cache.update(zip(smiles, scores))
 
         # fetch all results (old and new) from cache
