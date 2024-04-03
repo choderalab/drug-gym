@@ -67,6 +67,7 @@ class Generator:
                 probabilities = self.boltzmann(scores, temperature)
                 samples = torch.multinomial(probabilities, len(self.building_blocks)).tolist()
 
+        print(molecules)
         generators = [
             self._generator_factory(sampler, molecule, strict=strict)
             for sampler, molecule in zip(samples, molecules)
