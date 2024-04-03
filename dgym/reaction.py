@@ -179,7 +179,7 @@ class LazyReaction(Reaction):
                 if not isinstance(x, Iterable) else x
                 for x in reactants
             ]
-
+            
             # Run reactants lazily
             for combination in zip(*sequences):
                 yield from self.run_single_step(combination, protect=protect, strict=strict)
@@ -196,7 +196,7 @@ class LazyReaction(Reaction):
 
         if protect:
             reactants = self.trace(reactants)
-        
+
         # Convert to RDKit mols to run reaction
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         

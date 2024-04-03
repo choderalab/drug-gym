@@ -44,9 +44,9 @@ class Generator:
         if molecules is None:
 
             # Unbiased sample of indices
-            molecules = [None] * 1_000
+            molecules = [None] * 200
             probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 1_000).tolist()
+            samples = torch.multinomial(probabilities, 200).tolist()
         
         else:
             
@@ -202,7 +202,7 @@ class Designer:
         """
         if mode == 'replace':
             reactions = self.match_reactions(molecule)
-            random.shuffle(molecule.reactants) # TODO make a toggle
+            # random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants.copy()
             reactants[replace] = self.generator(
                 reactants[replace],
@@ -250,7 +250,7 @@ class Designer:
     def retrosynthesize(
         self,
         molecule,
-        protect = False,
+        protect = True,
         max_depth = None,
         _depth = 0
     ):
@@ -272,6 +272,9 @@ class Designer:
 
         if molecule.reaction is None:
             molecule.reaction = self.match_reactions(molecule)[0]
+        
+        # if _depth == 0:
+        #     import pdb; pdb.set_trace()
 
         # Use reaction to reconstruct the original molecule from its reactants
         output = molecule.reaction.run(retrosynthesized_reactants, protect=protect)
