@@ -9,6 +9,7 @@ import dgllife
 import numpy as np
 from typing import Union, Optional
 from collections import defaultdict
+from scipy.special import logsumexp
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from contextlib import contextmanager
@@ -39,24 +40,24 @@ class Oracle:
         use_cache: bool = True,
         **kwargs
     ):
+        molecules = MoleculeCollection(molecules)
 
-        if isinstance(molecules, list):
-            molecules = MoleculeCollection(molecules)
-        
-        pending_molecules = molecules
-
-        # identify uncached molecules
         if use_cache:
-            not_in_cache = lambda m: m.smiles not in self.cache
-            pending_molecules = set(filter(not_in_cache, pending_molecules))
-        
-        # make and cache predictions
-        if pending_molecules:
-            smiles, scores = self.predict(pending_molecules, **kwargs)
-            self.cache.update(zip(smiles, scores))
+            
+            # Identify molecules not in cache
+            if uncached_molecules := set([
+                m for m in molecules
+                if m.smiles not in self.cache
+            ]):
+                # Predict only uncached molecules and update cache
+                smiles, predictions = self.predict(uncached_molecules, **kwargs)
+                self.cache.update(zip(smiles, predictions))
 
-        # fetch all results (old and new) from cache
-        return [self.cache[m.smiles] for m in molecules]
+            return [self.cache[m.smiles] for m in molecules]
+
+        # If not using cache, predict for all molecules
+        _, predictions = self.predict(molecules, **kwargs)
+        return predictions
 
     def predict(self, molecules: MoleculeCollection):
         raise NotImplementedError
@@ -207,9 +208,9 @@ class DockingOracle(Oracle):
     
 
     def _convert_units(
-            self,
-            scores: list[float],
-            units: Optional[str] = 'pIC50'
+        self,
+        scores: list[float],
+        units: Optional[str] = 'pIC50'
     ):
         match units:
             case 'deltaG':
@@ -248,8 +249,8 @@ class DockingOracle(Oracle):
                 energies = [float(process_affinity(a)) for a in affinity_strs]
 
                 # compute boltzmann sum
-                # score = self._boltzmann_sum(energies)
-                score = min(energies)
+                score = self._compute_deltaG(energies)
+                # score = min(energies)
 
                 # append to affinities
                 scores.append(score)
@@ -339,16 +340,16 @@ class DockingOracle(Oracle):
         
         return pdbqt_string
 
-    def _boltzmann_sum(self, energies, temperature=298.15):
+    def _compute_deltaG(self, energies, temperature=298.15):
 
         # Boltzmann constant in kcal/(mol·K) multiplied by temperature in K
-        kT = 0.0019872041 * temperature
+        kT = 1.987204259e-3 * temperature
         
         # Energies should be in kcal/mol
         energies = np.array(energies)
-
-        # Use logsumexp for numerical stability
-        boltz_sum = -kT * np.log(np.sum(np.exp(-energies / kT)))
+        
+        # Calculate the overall Gibbs free energy
+        boltz_sum = -kT * logsumexp(-energies / kT)
         
         return boltz_sum
 

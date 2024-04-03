@@ -304,6 +304,9 @@ class MoleculeCollection(Collection):
     
     def __init__(self, molecules: Optional[Iterable] = []) -> None:
         
+        if isinstance(molecules, Molecule):
+            molecules = [molecules]
+        
         assert all(isinstance(molecule, Molecule) for molecule in molecules)
         super().__init__(molecules)
 
