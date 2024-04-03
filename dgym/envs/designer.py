@@ -44,6 +44,7 @@ class Generator:
         if molecules is None:
 
             # Unbiased sample of indices
+            molecules = [None] * 1_000
             probabilities = torch.ones([1, len(self.building_blocks)])
             samples = torch.multinomial(probabilities, 1_000).tolist()
         
@@ -67,7 +68,6 @@ class Generator:
                 probabilities = self.boltzmann(scores, temperature)
                 samples = torch.multinomial(probabilities, len(self.building_blocks)).tolist()
 
-        print(molecules)
         generators = [
             self._generator_factory(sampler, molecule, strict=strict)
             for sampler, molecule in zip(samples, molecules)
