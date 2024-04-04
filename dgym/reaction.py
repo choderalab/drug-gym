@@ -169,7 +169,7 @@ class LazyReaction(Reaction):
     
     @viewable
     def run(self, reactants, protect=False, strict=False):
-
+        
         # If any of the reagents are generators
         if any(isinstance(r, Iterable) for r in reactants):
             
@@ -188,7 +188,7 @@ class LazyReaction(Reaction):
             yield from self.run_single_step(reactants, protect=protect, strict=strict)
 
     def run_single_step(self, reactants, protect=False, strict=False):
-
+        
         # check if reaction is even going to run
         if len(reactants) != len(self.reactants) \
             or not all(reactants):
@@ -196,7 +196,7 @@ class LazyReaction(Reaction):
 
         if protect:
             reactants = self.trace(reactants)
-
+            
         # Convert to RDKit mols to run reaction
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         
@@ -205,14 +205,14 @@ class LazyReaction(Reaction):
         else:
             output = (self.template.RunReactants(mols_)
                       for mols_ in itertools.permutations(mols))
-        
+            
         yield from self.parse_output(output, reactants, protect=protect)
         
     def parse_output(self, output, reactants, protect=False):
         
         output = self.flatten_and_randomize(output)
         for product in output:
-        
+            
             if product := self.sanitize(product):
                 
                 if protect:

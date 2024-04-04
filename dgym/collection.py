@@ -31,9 +31,9 @@ class Collection(torch.utils.data.Dataset):
         Generate a torch.utils.data.DataLoader from this Collection.
     
     """
-    def __init__(self, items: Optional[List] = []) -> None:
+    def __init__(self, items: Optional[Iterable] = []) -> None:
         super(Collection, self).__init__()
-        assert isinstance(items, List)
+        assert isinstance(items, Iterable)
         
         self._items = items
         self._lookup = None

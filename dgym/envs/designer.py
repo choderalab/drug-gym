@@ -202,17 +202,13 @@ class Designer:
         """
         if mode == 'replace':
             reactions = self.match_reactions(molecule)
-            # random.shuffle(molecule.reactants) # TODO make a toggle
+            random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants.copy()
             reactants[replace] = self.generator(
                 reactants[replace],
                 temperature=temperature,
                 strict=strict,
             )
-            # reactants = [
-            #     self.generator(reactants[0], temperature=temperature, strict=strict),
-            #     self.generator(reactants[1], temperature=temperature, strict=strict)
-            # ]
             max_depth = None
 
         elif mode == 'grow':
@@ -231,8 +227,12 @@ class Designer:
             with molecule.set_reaction(reaction):
                 with molecule.set_reactants(reactants):
                     
-                    # Lazy load molecule analogs
-                    analogs = self.retrosynthesize(molecule, max_depth=max_depth)
+                    # Lazy load molecule analogs                    
+                    # TODO - fix
+                    if mode == 'replace':
+                        analogs = reaction.run(reactants)
+                    else:
+                        analogs = self.retrosynthesize(molecule, max_depth=max_depth)
 
                     # Run reaction
                     for analog in analogs:
@@ -244,7 +244,7 @@ class Designer:
                             self._cache.add(analog)
                         else:
                             return products
-        
+
         return products
 
     def retrosynthesize(
@@ -273,9 +273,6 @@ class Designer:
         if molecule.reaction is None:
             molecule.reaction = self.match_reactions(molecule)[0]
         
-        # if _depth == 0:
-        #     import pdb; pdb.set_trace()
-
         # Use reaction to reconstruct the original molecule from its reactants
         output = molecule.reaction.run(retrosynthesized_reactants, protect=protect)
         
