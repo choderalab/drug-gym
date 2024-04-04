@@ -180,7 +180,7 @@ class Designer:
     def design(
         self,
         molecule: Molecule,
-        size: int,
+        size: int = 1,
         mode: Literal['replace', 'grow'] = 'replace',
         temperature: Optional[float] = 0.0,
         strict: bool = False,
@@ -202,7 +202,7 @@ class Designer:
         """
         if mode == 'replace':
             reactions = self.match_reactions(molecule)
-            random.shuffle(molecule.reactants) # TODO make a toggle
+            # random.shuffle(molecule.reactants) # TODO make a toggle
             reactants = molecule.reactants.copy()
             reactants[replace] = self.generator(
                 reactants[replace],
