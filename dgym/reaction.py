@@ -183,7 +183,6 @@ class LazyReaction(Reaction):
             # Run reactants lazily
             for combination in zip(*sequences):
                 yield from self.run_single_step(combination, protect=protect, strict=strict)
-        
         else:
             yield from self.run_single_step(reactants, protect=protect, strict=strict)
 
@@ -196,7 +195,7 @@ class LazyReaction(Reaction):
 
         if protect:
             reactants = self.trace(reactants)
-            
+
         # Convert to RDKit mols to run reaction
         mols = [r.mol if isinstance(r, Molecule) else r for r in reactants]
         
@@ -209,7 +208,6 @@ class LazyReaction(Reaction):
         yield from self.parse_output(output, reactants, protect=protect)
         
     def parse_output(self, output, reactants, protect=False):
-        
         output = self.flatten_and_randomize(output)
         for product in output:
             

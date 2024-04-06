@@ -14,6 +14,8 @@ from dgym.collection import MoleculeCollection
 import torch        
 from ..utils import viewable, OrderedSet
 from collections.abc import Iterator
+from functools import lru_cache
+from rdkit.Chem import SDMolSupplier
 
 class Generator:
     
@@ -36,12 +38,13 @@ class Generator:
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
         temperature: Optional[float] = 0.0,
         strict: bool = False,
-        mode: Literal['similar', 'original', 'random'] = 'similar'
+        mode: Literal['similar', 'original', 'random'] = 'similar',
+        seed: Optional[int] = None,
     ):
         """
         Returns a generator that samples analogs of the original molecules.
         """
-        # Clean type
+        # Normalize type
         return_list = isinstance(molecules, list)
         molecules = [molecules] if not return_list else molecules
         molecules = [Molecule(m) for m in molecules if m]
@@ -52,6 +55,8 @@ class Generator:
         else:
             # Unbiased sample of indices if random
             if mode == 'random' or not molecules:
+                if seed:
+                    torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
                 samples = torch.multinomial(probabilities, 200).tolist()
@@ -84,10 +89,16 @@ class Generator:
     def _generator_factory(self, sampler, original=None, strict=False):
         
         for index in sampler:
-            if building_block := self.building_blocks[index]:
-                if strict:
-                    building_block = self.substruct_match(building_block, original)
-                yield Molecule(building_block)
+            building_block = self._get_building_block(index)
+            yield building_block
+    
+    @lru_cache(maxsize=None)
+    def _get_building_block(self, index, original=None, strict=False):
+        if building_block := self.building_blocks[index]:
+            if strict:
+                building_block = self.substruct_match(building_block, original)
+            return Molecule(building_block)
+        
     
     def fingerprint_similarity(self, molecules):
         
@@ -230,7 +241,7 @@ class Designer:
             with molecule.set_reaction(reaction):
                 with molecule.set_reactants(reactants):
                     
-                    # Lazy load molecule analogs                    
+                    # Lazy load molecule analogs
                     # TODO - fix
                     if mode == 'replace':
                         analogs = reaction.run(reactants)
@@ -239,6 +250,7 @@ class Designer:
 
                     # Run reaction
                     for analog in analogs:
+                        print(reaction.name)
                         analog.inspiration = molecule
                         if len(products) < size:
                             if self.cache and analog in self._cache:
