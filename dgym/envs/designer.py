@@ -38,7 +38,7 @@ class Generator:
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
         temperature: Optional[float] = 0.0,
         strict: bool = False,
-        generate: Literal['original', 'similar', 'random'] = 'original',
+        method: Literal['original', 'similar', 'random'] = 'original',
         seed: Optional[int] = 1997,
         **kwargs
     ):
@@ -50,18 +50,18 @@ class Generator:
         molecules = [molecules] if not return_list else molecules
         molecules = [Molecule(m) for m in molecules if m]
         
-        if generate == 'original' and molecules:
+        if method == 'original' and molecules:
             generators = [itertools.repeat(m) for m in molecules]
         
         else:
             # Unbiased sample of indices if random
-            if generate == 'random' or not molecules:
+            if method == 'random' or not molecules:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
                 samples = torch.multinomial(probabilities, 200).tolist()
 
-            elif generate == 'similar':
+            elif method == 'similar':
                 
                 # Identify analogs of each original molecule
                 scores = self.fingerprint_similarity(molecules)
@@ -195,7 +195,7 @@ class Designer:
         self,
         molecule: Molecule = None,
         size: int = 1,
-        mode: Literal['replace', 'grow', 'random'] = 'replace',
+        method: Literal['replace', 'grow', 'random'] = 'replace',
         temperature: Optional[float] = 0.0,
         strict: bool = False,
     ) -> Iterable:
@@ -218,13 +218,13 @@ class Designer:
             molecule = None
 
         # Prepare reaction conditions
-        if mode == 'random' or molecule is None:
+        if method == 'random' or molecule is None:
             reactions = self.reactions
-            reactants = [{'generate': 'random', 'seed': None}, {'generate': 'random', 'seed': None}]
-        elif mode == 'grow':
+            reactants = [{'method': 'random', 'seed': None}, {'method': 'random', 'seed': None}]
+        elif method == 'grow':
             reactions = self.reactions
-            reactants = [{'product': molecule.smiles}, {'generate': 'random'}]
-        elif mode == 'replace':
+            reactants = [{'product': molecule.smiles}, {'method': 'random'}]
+        elif method == 'replace':
             reactions = self.match_reactions(molecule)
             reactants = molecule.dump()['reactants']
 
@@ -239,7 +239,7 @@ class Designer:
                 
                 # Annotate metadata
                 analog.inspiration = molecule
-                if mode == 'grow':
+                if method == 'grow':
                     analog.reactants[0] = molecule
 
                 # Collect products
