@@ -3,6 +3,8 @@ import chemfp
 import itertools
 import dgym as dg
 import numpy as np
+from numpy.random import randint
+import sys
 import chemfp.arena
 from rdkit import Chem
 from itertools import chain, product
@@ -11,11 +13,10 @@ from typing import Union, Iterable, Optional, Literal
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
 from dgym.collection import MoleculeCollection
-import torch        
+import torch       
 from ..utils import viewable, OrderedSet
 from collections.abc import Iterator
 from functools import lru_cache
-from rdkit.Chem import SDMolSupplier
 
 class Generator:
     
@@ -39,7 +40,7 @@ class Generator:
         temperature: Optional[float] = 0.0,
         strict: bool = False,
         method: Literal['original', 'similar', 'random'] = 'original',
-        seed: Optional[int] = 1997,
+        seed: Optional[int] = None,
         **kwargs
     ):
         """
@@ -59,7 +60,7 @@ class Generator:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
-                samples = torch.multinomial(probabilities, 200).tolist()
+                samples = torch.multinomial(probabilities, 10_000).tolist()
 
             elif method == 'similar':
                 
@@ -150,7 +151,7 @@ class Generator:
         torch.Tensor
             The probabilities resulting from the Boltzmann distribution.
         """
-        temperature = max(temperature, 1e-2)  # Ensure temperature is not too low
+        temperature = max(temperature, 1e-2) # Ensure temperature is not too low
         scaled_scores = scores / temperature
         probabilities = torch.softmax(scaled_scores, dim=-1)
         return probabilities
@@ -220,10 +221,10 @@ class Designer:
         # Prepare reaction conditions
         if method == 'random' or molecule is None:
             reactions = self.reactions
-            reactants = [{'method': 'random', 'seed': None}, {'method': 'random', 'seed': None}]
+            reactants = [{'method': 'random'}, {'method': 'random'}]
         elif method == 'grow':
             reactions = self.reactions
-            reactants = [{'product': molecule.smiles}, {'method': 'random'}]
+            reactants = [{'product': molecule.smiles}, {'method': 'random', 'seed': randint(sys.maxsize)}]
         elif method == 'replace':
             reactions = self.match_reactions(molecule)
             reactants = molecule.dump()['reactants']
@@ -232,6 +233,7 @@ class Designer:
         products = OrderedSet()
         for reaction in reactions:
             reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
+            print(reaction_tree)
             analogs = self.construct_reaction(reaction_tree)
             
             # Run reaction
@@ -250,7 +252,7 @@ class Designer:
                     self._cache.add(analog)
                 else:
                     return products
-
+                
         return products
 
     def construct_reaction(self, reaction_tree):
