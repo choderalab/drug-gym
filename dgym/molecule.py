@@ -251,3 +251,5 @@ class Molecule:
         if detailed and self.metadata:
             data['metadata'] = self.metadata
         return data
+
+    
