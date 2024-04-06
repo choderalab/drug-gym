@@ -38,8 +38,9 @@ class Generator:
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
         temperature: Optional[float] = 0.0,
         strict: bool = False,
-        mode: Literal['similar', 'original', 'random'] = 'similar',
-        seed: Optional[int] = None,
+        mode: Literal['original', 'similar', 'random'] = 'original',
+        seed: Optional[int] = 1997,
+        **kwargs
     ):
         """
         Returns a generator that samples analogs of the original molecules.
@@ -49,14 +50,13 @@ class Generator:
         molecules = [molecules] if not return_list else molecules
         molecules = [Molecule(m) for m in molecules if m]
         
-        if mode == 'original':
+        if mode == 'original' and molecules:
             generators = [itertools.repeat(m) for m in molecules]
         
         else:
             # Unbiased sample of indices if random
             if mode == 'random' or not molecules:
-                if seed:
-                    torch.manual_seed(seed)
+                if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
                 samples = torch.multinomial(probabilities, 200).tolist()
@@ -82,7 +82,7 @@ class Generator:
                 self._generator_factory(sampler, molecule, strict=strict)
                 for sampler, molecule in zip(samples, molecules)
             ]
-        
+
         return generators if return_list else generators[0]
     
     @viewable
@@ -222,6 +222,7 @@ class Designer:
                 reactants[replace],
                 temperature=temperature,
                 strict=strict,
+                mode='similar'
             )
             max_depth = None
 

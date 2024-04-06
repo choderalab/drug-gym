@@ -59,7 +59,10 @@ class Molecule:
     ) -> None:
         
         if isinstance(mol, Molecule):
-            return mol
+            for attr in vars(mol):
+                setattr(self, attr, getattr(mol, attr))
+            return None
+
         if isinstance(mol, str):
             mol = rdkit.Chem.MolFromSmiles(mol)
 
@@ -252,4 +255,3 @@ class Molecule:
             data['metadata'] = self.metadata
         return data
 
-    
