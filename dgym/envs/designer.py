@@ -38,7 +38,7 @@ class Generator:
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
         temperature: Optional[float] = 0.0,
         strict: bool = False,
-        mode: Literal['original', 'similar', 'random'] = 'original',
+        generate: Literal['original', 'similar', 'random'] = 'original',
         seed: Optional[int] = 1997,
         **kwargs
     ):
@@ -50,18 +50,18 @@ class Generator:
         molecules = [molecules] if not return_list else molecules
         molecules = [Molecule(m) for m in molecules if m]
         
-        if mode == 'original' and molecules:
+        if generate == 'original' and molecules:
             generators = [itertools.repeat(m) for m in molecules]
         
         else:
             # Unbiased sample of indices if random
-            if mode == 'random' or not molecules:
+            if generate == 'random' or not molecules:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
                 samples = torch.multinomial(probabilities, 200).tolist()
 
-            elif mode == 'similar':
+            elif generate == 'similar':
                 
                 # Identify analogs of each original molecule
                 scores = self.fingerprint_similarity(molecules)
@@ -193,13 +193,11 @@ class Designer:
 
     def design(
         self,
-        molecule: Molecule,
+        molecule: Molecule = None,
         size: int = 1,
-        mode: Literal['replace', 'grow'] = 'replace',
+        mode: Literal['replace', 'grow', 'random'] = 'replace',
         temperature: Optional[float] = 0.0,
         strict: bool = False,
-        config: dict = {}, # TODO,
-        replace = 0
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
@@ -214,91 +212,77 @@ class Designer:
         Returns:
         - list: A list of product molecules.
         """
-        if mode == 'replace':
-            reactions = self.match_reactions(molecule)
-            # random.shuffle(molecule.reactants) # TODO make a toggle
-            reactants = molecule.reactants.copy()
-            reactants[replace] = self.generator(
-                reactants[replace],
-                temperature=temperature,
-                strict=strict,
-                mode='similar'
-            )
-            max_depth = None
+        # Normalize input
+        if isinstance(molecule, int):
+            size = molecule
+            molecule = None
 
+        # Prepare reaction conditions
+        if mode == 'random' or molecule is None:
+            reactions = self.reactions
+            reactants = [{'generate': 'random', 'seed': None}, {'generate': 'random', 'seed': None}]
         elif mode == 'grow':
             reactions = self.reactions
-            reactants = [molecule, self.generator()]
-            max_depth = 1
-
-        elif mode == 'random':
-            reactions = self.reactions
-            reactants = [self.generator(), self.generator()]
-            max_depth = 1
+            reactants = [{'product': molecule.smiles}, {'generate': 'random'}]
+        elif mode == 'replace':
+            reactions = self.match_reactions(molecule)
+            reactants = molecule.dump()['reactants']
 
         # Perform reactions
         products = OrderedSet()
         for reaction in reactions:
-            with molecule.set_reaction(reaction):
-                with molecule.set_reactants(reactants):
-                    
-                    # Lazy load molecule analogs
-                    # TODO - fix
-                    if mode == 'replace':
-                        analogs = reaction.run(reactants)
-                    else:
-                        analogs = self.retrosynthesize(molecule, max_depth=max_depth)
+            reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
+            analogs = self.construct_reaction(reaction_tree)
+            
+            # Run reaction
+            for analog in analogs:
+                
+                # Annotate metadata
+                analog.inspiration = molecule
+                if mode == 'grow':
+                    analog.reactants[0] = molecule
 
-                    # Run reaction
-                    for analog in analogs:
-                        print(reaction.name)
-                        analog.inspiration = molecule
-                        if len(products) < size:
-                            if self.cache and analog in self._cache:
-                                continue
-                            products.add(analog)
-                            self._cache.add(analog)
-                        else:
-                            return products
+                # Collect products
+                if len(products) < size:
+                    if self.cache and analog in self._cache:
+                        continue
+                    products.add(analog)
+                    self._cache.add(analog)
+                else:
+                    return products
 
         return products
 
-    def retrosynthesize(
-        self,
-        molecule,
-        protect = True,
-        max_depth = None,
-        _depth = 0
-    ):
-        # Base cases
-        if _depth == max_depth:
-            return molecule
+    def construct_reaction(self, reaction_tree):
+        """
+        Generates LazyReaction products based on a serialized reaction tree.
+        
+        Parameters:
+        - serialized_tree: dict, the serialized reaction tree including SMILES strings.
+        - generator: Generator object, used for generating molecules.
+        
+        Returns:
+        - A generator for LazyReaction products.
+        """
+        # Base case: If tree is a simple molecule, return it appropriate generator
+        if 'reactants' not in reaction_tree:
+            product = reaction_tree.get('product', None)
+            return self.generator(product, **reaction_tree)
 
-        if isinstance(molecule, Iterator):
-            return molecule
-        
-        if not molecule.reactants:
-            return molecule
-        
-        # Recursive case: Retrosynthesize each reactant
-        retrosynthesized_reactants = [
-            self.retrosynthesize(reactant, protect, max_depth, _depth + 1)
-            for reactant in molecule.reactants
-        ]
+        # Recursive case: Construct reactants and apply reaction
+        if 'reaction' in reaction_tree \
+            and 'reactants' in reaction_tree:
+            reactants = [self.construct_reaction(reactant) for reactant in reaction_tree['reactants']]
+            reaction = self.reactions[reaction_tree['reaction']]
+            return reaction.run(reactants)
 
-        if molecule.reaction is None:
-            molecule.reaction = self.match_reactions(molecule)[0]
-        
-        # Use reaction to reconstruct the original molecule from its reactants
-        output = molecule.reaction.run(retrosynthesized_reactants, protect=protect)
-        
-        return output
+        raise Exception('`reaction_tree` must include a reaction or reactants.')        
     
     def match_reactions(self, molecule):
         """
         Finds the most specific reactions for the given molecule
         """
-        if molecule.reaction in self.reactions:
+        if molecule.reaction and molecule.reaction in self.reactions:
             return [molecule.reaction]
 
         # First, filter by reactions compatible with reactants
