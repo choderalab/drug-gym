@@ -62,7 +62,7 @@ class Generator:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 probabilities = torch.ones([1, len(self.building_blocks)])
-                samples = torch.multinomial(probabilities, 10_000).tolist()
+                samples = torch.multinomial(probabilities, 100).tolist()
 
             elif method == 'similar':
                 
@@ -236,7 +236,7 @@ class Designer:
         for reaction in reactions:
             reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
             analogs = self.generate_analogs(reaction_tree, method=method)
-            
+
             # Run reaction
             for analog in analogs:
                 
@@ -288,10 +288,13 @@ class Designer:
             reaction_tree, method=method, num_annotations=num_annotations)
         variant_products = [self._construct_reaction(v) for v in variant_trees]
         
-        # Choose tree from which to yield product
-        while True:
-            chosen_products = random.choice(variant_products)
-            yield from chosen_products
+        # Yield product from randomly chosen tree
+        try:
+            while True:
+                chosen_products = random.choice(variant_products)
+                yield next(chosen_products)
+        except StopIteration:
+            return
     
     def _annotate_reactants(self, reaction_tree, method: str = 'similar', num_annotations: int = 0):
         """
