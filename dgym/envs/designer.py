@@ -17,6 +17,8 @@ import torch
 from ..utils import viewable, OrderedSet
 from collections.abc import Iterator
 from functools import lru_cache
+from itertools import combinations
+from copy import deepcopy
 
 class Generator:
     
@@ -196,7 +198,7 @@ class Designer:
         self,
         molecule: Molecule = None,
         size: int = 1,
-        method: Literal['replace', 'grow', 'random'] = 'replace',
+        method: Literal['similar', 'grow', 'random'] = 'similar',
         temperature: Optional[float] = 0.0,
         strict: bool = False,
     ) -> Iterable:
@@ -225,7 +227,7 @@ class Designer:
         elif method == 'grow':
             reactions = self.reactions
             reactants = [{'product': molecule.smiles}, {'method': 'random', 'seed': randint(sys.maxsize)}]
-        elif method == 'replace':
+        elif method == 'similar':
             reactions = self.match_reactions(molecule)
             reactants = molecule.dump()['reactants']
 
@@ -233,8 +235,7 @@ class Designer:
         products = OrderedSet()
         for reaction in reactions:
             reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
-            print(reaction_tree)
-            analogs = self.construct_reaction(reaction_tree)
+            analogs = self.generate_analogs(reaction_tree, method=method)
             
             # Run reaction
             for analog in analogs:
@@ -254,31 +255,6 @@ class Designer:
                     return products
                 
         return products
-
-    def construct_reaction(self, reaction_tree):
-        """
-        Generates LazyReaction products based on a serialized reaction tree.
-        
-        Parameters:
-        - serialized_tree: dict, the serialized reaction tree including SMILES strings.
-        - generator: Generator object, used for generating molecules.
-        
-        Returns:
-        - A generator for LazyReaction products.
-        """
-        # Base case: If tree is a simple molecule, return it appropriate generator
-        if 'reactants' not in reaction_tree:
-            product = reaction_tree.get('product', None)
-            return self.generator(product, **reaction_tree)
-
-        # Recursive case: Construct reactants and apply reaction
-        if 'reaction' in reaction_tree \
-            and 'reactants' in reaction_tree:
-            reactants = [self.construct_reaction(reactant) for reactant in reaction_tree['reactants']]
-            reaction = self.reactions[reaction_tree['reaction']]
-            return reaction.run(reactants)
-
-        raise Exception('`reaction_tree` must include a reaction or reactants.')        
     
     def match_reactions(self, molecule):
         """
@@ -302,3 +278,125 @@ class Designer:
         ]
         
         return match if match else (match_reactants if match_reactants else [])
+
+    def generate_analogs(self, reaction_tree, method: str = 'similar'):
+        """Initialize the reaction system with a random configuration variant."""
+        
+        # Make variant reaction trees
+        num_annotations = 1 if method == 'similar' else 0
+        variant_trees = self._annotate_reactants(
+            reaction_tree, method=method, num_annotations=num_annotations)
+        variant_products = [self._construct_reaction(v) for v in variant_trees]
+        
+        # Choose tree from which to yield product
+        while True:
+            chosen_products = random.choice(variant_products)
+            yield from chosen_products
+    
+    def _annotate_reactants(self, reaction_tree, method: str = 'similar', num_annotations: int = 0):
+        """
+        Generates all unique variants of the reaction tree with the specified number of annotations applied.
+        Utilizes deepcopy to ensure each variant is a completely separate copy.
+
+        Parameters
+        ----------
+        reaction_tree : dict
+            The initial reaction tree.
+        mode : str
+            The mode for annotation.
+        num_annotations : int
+            The number of annotations to apply.
+
+        Returns
+        -------
+        list
+            A list of all unique reaction tree variants with annotations applied.
+        """
+        paths = self._flatten_tree(reaction_tree)
+        variants = []
+        for combo in combinations(paths, num_annotations):
+            new_tree = deepcopy(reaction_tree)
+            for path in combo:
+                new_tree = self._apply_annotation_to_path(new_tree, path, method)
+            variants.append(new_tree)
+        return variants
+
+    def _flatten_tree(self, reaction_tree, path=()):
+        """
+        Flattens the reaction tree to a list of paths to each reactant.
+
+        Parameters
+        ----------
+        reaction_tree : dict
+            The reaction tree to flatten.
+        path : tuple
+            The current path in the tree, used for internal tracking.
+
+        Returns
+        -------
+        list
+            A list of paths to each reactant in the tree.
+        """
+        if 'reactants' in reaction_tree and reaction_tree['reactants']:
+            paths = []
+            for i, reactant in enumerate(reaction_tree['reactants']):
+                paths.extend(self._flatten_tree(reactant, path + (i,)))
+            return paths
+        else:
+            return [path]
+
+    def _apply_annotation_to_path(self, reaction_tree, path, method):
+        """
+        Applies an annotation to a reactant specified by a path.
+        This function now utilizes deepcopy to ensure modifications are isolated.
+
+        Parameters
+        ----------
+        reaction_tree : dict
+            The reaction tree.
+        path : tuple
+            The path to the reactant to be annotated.
+        mode : str
+            The annotation mode.
+
+        Returns
+        -------
+        dict
+            The reaction tree with the annotation applied.
+        """
+        if not path:
+            return {'method': method, **reaction_tree}
+
+        reactants = reaction_tree['reactants']
+        for i, step in enumerate(path):
+            if i == len(path) - 1:
+                reactants[step] = self._apply_annotation_to_path(reactants[step], (), method)
+            else:
+                reactants = reactants[step]['reactants']
+
+        return reaction_tree
+
+    def _construct_reaction(self, reaction_tree):
+        """
+        Generates LazyReaction products based on a serialized reaction tree.
+        
+        Parameters:
+        - serialized_tree: dict, the serialized reaction tree including SMILES strings.
+        - generator: Generator object, used for generating molecules.
+        
+        Returns:
+        - A generator for LazyReaction products.
+        """
+        # Base case: If tree is a simple molecule, return it appropriate generator
+        if 'reactants' not in reaction_tree:
+            product = reaction_tree.get('product', None)
+            return self.generator(product, **reaction_tree)
+
+        # Recursive case: Construct reactants and apply reaction
+        if 'reaction' in reaction_tree \
+            and 'reactants' in reaction_tree:
+            reactants = [self._construct_reaction(reactant) for reactant in reaction_tree['reactants']]
+            reaction = self.reactions[reaction_tree['reaction']]
+            return reaction.run(reactants)
+
+        raise Exception('`reaction_tree` must include a reaction or reactants.')
