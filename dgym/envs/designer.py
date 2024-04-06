@@ -199,8 +199,9 @@ class Designer:
         molecule: Molecule = None,
         size: int = 1,
         method: Literal['similar', 'grow', 'random'] = 'similar',
-        temperature: Optional[float] = 0.0,
-        strict: bool = False,
+        **kwargs
+        # temperature: Optional[float] = 0.0,
+        # strict: bool = False,
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
@@ -235,7 +236,7 @@ class Designer:
         products = OrderedSet()
         for reaction in reactions:
             reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
-            analogs = self.generate_analogs(reaction_tree, method=method)
+            analogs = self.generate_analogs(reaction_tree, method=method, **kwargs)
 
             # Run reaction
             for analog in analogs:
@@ -279,14 +280,14 @@ class Designer:
         
         return match if match else (match_reactants if match_reactants else [])
 
-    def generate_analogs(self, reaction_tree, method: str = 'similar'):
+    def generate_analogs(self, reaction_tree, method: str = 'similar', **kwargs):
         """Initialize the reaction system with a random configuration variant."""
         
         # Make variant reaction trees
         num_annotations = 1 if method == 'similar' else 0
         variant_trees = self._annotate_reactants(
-            reaction_tree, method=method, num_annotations=num_annotations)
-        variant_products = [self._construct_reaction(v) for v in variant_trees]
+            reaction_tree, method=method, num_annotations=num_annotations, **kwargs)
+        variant_products = [self.construct_reaction(v) for v in variant_trees]
         
         # Yield product from randomly chosen tree
         try:
@@ -296,7 +297,13 @@ class Designer:
         except StopIteration:
             return
     
-    def _annotate_reactants(self, reaction_tree, method: str = 'similar', num_annotations: int = 0):
+    def _annotate_reactants(
+        self,
+        reaction_tree,
+        method: str = 'similar',
+        num_annotations: int = 0,
+        **kwargs
+    ):
         """
         Generates all unique variants of the reaction tree with the specified number of annotations applied.
         Utilizes deepcopy to ensure each variant is a completely separate copy.
@@ -320,7 +327,7 @@ class Designer:
         for combo in combinations(paths, num_annotations):
             new_tree = deepcopy(reaction_tree)
             for path in combo:
-                new_tree = self._apply_annotation_to_path(new_tree, path, method)
+                new_tree = self._apply_annotation_to_path(new_tree, path, method, **kwargs)
             variants.append(new_tree)
         return variants
 
@@ -348,7 +355,7 @@ class Designer:
         else:
             return [path]
 
-    def _apply_annotation_to_path(self, reaction_tree, path, method):
+    def _apply_annotation_to_path(self, reaction_tree, path, method, **kwargs):
         """
         Applies an annotation to a reactant specified by a path.
         This function now utilizes deepcopy to ensure modifications are isolated.
@@ -368,18 +375,19 @@ class Designer:
             The reaction tree with the annotation applied.
         """
         if not path:
-            return {'method': method, **reaction_tree}
+            return {'method': method, **reaction_tree, **kwargs}
 
         reactants = reaction_tree['reactants']
         for i, step in enumerate(path):
             if i == len(path) - 1:
-                reactants[step] = self._apply_annotation_to_path(reactants[step], (), method)
+                reactants[step] = self._apply_annotation_to_path(
+                    reactants[step], (), method, **kwargs)
             else:
                 reactants = reactants[step]['reactants']
 
         return reaction_tree
 
-    def _construct_reaction(self, reaction_tree):
+    def construct_reaction(self, reaction_tree):
         """
         Generates LazyReaction products based on a serialized reaction tree.
         
@@ -398,7 +406,7 @@ class Designer:
         # Recursive case: Construct reactants and apply reaction
         if 'reaction' in reaction_tree \
             and 'reactants' in reaction_tree:
-            reactants = [self._construct_reaction(reactant) for reactant in reaction_tree['reactants']]
+            reactants = [self.construct_reaction(reactant) for reactant in reaction_tree['reactants']]
             reaction = self.reactions[reaction_tree['reaction']]
             return reaction.run(reactants)
 
