@@ -285,7 +285,7 @@ class DockingOracle(Oracle):
             for elem in pair
         ])
 
-        return ' '.join(['Unidock', *inputs])
+        return ' '.join(['unidock', *inputs])
 
     def _prepare_ligands(self, molecules, directory: str):
         

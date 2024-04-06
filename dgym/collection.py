@@ -125,8 +125,7 @@ class Collection(torch.utils.data.Dataset):
         Notes
         -----
         * If the key is integer, return the single molecule indexed.
-        * If the key is a string, return a collection of all molecules with
-            this SMILES.
+        * If the key is a string, the items with this identifier.
         * If the key is a molecule, extract the SMILES string and index by
             its SMILES.
         * If the key is a tensor, flatten it to treat it as a list.
@@ -139,7 +138,7 @@ class Collection(torch.utils.data.Dataset):
         if isinstance(key, int):
             return self._items[key]
         elif isinstance(key, str):
-            return self.__class__([self.lookup[key]])
+            return self.lookup[key]
         elif isinstance(key, type(self._items[0])):
             return self.lookup[key.name]
         elif isinstance(key, torch.Tensor):

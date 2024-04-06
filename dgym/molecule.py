@@ -58,6 +58,8 @@ class Molecule:
         annotations: Optional[dict] = None,
     ) -> None:
         
+        if isinstance(mol, Molecule):
+            return mol
         if isinstance(mol, str):
             mol = rdkit.Chem.MolFromSmiles(mol)
 
@@ -238,3 +240,14 @@ class Molecule:
             yield
         finally:
             self.reactants = original_reactants
+
+    def dump(self, detailed: bool = False):
+        """Recursively dumps the molecule and its synthesis pathway to a dictionary."""
+        data = {'product': self.name}
+        if self.reaction:
+            data['reaction'] = self.reaction.name
+        if self.reactants:
+            data['reactants'] = [reactant.dump() for reactant in self.reactants]
+        if detailed and self.metadata:
+            data['metadata'] = self.metadata
+        return data

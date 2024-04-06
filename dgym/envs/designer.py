@@ -33,57 +33,60 @@ class Generator:
     
     def __call__(
         self,
-        molecules: Optional[Union[Iterable[Molecule], Molecule]] = None,
+        molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
         temperature: Optional[float] = 0.0,
-        strict: bool = False
+        strict: bool = False,
+        mode: Literal['similar', 'original', 'random'] = 'similar'
     ):
         """
         Returns a generator that samples analogs of the original molecules.
         """
+        # Clean type
         return_list = isinstance(molecules, list)
-        if molecules is None:
-
-            # Unbiased sample of indices
-            molecules = [None] * 200
-            probabilities = torch.ones([1, len(self.building_blocks)])
-            samples = torch.multinomial(probabilities, 200).tolist()
+        molecules = [molecules] if not return_list else molecules
+        molecules = [Molecule(m) for m in molecules if m]
+        
+        if mode == 'original':
+            generators = [itertools.repeat(m) for m in molecules]
         
         else:
-            
-            if isinstance(molecules, Molecule):
-                molecules = [molecules]
+            # Unbiased sample of indices if random
+            if mode == 'random' or not molecules:
+                molecules = itertools.repeat(None)
+                probabilities = torch.ones([1, len(self.building_blocks)])
+                samples = torch.multinomial(probabilities, 200).tolist()
 
-            # Identify analogs of each original molecule
-            scores = self.fingerprint_similarity(molecules)
+            elif mode == 'similar':
+                
+                # Identify analogs of each original molecule
+                scores = self.fingerprint_similarity(molecules)
 
-            # Add size similarity to score
-            scores += self.size_similarity(molecules)
+                # Add size similarity to score
+                scores += self.size_similarity(molecules)
 
-            # Weighted sample of indices
-            if temperature == 0.0:
-                samples = torch.topk(scores, len(self.building_blocks))[1].tolist()
-            
-            # TODO set random seed
-            else:
-                probabilities = self.boltzmann(scores, temperature)
-                samples = torch.multinomial(probabilities, len(self.building_blocks)).tolist()
+                # Weighted sample of indices
+                if temperature == 0.0:
+                    samples = torch.topk(scores, len(self.building_blocks))[1].tolist()
+                
+                # TODO set random seed
+                else:
+                    probabilities = self.boltzmann(scores, temperature)
+                    samples = torch.multinomial(probabilities, len(self.building_blocks)).tolist()
 
-        generators = [
-            self._generator_factory(sampler, molecule, strict=strict)
-            for sampler, molecule in zip(samples, molecules)
-        ]
+            generators = [
+                self._generator_factory(sampler, molecule, strict=strict)
+                for sampler, molecule in zip(samples, molecules)
+            ]
         
         return generators if return_list else generators[0]
-
+    
     @viewable
     def _generator_factory(self, sampler, original=None, strict=False):
         
         for index in sampler:
             if building_block := self.building_blocks[index]:
-
                 if strict:
                     building_block = self.substruct_match(building_block, original)
-
                 yield Molecule(building_block)
     
     def fingerprint_similarity(self, molecules):
