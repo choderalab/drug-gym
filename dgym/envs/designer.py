@@ -4,7 +4,6 @@ import itertools
 import dgym as dg
 import numpy as np
 from numpy.random import randint
-import sys
 import chemfp.arena
 from rdkit import Chem
 from itertools import chain, product
@@ -19,6 +18,9 @@ from collections.abc import Iterator
 from functools import lru_cache
 from itertools import combinations
 from copy import deepcopy
+import sys
+
+MAX_INT = sys.maxsize
 
 class Generator:
     
@@ -204,10 +206,8 @@ class Designer:
         self,
         molecule: Molecule = None,
         size: int = 1,
-        method: Literal['similar', 'grow', 'random'] = 'similar',
+        strategy: Literal['replace', 'grow', 'random'] = 'replace',
         **kwargs
-        # temperature: Optional[float] = 0.0,
-        # strict: bool = False,
     ) -> Iterable:
         """
         Run reactions based on the specified mode, returning a list of products.
@@ -224,33 +224,33 @@ class Designer:
         """
         # Normalize input
         if isinstance(molecule, int):
-            method = 'random'
+            strategy = 'random'
             size = molecule
             molecule = None
 
         # Prepare reaction conditions
-        if method == 'random' or molecule is None:
-            reactions = self.reactions
-            reactants = [{'method': 'random'}, {'method': 'random'}]
-        elif method == 'grow':
-            reactions = self.reactions
-            reactants = [{'product': molecule.smiles}, {'method': 'random', 'seed': randint(sys.maxsize)}]
-        elif method == 'similar':
-            reactions = self.match_reactions(molecule)
-            reactants = molecule.dump()['reactants']
+        reactions = self.reactions if strategy != 'replace' else self.match_reactions(molecule)
+        if strategy == 'random' or not molecule:
+            routes = [{'reactants': [{'method': 'random'}, {'method': 'random'}]}]
+        elif strategy == 'grow':
+            routes = [{'reactants': [{'method': 'original', 'product': molecule.smiles},
+                                     {'method': 'random', 'size_limit': 10, 'seed': randint(MAX_INT)}]}]
+        elif strategy == 'replace':
+            routes = self._apply_annotations(molecule.dump(), annotations={'method': 'similar'}, **kwargs)
 
         # Perform reactions
+        print(routes)
         products = OrderedSet()
         for reaction in reactions:
-            reaction_tree = {'reaction': reaction.name, 'reactants': reactants}
-            analogs = self.generate_analogs(reaction_tree, method=method, **kwargs)
+            routes_ = [{'reaction': reaction.name, **r} for r in routes]
 
             # Run reaction
+            analogs = self.generate_analogs(routes_)
             for analog in analogs:
                 
                 # Annotate metadata
                 analog.inspiration = molecule
-                if method == 'grow':
+                if strategy == 'grow':
                     analog.reactants[0] = molecule
 
                 # Collect products
@@ -287,95 +287,90 @@ class Designer:
         
         return match if match else (match_reactants if match_reactants else [])
 
-    def generate_analogs(
-        self,
-        reaction_tree,
-        method: str = 'similar',
-        **kwargs
-    ):
+    def generate_analogs(self, routes):
         """Initialize the reaction system with a random configuration variant."""
         
-        # Make variant reaction trees
-        variant_trees = self._annotate_reactants(reaction_tree, method=method, **kwargs)
-        variant_products = [self.construct_reaction(v) for v in variant_trees]
+        # Derive pending reactions
+        reaction_products = [self.construct_reaction(r) for r in routes]
         
         # Yield product from randomly chosen tree
         try:
             while True:
-                chosen_products = random.choice(variant_products)
+                chosen_products = random.choice(reaction_products)
                 yield next(chosen_products)
         except StopIteration:
             return
     
-    def _annotate_reactants(
+    def _apply_annotations(
         self,
-        reaction_tree,
-        method: str = 'similar',
+        route: dict,
+        annotations: Optional[dict] = None,
+        limit: Optional[int] = 1,
         **kwargs
     ):
         """
-        Generates all unique variants of the reaction tree with the specified number of annotations applied.
+        Generates all unique variants of the synthetic route with the specified number of annotations applied.
         Utilizes deepcopy to ensure each variant is a completely separate copy.
 
         Parameters
         ----------
-        reaction_tree : dict
-            The initial reaction tree.
+        route : dict
+            The initial synthetic route.
         mode : str
             The mode for annotation.
-        num_annotations : int
-            The number of annotations to apply.
+        num_reactants : int
+            The number of reactants to annotate in each combination.
 
         Returns
         -------
         list
             A list of all unique reaction tree variants with annotations applied.
         """
-        paths = self._flatten_tree(reaction_tree)
-        num_annotations = len(paths) if method != 'similar' else 1
+        paths = self._flatten_route(route)
 
-        variants = []
-        for idx, combo in enumerate(combinations(paths, num_annotations)):
-            new_tree = deepcopy(reaction_tree)
+        reactant_variants = []
+        for combo in combinations(paths, limit):
+            new_tree = deepcopy(route)
             for path in combo:
-                new_tree = self._apply_annotation_to_path(new_tree, path, method, **kwargs)
-            variants.append(new_tree)
+                new_tree = self._apply_annotation_to_path(
+                    new_tree, path, annotations, **kwargs)
+            reactant_variants.append(new_tree)
         
-        return variants
+        return reactant_variants
 
-    def _flatten_tree(self, reaction_tree, path=()):
+    def _flatten_route(self, route, path=()):
         """
-        Flattens the reaction tree to a list of paths to each reactant.
+        Flattens the synthetic route tree to a list of paths to each reactant.
 
         Parameters
         ----------
-        reaction_tree : dict
-            The reaction tree to flatten.
+        route : dict
+            The synthetic route tree to flatten.
         path : tuple
             The current path in the tree, used for internal tracking.
 
         Returns
         -------
         list
-            A list of paths to each reactant in the tree.
+            A list of paths to each reactant in the synthetic route.
         """
-        if 'reactants' in reaction_tree and reaction_tree['reactants']:
+        if 'reactants' in route and route['reactants']:
             paths = []
-            for i, reactant in enumerate(reaction_tree['reactants']):
-                paths.extend(self._flatten_tree(reactant, path + (i,)))
+            for i, reactant in enumerate(route['reactants']):
+                paths.extend(self._flatten_route(reactant, path + (i,)))
             return paths
         else:
             return [path]
 
-    def _apply_annotation_to_path(self, reaction_tree, path, method, **kwargs):
+    def _apply_annotation_to_path(self, route, path, annotations, **kwargs):
         """
         Applies an annotation to a reactant specified by a path.
         This function now utilizes deepcopy to ensure modifications are isolated.
 
         Parameters
         ----------
-        reaction_tree : dict
-            The reaction tree.
+        route : dict
+            The synethic route tree.
         path : tuple
             The path to the reactant to be annotated.
         mode : str
@@ -387,42 +382,42 @@ class Designer:
             The reaction tree with the annotation applied.
         """
         if not path:
-            return {'method': method, **reaction_tree, **kwargs}
+            return {**route, **annotations, **kwargs}
 
         # Recursive step
-        reactants = reaction_tree['reactants']
+        reactants = route['reactants']
         for i, step in enumerate(path):
             if i == len(path) - 1:
                 # Apply annotations at leaves
                 reactants[step] = self._apply_annotation_to_path(
-                    reactants[step], (), method, **kwargs)
+                    reactants[step], (), annotations, **kwargs)
             else:
                 # Continue navigating path
                 reactants = reactants[step]['reactants']
 
-        return reaction_tree
+        return route
 
-    def construct_reaction(self, reaction_tree):
+    def construct_reaction(self, route):
         """
-        Generates LazyReaction products based on a serialized reaction tree.
+        Generates LazyReaction products based on a serialized synthetic route.
         
         Parameters:
-        - serialized_tree: dict, the serialized reaction tree including SMILES strings.
+        - route: dict, the serialized synthetic route including SMILES strings.
         - generator: Generator object, used for generating molecules.
         
         Returns:
         - A generator for LazyReaction products.
         """
         # Base case: If tree is a simple molecule, return it appropriate generator
-        if 'reactants' not in reaction_tree:
-            product = reaction_tree.get('product', None)
-            return self.generator(product, **reaction_tree)
+        if 'reactants' not in route:
+            product = route.get('product', None)
+            return self.generator(product, **route)
 
         # Recursive case: Construct reactants and apply reaction
-        if 'reaction' in reaction_tree \
-            and 'reactants' in reaction_tree:
-            reactants = [self.construct_reaction(reactant) for reactant in reaction_tree['reactants']]
-            reaction = self.reactions[reaction_tree['reaction']]
+        if 'reaction' in route \
+            and 'reactants' in route:
+            reactants = [self.construct_reaction(reactant) for reactant in route['reactants']]
+            reaction = self.reactions[route['reaction']]
             return reaction.run(reactants)
 
-        raise Exception('`reaction_tree` must include a reaction or reactants.')
+        raise Exception('`route` must include a reaction or reactants.')
