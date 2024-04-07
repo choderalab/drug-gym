@@ -39,9 +39,10 @@ class Generator:
     def __call__(
         self,
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
-        temperature: Optional[float] = 0.0,
-        strict: bool = False,
         method: Literal['original', 'similar', 'random'] = 'original',
+        temperature: Optional[float] = 0.0,
+        size_limit: Optional[int] = 1e3,
+        strict: Optional[bool] = False,
         seed: Optional[int] = None,
         **kwargs
     ):
@@ -61,8 +62,13 @@ class Generator:
             if method == 'random' or not molecules:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
-                probabilities = torch.ones([1, len(self.building_blocks)])
-                samples = torch.multinomial(probabilities, 100).tolist()
+                
+                # Filter by size
+                valid_indices = torch.nonzero(self.sizes < size_limit).squeeze()
+                
+                # Sample randomly
+                probabilities = torch.ones([1, len(valid_indices)])
+                samples = valid_indices[torch.multinomial(probabilities, 100)].tolist()
 
             elif method == 'similar':
                 
@@ -218,6 +224,7 @@ class Designer:
         """
         # Normalize input
         if isinstance(molecule, int):
+            method = 'random'
             size = molecule
             molecule = None
 
@@ -280,13 +287,16 @@ class Designer:
         
         return match if match else (match_reactants if match_reactants else [])
 
-    def generate_analogs(self, reaction_tree, method: str = 'similar', **kwargs):
+    def generate_analogs(
+        self,
+        reaction_tree,
+        method: str = 'similar',
+        **kwargs
+    ):
         """Initialize the reaction system with a random configuration variant."""
         
         # Make variant reaction trees
-        num_annotations = 1 if method == 'similar' else 0
-        variant_trees = self._annotate_reactants(
-            reaction_tree, method=method, num_annotations=num_annotations, **kwargs)
+        variant_trees = self._annotate_reactants(reaction_tree, method=method, **kwargs)
         variant_products = [self.construct_reaction(v) for v in variant_trees]
         
         # Yield product from randomly chosen tree
@@ -301,7 +311,6 @@ class Designer:
         self,
         reaction_tree,
         method: str = 'similar',
-        num_annotations: int = 0,
         **kwargs
     ):
         """
@@ -323,12 +332,15 @@ class Designer:
             A list of all unique reaction tree variants with annotations applied.
         """
         paths = self._flatten_tree(reaction_tree)
+        num_annotations = len(paths) if method != 'similar' else 1
+
         variants = []
-        for combo in combinations(paths, num_annotations):
+        for idx, combo in enumerate(combinations(paths, num_annotations)):
             new_tree = deepcopy(reaction_tree)
             for path in combo:
                 new_tree = self._apply_annotation_to_path(new_tree, path, method, **kwargs)
             variants.append(new_tree)
+        
         return variants
 
     def _flatten_tree(self, reaction_tree, path=()):
@@ -377,12 +389,15 @@ class Designer:
         if not path:
             return {'method': method, **reaction_tree, **kwargs}
 
+        # Recursive step
         reactants = reaction_tree['reactants']
         for i, step in enumerate(path):
             if i == len(path) - 1:
+                # Apply annotations at leaves
                 reactants[step] = self._apply_annotation_to_path(
                     reactants[step], (), method, **kwargs)
             else:
+                # Continue navigating path
                 reactants = reactants[step]['reactants']
 
         return reaction_tree

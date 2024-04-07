@@ -471,4 +471,3 @@ class ReactionCollection(Collection):
 
         reactions = reactions_df.apply(_make_reaction, axis=1).tolist()
         return cls(reactions)
-
