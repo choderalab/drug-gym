@@ -239,7 +239,6 @@ class Designer:
             routes = self._apply_annotations(molecule.dump(), annotations={'method': 'similar'}, **kwargs)
 
         # Perform reactions
-        print(routes)
         products = OrderedSet()
         for reaction in reactions:
             routes_ = [{'reaction': reaction.name, **r} for r in routes]
