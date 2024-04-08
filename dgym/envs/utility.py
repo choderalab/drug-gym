@@ -19,22 +19,18 @@ class UtilityFunction:
 
     def __call__(self, input):
         
+        # Normalize input
+        return_list = isinstance(input, Iterable)
+        input = np.array([input]) if not return_list else input
         if isinstance(input[0], Molecule):
             input = self.oracle(input)
+
+        # Score
+        scores = self.score(input)
         
-        return self.score(input)
+        return scores if return_list else scores.item()
 
     def score(self, value):
-        is_scalar = np.isscalar(value)
-        value = np.asarray(value)
-        scores = np.where(
-            (self.ideal[0] <= value) & (value <= self.ideal[1]), 
-            1,
-            self.score_acceptable(value)
-        )
-        return scores.item() if is_scalar else scores
-
-    def score_acceptable(self, value):
         raise NotImplementedError
 
 
@@ -127,3 +123,36 @@ class NewUtilityFunction(UtilityFunction):
     def _slope(x1, y1, x2, y2):
         if (x2 - x1) == 0: return 0
         return (y2 - y1) / (x2 - x1)
+
+
+
+class PenaltyUtilityFunction(UtilityFunction):
+    
+    def __init__(self, oracle: Optional[Oracle] = None, ideal: Iterable = [], acceptable: Iterable = []):
+        super().__init__(oracle, ideal, acceptable)
+
+    def score(self, value):
+        value = np.asarray(value)
+        res = np.empty_like(value, dtype=float)
+        
+        # Value less than lower acceptable limit (quadratic penalty)
+        mask = value < self.acceptable[0]
+        res[mask] = (abs(value[mask] - self.acceptable[0]) + 1)**2
+        
+        # Value between lower acceptable limit and lower ideal limit (linear interpolation)
+        mask = (self.acceptable[0] <= value) & (value < self.ideal[0])
+        res[mask] = np.interp(value[mask], [self.acceptable[0], self.ideal[0]], [1, 0])
+        
+        # Value inside ideal range
+        mask = (self.ideal[0] <= value) & (value <= self.ideal[1])
+        res[mask] = 0
+        
+        # Value between upper ideal limit and upper acceptable limit (linear interpolation)
+        mask = (self.ideal[1] < value) & (value <= self.acceptable[1])
+        res[mask] = np.interp(value[mask], [self.ideal[1], self.acceptable[1]], [0, 1])
+        
+        # Value greater than upper acceptable limit (quadratic penalty)
+        mask = value > self.acceptable[1]
+        res[mask] = (abs(value[mask] - self.acceptable[1]) + 1)**2
+        
+        return res
