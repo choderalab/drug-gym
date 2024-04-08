@@ -21,13 +21,14 @@ class UtilityFunction:
         
         # Normalize input
         return_list = isinstance(input, Iterable)
-        input = np.array([input]) if not return_list else input
+        input = input if return_list else np.array([input])
+        
+        # Score molecules
         if isinstance(input[0], Molecule):
             input = self.oracle(input)
 
-        # Score
+        # Normalize scores
         scores = self.score(input)
-        
         return scores if return_list else scores.item()
 
     def score(self, value):
@@ -128,7 +129,12 @@ class NewUtilityFunction(UtilityFunction):
 
 class PenaltyUtilityFunction(UtilityFunction):
     
-    def __init__(self, oracle: Optional[Oracle] = None, ideal: Iterable = [], acceptable: Iterable = []):
+    def __init__(
+        self,
+        oracle: Optional[Oracle] = None,
+        ideal: Iterable = [],
+        acceptable: Iterable = []
+    ):
         super().__init__(oracle, ideal, acceptable)
 
     def score(self, value):
