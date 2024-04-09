@@ -13,8 +13,11 @@ from scipy.special import logsumexp
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from contextlib import contextmanager
+from catboost import CatBoostRegressor
 from meeko import MoleculePreparation, PDBQTWriterLegacy
 from dgym.collection import MoleculeCollection
+from sklearn.preprocessing import normalize
+from scikit_mol.descriptors import MolecularDescriptorTransformer
 
 
 class OracleCache(dict):
@@ -110,6 +113,57 @@ class NoisyOracle(Oracle):
         self.oracle.reset_cache()
         return self
 
+
+class CatBoostOracle(Oracle):
+    
+    def __init__(
+        self,
+        name: str,
+        path: str
+    ):
+        super().__init__()
+        self.name = name
+        self.path = path
+        self.regressor = CatBoostRegressor().load_model(path)
+    
+    def predict(self, molecules: MoleculeCollection):
+        
+        # Get SMILES
+        smiles = [m.smiles for m in molecules]
+        mols = [m.mol for m in molecules]
+
+        # Score molecules
+        X = self._featurize(mols)
+        scores = self.regressor.predict(X)
+        
+        return smiles, scores
+    
+    def _featurize(self, rd_mols):
+        
+        desc_list = [
+            'ExactMolWt', 'FpDensityMorgan1',
+            'FpDensityMorgan2', 'FpDensityMorgan3',
+            'HeavyAtomMolWt', 'MaxAbsPartialCharge',
+            'MaxAbsPartialCharge', 'MinAbsPartialCharge',
+            'MinPartialCharge', 'MolWt',
+            'NumRadicalElectrons', 'NumValenceElectrons',
+            'MolLogP', 'FractionCSP3',
+            'HeavyAtomCount', 'NHOHCount',
+            'NOCount', 'NumAliphaticCarbocycles',
+            'NumAliphaticHeterocycles', 'NumAliphaticRings',
+            'NumAromaticCarbocycles', 'NumAromaticHeterocycles',
+            'NumAromaticRings', 'NumHAcceptors',
+            'NumHDonors', 'NumHeteroatoms',
+            'NumRotatableBonds', 'NumSaturatedCarbocycles',
+            'NumSaturatedHeterocycles', 'NumSaturatedRings', 'RingCount',
+        ]
+
+        transformer = MolecularDescriptorTransformer(
+            desc_list, parallel=True)
+        X = transformer.transform(rd_mols)
+        X = normalize(np.nan_to_num(X))
+        
+        return X
 
 class DGLOracle(Oracle):
 
