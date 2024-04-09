@@ -132,7 +132,7 @@ class Generator:
             threshold = 0.0,
         )
 
-        scores = torch.tensor(results.to_csr().A)
+        scores = torch.tensor(results.to_csr().toarray())
 
         return scores
     
