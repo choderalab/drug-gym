@@ -207,6 +207,7 @@ class Designer:
         molecule: Molecule = None,
         size: int = 1,
         strategy: Literal['replace', 'grow', 'random'] = 'replace',
+        seed: Optional[int] = None,
         **kwargs
     ) -> Iterable:
         """

@@ -54,9 +54,11 @@ class Oracle:
             ]):
                 # Predict only uncached molecules and update cache
                 smiles, predictions = self.predict(uncached_molecules, **kwargs)
+                # import json; print(json.dumps(list(zip(smiles, predictions)), indent=4))
+                
                 self.cache.update(zip(smiles, predictions))
 
-            return [self.cache[m.smiles] for m in molecules]
+            return predictions, [self.cache[m.smiles] for m in molecules]
 
         # If not using cache, predict for all molecules
         _, predictions = self.predict(molecules, **kwargs)
