@@ -44,7 +44,7 @@ class Oracle:
         try:
             yield
         finally:
-            self.cache = {**old_cache, **self.cache}
+            self.cache = old_cache
     
     def get_predictions(
         self,
@@ -56,11 +56,11 @@ class Oracle:
             return self._get_predictions(molecules, **kwargs)
         else:
             with self.suspend_cache():
-                return self._get_predictions(molecules, **kwargs)            
+                return self._get_predictions(molecules, **kwargs)
 
     def _get_predictions(
         self,
-        molecules,
+        molecules: Union[MoleculeCollection, list],
         **kwargs
     ):
         # Normalize input            
