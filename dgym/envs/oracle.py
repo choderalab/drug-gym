@@ -254,6 +254,7 @@ class DockingOracle(Oracle):
             
             # gather results
             smiles, scores = self._gather_results(directory)
+            # import json; print(json.dumps(list(zip(smiles, scores)), indent=4))
 
             # convert units
             scores = self._convert_units(scores, units)
