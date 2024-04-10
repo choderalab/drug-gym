@@ -37,31 +37,47 @@ class Oracle:
         self.cache = OracleCache()
         return self
     
+    @contextmanager
+    def suspend_cache(self):
+        old_cache = self.cache.copy()
+        self.reset_cache()
+        try:
+            yield
+        finally:
+            self.cache = {**old_cache, **self.cache}
+    
     def get_predictions(
         self,
         molecules: Union[MoleculeCollection, list],
         use_cache: bool = True,
         **kwargs
     ):
+        if use_cache:
+            return self._get_predictions(molecules, **kwargs)
+        else:
+            with self.suspend_cache():
+                return self._get_predictions(molecules, **kwargs)            
+
+    def _get_predictions(
+        self,
+        molecules,
+        **kwargs
+    ):
+        # Normalize input            
         molecules = MoleculeCollection(molecules)
 
-        if use_cache:
-            
-            # Identify molecules not in cache
-            if uncached_molecules := set([
-                m for m in molecules
-                if m.smiles not in self.cache
-            ]):
-                # Predict only uncached molecules and update cache
-                smiles, predictions = self.predict(uncached_molecules, **kwargs)
-                # import json; print(json.dumps(list(zip(smiles, predictions)), indent=4))
-                
-                self.cache.update(zip(smiles, predictions))
-
-            return predictions, [self.cache[m.smiles] for m in molecules]
-
-        # If not using cache, predict for all molecules
-        _, predictions = self.predict(molecules, **kwargs)
+        # Identify molecules not in cache
+        if uncached_molecules := set([
+            m for m in molecules
+            if m.smiles not in self.cache
+        ]):
+            # Predict only uncached molecules and update cache
+            smiles, predictions = self.predict(uncached_molecules, **kwargs)
+            self.cache.update(zip(smiles, predictions))
+        
+        # Match input ordering
+        predictions = [self.cache[m.smiles] for m in molecules]
+        
         return predictions
 
     def predict(self, molecules: MoleculeCollection):
