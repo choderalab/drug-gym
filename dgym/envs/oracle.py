@@ -24,6 +24,9 @@ class OracleCache(dict):
     def __missing__(self, key):
         self[key] = float('nan')
         return float('nan')
+    
+    def copy(self):
+        return self.__class__(self.copy())
 
 class Oracle:
     

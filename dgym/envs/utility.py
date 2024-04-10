@@ -17,7 +17,7 @@ class UtilityFunction:
         self.ideal = np.array(ideal)
         self.acceptable = np.array(acceptable)
 
-    def __call__(self, input):
+    def __call__(self, input, **kwargs):
         
         # Normalize input
         return_list = isinstance(input, Iterable)
@@ -25,7 +25,7 @@ class UtilityFunction:
         
         # Score molecules
         if isinstance(input[0], Molecule):
-            input = self.oracle(input)
+            input = self.oracle(input, **kwargs)
 
         # Normalize scores
         scores = self.score(input)
