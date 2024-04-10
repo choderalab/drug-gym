@@ -29,6 +29,8 @@ class UtilityFunction:
 
         # Normalize scores
         scores = self.score(input)
+        scores[np.isnan(input)] = -1e3
+
         return scores if return_list else scores.item()
 
     def score(self, value):
