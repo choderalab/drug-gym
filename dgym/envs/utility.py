@@ -68,4 +68,4 @@ class ClassicUtilityFunction(UtilityFunction):
         mask = value > self.acceptable[1]
         res[mask] = (abs(value[mask] - self.acceptable[1]) + 1)**2
         
-        return res
+        return 1 - res

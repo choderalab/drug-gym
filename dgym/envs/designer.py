@@ -41,7 +41,7 @@ class Generator:
     def __call__(
         self,
         molecules: Optional[Union[Iterable[Molecule], Molecule, str]] = None,
-        method: Literal['original', 'similar', 'random'] = 'original',
+        search: Literal['fixed', 'similar', 'random'] = 'fixed',
         temperature: Optional[float] = 0.0,
         size_limit: Optional[int] = 1e3,
         strict: Optional[bool] = False,
@@ -56,12 +56,12 @@ class Generator:
         molecules = [molecules] if not return_list else molecules
         molecules = [Molecule(m) for m in molecules if m]
         
-        if method == 'original' and molecules:
+        if search == 'fixed' and molecules:
             generators = [itertools.repeat(m) for m in molecules]
         
         else:
             # Unbiased sample of indices if random
-            if method == 'random' or not molecules:
+            if search == 'random' or not molecules:
                 if seed: torch.manual_seed(seed)
                 molecules = itertools.repeat(None)
                 
@@ -72,7 +72,7 @@ class Generator:
                 probabilities = torch.ones([1, len(valid_indices)])
                 samples = valid_indices[torch.multinomial(probabilities, 100)].tolist()
 
-            elif method == 'similar':
+            elif search == 'similar':
                 
                 # Identify analogs of each original molecule
                 scores = self.fingerprint_similarity(molecules)
@@ -232,12 +232,12 @@ class Designer:
         # Prepare reaction conditions
         reactions = self.reactions if strategy != 'replace' else self.match_reactions(molecule)
         if strategy == 'random' or not molecule:
-            routes = [{'reactants': [{'method': 'random'}, {'method': 'random'}]}]
+            routes = [{'reactants': [{'search': 'random'}, {'search': 'random'}]}]
         elif strategy == 'grow':
-            routes = [{'reactants': [{'method': 'original', 'product': molecule.smiles},
-                                     {'method': 'random', 'size_limit': 10, 'seed': randint(MAX_INT)}]}]
+            routes = [{'reactants': [{'search': 'fixed', 'product': molecule.smiles},
+                                     {'search': 'random', 'size_limit': 10, 'seed': randint(MAX_INT)}]}]
         elif strategy == 'replace':
-            routes = self._apply_annotations(molecule.dump(), annotations={'method': 'similar'}, **kwargs)
+            routes = self._apply_annotations(molecule.dump(), annotations={'search': 'similar'}, **kwargs)
 
         # Perform reactions
         products = OrderedSet()
