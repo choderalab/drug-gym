@@ -26,7 +26,7 @@ class OracleCache(dict):
         return float('nan')
     
     def copy(self):
-        return self.__class__(self.copy())
+        return OracleCache(self)
 
 class Oracle:
     
