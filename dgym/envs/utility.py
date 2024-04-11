@@ -1,5 +1,7 @@
+import numbers
 import dgym as dg
 import numpy as np
+import itertools
 from dgym.molecule import Molecule
 from dgym.envs.oracle import Oracle
 from typing import Optional, Callable, Iterable
@@ -102,10 +104,20 @@ class MultipleUtilityFunction:
         input,
         **kwargs
     ):
-        # Score molecules
+        # Initialize utility array
         utility = np.empty((len(input), len(self.utility_functions)))
-        for idx, utility_function in enumerate(self.utility_functions):
-            utility[:,idx] = utility_function(input, **kwargs)
+
+        # Normalize input
+        if isinstance(input[0], numbers.Number):
+            input = [input]
+        elif isinstance(input[0], Iterable):
+            input = np.array(input).T
+        elif isinstance(input[0], Molecule):
+            input = itertools.repeat(input)
+
+        # Compute utility
+        for idx, (utility_function, input_) in enumerate(zip(self.utility_functions, input)):
+            utility[:,idx] = utility_function(input_, **kwargs)            
         
         return utility
 
