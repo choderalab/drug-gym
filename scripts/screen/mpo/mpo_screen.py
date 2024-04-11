@@ -155,8 +155,8 @@ molecules = get_molecules(
     log_S_oracle
 ) = get_oracles(
     path=path,
-    target_index=args.target_index,
-    scorer=args.scorer
+    target_index=0,
+    scorer='vina'
 )
 
 # Score molecules
