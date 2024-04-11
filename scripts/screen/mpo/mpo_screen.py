@@ -114,7 +114,7 @@ def get_oracles(path: str, target_index: int):
     docking_oracle = DockingOracle(name, receptor_path=receptor_path, config=config)
     log_P_oracle = RDKitOracle('MolLogP')
     log_S_oracle = CatBoostOracle(
-        'Log S', path='../../dgym-data/models/aqsolcb.model')
+        'Log S', path='../../../dgym/envs/models/aqsolcb.model')
     return docking_oracle, log_P_oracle, log_S_oracle
 
 
