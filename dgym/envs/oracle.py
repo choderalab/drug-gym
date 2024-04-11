@@ -36,14 +36,14 @@ class Oracle:
     def __call__(self, molecules: Union[MoleculeCollection, list], **kwargs):
         return self.get_predictions(molecules, **kwargs)
     
-    def reset_cache(self):
+    def reset(self):
         self.cache = OracleCache()
         return self
     
     @contextmanager
     def suspend_cache(self):
         old_cache = self.cache.copy()
-        self.reset_cache()
+        self.reset()
         try:
             yield
         finally:
@@ -123,15 +123,15 @@ class NoisyOracle(Oracle):
 
         return noisy_predictions
 
-    def reset_cache(self):
+    def reset(self):
         """
         Resets the cache for both the NoisyOracle and the wrapped oracle.
 
         Returns:
         - NoisyOracle: self for method chaining.
         """
-        super().reset_cache()
-        self.oracle.reset_cache()
+        super().reset()
+        self.oracle.reset()
         return self
 
 

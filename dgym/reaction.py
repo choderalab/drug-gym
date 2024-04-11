@@ -216,7 +216,7 @@ class LazyReaction(Reaction):
                 if protect:
                     reactants = self.protect(product, reactants)
                 
-                yield Molecule(product, reaction = self, reactants = reactants)
-        
+                yield Molecule(product, reaction = self.name, reactants = reactants)
+
             else:
                 continue

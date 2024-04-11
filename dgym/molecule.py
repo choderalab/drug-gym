@@ -141,7 +141,7 @@ class Molecule:
         return self.mol is not None
 
     def erase_annotations(self) -> Any:
-        """Erase the metadata. """
+        """Erase the annotations. """
         self.annotations = {}
         return self
 
@@ -192,6 +192,23 @@ class Molecule:
             return 0
         else:
             return 1 + self.inspiration.design_cycle
+    
+    @property
+    def lineage(self):
+        """
+        Recursively collects all inspirations into a list, starting from this molecule.
+
+        Returns:
+        -------
+        List[Molecule]
+            A list of molecules from self to the last inspiration in the chain.
+        """
+        # Base case: If there's no inspiration, return a list containing just this molecule.
+        if not self.inspiration:
+            return [self]
+        else:
+            # Recursive case: Append this molecule to the lineage of its inspiration.
+            return self.inspiration.lineage + [self]
     
     @contextmanager
     def set_reaction(self, new_reaction):
@@ -246,12 +263,42 @@ class Molecule:
 
     def dump(self, detailed: bool = False):
         """Recursively dumps the molecule and its synthesis pathway to a dictionary."""
-        data = {'product': self.name}
+        route = {'product': self.name}
         if self.reaction:
-            data['reaction'] = self.reaction.name
+            route['reaction'] = self.reaction
         if self.reactants:
-            data['reactants'] = [reactant.dump() for reactant in self.reactants]
-        if detailed and self.metadata:
-            data['metadata'] = self.metadata
-        return data
+            route['reactants'] = [reactant.dump() for reactant in self.reactants]
+        if detailed and self.annotations:
+            route['annotations'] = self.annotations
+        return route
 
+    @staticmethod
+    def load_from_route(route: dict) -> 'Molecule':
+        """
+        Recursively loads molecules and their synthesis pathways from a dictionary.
+        
+        Parameters
+        ----------
+        route : dict
+            The dictionary representation of the synthesis route.
+        
+        Returns
+        -------
+        Molecule
+            The Molecule object at the root of the synthesis pathway.
+        """
+        # Create the root molecule, possibly without 'mol' if not directly provided
+        product_smiles = route.get('product', None)
+        product_mol = rdkit.Chem.MolFromSmiles(product_smiles) if product_smiles else None
+        reaction_name = route.get('reaction', None)
+        reactants_data = route.get('reactants', [])
+        annotations = route.get('annotations', None)
+        
+        reactants = [Molecule.load_from_route(reactant) for reactant in reactants_data]
+        
+        return Molecule(
+            mol=product_mol,
+            reactants=reactants,
+            reaction=reaction_name,
+            annotations=annotations
+        )

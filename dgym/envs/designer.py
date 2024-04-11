@@ -7,7 +7,7 @@ from numpy.random import randint
 import chemfp.arena
 from rdkit import Chem
 from itertools import chain, product
-from rdkit.Chem import AllChem, DataStructs
+from rdkit.Chem import AllChem, DataStructs, rdDeprotect
 from typing import Union, Iterable, Optional, Literal
 from dgym.molecule import Molecule
 from dgym.reaction import Reaction
@@ -104,10 +104,12 @@ class Generator:
             yield building_block
     
     @lru_cache(maxsize=None)
-    def _get_building_block(self, index, original=None, strict=False):
+    def _get_building_block(self, index, original=None, strict=False, deprotect=True):
         if building_block := self.building_blocks[index]:
             if strict:
                 building_block = self.substruct_match(building_block, original)
+            if deprotect:
+                building_block = rdDeprotect.Deprotect(building_block)
             return Molecule(building_block)
         
     
@@ -199,7 +201,7 @@ class Designer:
         # john: why not lazily recompute fingerprints only when needed, then cache it
         # for each object, what goes in, and what goes out
 
-    def reset_cache(self):
+    def reset(self):
         self._cache = set()
 
     def design(
@@ -230,7 +232,8 @@ class Designer:
             molecule = None
 
         # Prepare reaction conditions
-        reactions = self.reactions if strategy != 'replace' else self.match_reactions(molecule)
+        reactions = self.reactions.names if strategy != 'replace' \
+            else self.match_reactions(molecule)
         if strategy == 'random' or not molecule:
             routes = [{'reactants': [{'search': 'random'}, {'search': 'random'}]}]
         elif strategy == 'grow':
@@ -242,7 +245,7 @@ class Designer:
         # Perform reactions
         products = OrderedSet()
         for reaction in reactions:
-            routes_ = [{'reaction': reaction.name, **r} for r in routes]
+            routes_ = [{'reaction': reaction, **r} for r in routes]
 
             # Run reaction
             analogs = self.generate_analogs(routes_)
@@ -268,19 +271,24 @@ class Designer:
         """
         Finds the most specific reactions for the given molecule
         """
-        if molecule.reaction and molecule.reaction in self.reactions:
+        # Normalize input
+        if isinstance(molecule, dict):
+            molecule = Molecule.load_from_route(molecule)
+        
+        # Return reaction if already annotated
+        if molecule.reaction and molecule.reaction in self.reactions.names:
             return [molecule.reaction]
 
-        # First, filter by reactions compatible with reactants
+        # Filter by reactions compatible with reactants
         match_reactants = [
             reaction
             for reaction in self.reactions
             if reaction.is_compatible(reactants = molecule.reactants)
         ]
 
-        # Next, filter those reactions by compatibility with product
+        # Filter those reactions by compatibility with product
         match = [
-            reaction
+            reaction.name
             for reaction in match_reactants
             if reaction.is_compatible(product = molecule)
         ]
@@ -408,16 +416,16 @@ class Designer:
         Returns:
         - A generator for LazyReaction products.
         """
-        # Base case: If tree is a simple molecule, return it appropriate generator
+        # Base case: If tree is a simple molecule, return the appropriate generator
         if 'reactants' not in route:
             product = route.get('product', None)
             return self.generator(product, **route)
 
         # Recursive case: Construct reactants and apply reaction
-        if 'reaction' in route \
-            and 'reactants' in route:
+        if 'reactants' in route:
             reactants = [self.construct_reaction(reactant) for reactant in route['reactants']]
-            reaction = self.reactions[route['reaction']]
+            reaction_name = route.get('reaction', self.match_reactions(route)[0])
+            reaction = self.reactions[reaction_name]
             return reaction.run(reactants)
 
         raise Exception('`route` must include a reaction or reactants.')

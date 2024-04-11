@@ -3,7 +3,7 @@ import numpy as np
 from dgym.molecule import Molecule
 from dgym.envs.oracle import Oracle
 from typing import Optional, Callable, Iterable
-
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 class UtilityFunction:
     
@@ -71,3 +71,64 @@ class ClassicUtilityFunction(UtilityFunction):
         res[mask] = (abs(value[mask] - self.acceptable[1]) + 1)**2
         
         return 1 - res
+
+
+class MultipleUtilityFunction:
+    
+    def __init__(
+        self,
+        utility_functions: Iterable[UtilityFunction],
+        weights: Optional[Iterable[float]] = None,
+    ):
+        self.utility_functions = utility_functions
+        self.weights = weights
+    
+    def __call__(
+        self,
+        input,
+        method: str = 'hybrid',
+        **kwargs
+    ):
+        # Score molecules
+        utility = np.empty((len(self.utility_functions), len(input)))
+        for idx, utility_function in enumerate(self.utility_functions):
+            utility[idx] = utility_function(input, **kwargs)
+
+        # Compose across objectives
+        composite_utility = self.compose(utility, method=method)
+        
+        return composite_utility.tolist()
+
+    def compose(
+        self,
+        utility: Iterable,
+        method: str = 'hybrid'
+    ):
+        match method:
+            case 'hybrid':
+                nds_ranks = self._non_dominated_sort(utility)
+                averages = self._weighted_average(utility)
+                hybrid_sort = np.lexsort([-averages, nds_ranks])
+                hybrid_ranks = hybrid_sort.argsort()
+                composite_utility = 1 - (hybrid_ranks / (len(hybrid_ranks) - 1))
+            case 'average':
+                composite_utility = self._weighted_average(utility)
+            case 'max':
+                composite_utility = np.nanmax(utility, axis=0)
+            case 'min':
+                composite_utility = np.nanmin(utility, axis=0)
+        
+        return composite_utility
+
+    def _non_dominated_sort(self, utility):
+        
+        _, nds_ranks = NonDominatedSorting().do(
+            -utility.T,
+            return_rank=True,
+            only_non_dominated_front=False
+        )
+        
+        return nds_ranks
+    
+    def _weighted_average(self, utility):
+        return np.average(utility, axis=0, weights=self.weights)

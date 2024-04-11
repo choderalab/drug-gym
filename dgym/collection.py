@@ -445,6 +445,15 @@ class ReactionCollection(Collection):
     def __init__(self, reactions: Optional[List] = []) -> None:
         # assert all(isinstance(reaction, Reaction) for reaction in reactions)
         super().__init__(reactions)
+        
+    @property
+    def reactions(self):
+        return self._items
+
+    @property
+    def names(self):
+        """Return the list of reaction names in the datset. """
+        return [reaction.name for reaction in self.reactions]
 
     @classmethod
     def from_json(
