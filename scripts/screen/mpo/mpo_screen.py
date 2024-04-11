@@ -159,6 +159,7 @@ molecules = get_molecules(
 )
 
 # Score molecules
+smiles = [m.smiles for m in molecules]
 pIC50 = docking_oracle(molecules)
 log_P = log_P_oracle(molecules)
 log_S = log_S_oracle(molecules)
@@ -166,7 +167,7 @@ log_S = log_S_oracle(molecules)
 # Attach smiles
 results_df = pd.DataFrame(
     {
-        'smiles': molecules.smiles,
+        'smiles': smiles,
         'pIC50': pIC50,
         'log P': log_P,
         'log S': log_S
