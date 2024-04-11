@@ -63,7 +63,7 @@ def get_molecules(
 
         # generate a few rounds of random molecules in REAL Space
         molecule = initial_molecule
-        designer.reset_cache()
+        designer.reset()
         for _ in range(3):
             molecule = designer.design(molecule, 1, temperature=1.0)[0]
         
@@ -107,12 +107,15 @@ def get_docking_config(path, target_index):
 
 def get_oracles(path: str, target_index: int):
     
-    from dgym.envs.oracle import DockingOracle, 
+    from dgym.envs.oracle import DockingOracle, CatBoostOracle, RDKitOracle
     
     # Create noiseless evaluators
     name, receptor_path, config = get_docking_config(path, target_index)
     docking_oracle = DockingOracle(name, receptor_path=receptor_path, config=config)
-    return docking_oracle
+    log_P_oracle = RDKitOracle('MolLogP')
+    log_S_oracle = CatBoostOracle(
+        'Log S', path='../../dgym-data/models/aqsolcb.model')
+    return docking_oracle, log_P_oracle, log_S_oracle
 
 
 # Parse command line arguments
