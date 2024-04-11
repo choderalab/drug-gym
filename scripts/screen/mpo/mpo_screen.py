@@ -117,9 +117,8 @@ def get_oracles(path: str, target_index: int):
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--target_index", type=int, help="The index of the docking target")
-parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
-parser.add_argument("--scorer", type=str, help="Which mode for scoring. `vina`, `vinardo`, or `gnina`.")
+parser.add_argument(
+    "--out_dir", type=str, help="Where to put the resulting JSONs")
 
 args = parser.parse_args()
 
@@ -175,7 +174,7 @@ results_df = pd.DataFrame(
 # Write to disk
 import os
 
-file_path = f'{args.out_dir}/screen_targets_{args.target_index}_{args.scorer}.tsv'
+file_path = f'{args.out_dir}/screen_mpo.tsv'
 results_df.to_csv(
     file_path,
     mode = 'a',
