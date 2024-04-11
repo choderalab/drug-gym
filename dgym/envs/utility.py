@@ -116,11 +116,14 @@ class MultipleUtilityFunction:
     ):
         match method:
             case 'hybrid':
-                nds_ranks = self._non_dominated_sort(utility)
-                averages = self._weighted_average(utility)
-                hybrid_sort = np.lexsort([-averages, nds_ranks])
-                hybrid_ranks = hybrid_sort.argsort()
-                composite_utility = 1 - (hybrid_ranks / (len(hybrid_ranks) - 1))
+                if len(utility) == 1:
+                    composite_utility = 1
+                else:
+                    nds_ranks = self._non_dominated_sort(utility)
+                    averages = self._weighted_average(utility)
+                    hybrid_sort = np.lexsort([-averages, nds_ranks])
+                    hybrid_ranks = hybrid_sort.argsort()
+                    composite_utility = 1 - (hybrid_ranks / (len(hybrid_ranks) - 1))
             case 'average':
                 composite_utility = self._weighted_average(utility)
             case 'max':
