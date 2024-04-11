@@ -90,14 +90,24 @@ class MultipleUtilityFunction:
         **kwargs
     ):
         # Score molecules
-        utility = np.empty((len(self.utility_functions), len(input)))
-        for idx, utility_function in enumerate(self.utility_functions):
-            utility[idx] = utility_function(input, **kwargs)
+        utility = self.score(input, **kwargs)
 
         # Compose across objectives
         composite_utility = self.compose(utility, method=method)
         
         return composite_utility.tolist()
+    
+    def score(
+        self,
+        input,
+        **kwargs
+    ):
+        # Score molecules
+        utility = np.empty((len(input), len(self.utility_functions)))
+        for idx, utility_function in enumerate(self.utility_functions):
+            utility[:,idx] = utility_function(input, **kwargs)
+        
+        return utility
 
     def compose(
         self,
@@ -114,21 +124,19 @@ class MultipleUtilityFunction:
             case 'average':
                 composite_utility = self._weighted_average(utility)
             case 'max':
-                composite_utility = np.nanmax(utility, axis=0)
+                composite_utility = np.nanmax(utility, axis=1)
             case 'min':
-                composite_utility = np.nanmin(utility, axis=0)
+                composite_utility = np.nanmin(utility, axis=1)
         
         return composite_utility
 
     def _non_dominated_sort(self, utility):
-        
         _, nds_ranks = NonDominatedSorting().do(
-            -utility.T,
+            -utility,
             return_rank=True,
             only_non_dominated_front=False
         )
-        
         return nds_ranks
     
     def _weighted_average(self, utility):
-        return np.average(utility, axis=0, weights=self.weights)
+        return np.average(utility, axis=1, weights=self.weights)
