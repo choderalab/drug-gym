@@ -27,7 +27,6 @@ class DrugAgent:
         action = self.construct_action()
         action_name = action['name']
         
-        # Only design analogs for tested molecules
         match action_name:
             case 'design':
                 observations = observations.tested
@@ -36,14 +35,14 @@ class DrugAgent:
             case _ as test:
                 observations = observations.made
 
-        # Extract action utility from the policy
+        # Compute utility from the policy
         utility = self.policy(observations)
         
         # Apply negative bias to utility of masked actions (True = valid)
         if mask:
             utility[~mask] = -1e8
 
-        # Gather indices
+        # Gather molecule indices
         batch_size = min([self.batch_size, len(observations)])
         pending = self.exploration_strategy(utility, size=batch_size)
         molecules = [observations.index[p] for p in pending]

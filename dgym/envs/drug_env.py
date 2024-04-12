@@ -55,46 +55,47 @@ class DrugEnv(gym.Env):
         super().__init__()
         
         self.designer = designer
-
         self.budget = budget
+        self.utility_function = utility_function
         self.time_elapsed = 0
-
-        # For now, max library size is set to a very large number
         self.max_molecules = 100_000
 
         # Define assays
         self.assays = {a.name: a for a in assays}
 
-        # Define utility function
-        self.utility_function = utility_function
-
         # Define the action space
         self.action_space = Dict({
             'type': Discrete(len(self.assays)),
             'molecules': Sequence(Discrete(self.max_molecules)),
-            # 'parameters': None, # TBD
         })
 
         # Define the observation space
         self.observation_space = Dict({
-            'library': Box(low=-float('inf'), high=float('inf'), shape=(self.max_molecules,)),  
-            'order': Box(low=-float('inf'), high=float('inf'), shape=(10,))
+            'library': Box(
+                low=-float('inf'),
+                high=float('inf'),
+                shape=(self.max_molecules,)
+            ),  
+            'order': Box(
+                low=-float('inf'),
+                high=float('inf'),
+                shape=(10,)
+            )
         })
 
-        # Initialize the library and orders
+        # Initialize the library
         if library is None:
             library = MoleculeCollection()
-        
-        # for molecule in library:
-        #     molecule.update_annotations({'timestep': self.time_elapsed})
+        if not library.tested:
+            library['status'] = 'tested'
+        library['timestep'] = self.time_elapsed
 
+        # Track history
         self._library_0 = library.copy()
         self.library = self._library_0.copy()
         self.reward_history = []
 
-        # Initialize the action mask
-        # TODO - figure out the logic here
-        # the idea is to prevent agent from selecting molecules that don't yet exist
+        # Initialize action mask
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
         self.valid_actions[:] = True
 
