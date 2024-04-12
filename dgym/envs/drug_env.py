@@ -101,9 +101,9 @@ class DrugEnv(gym.Env):
 
     def step(self, action):
         """
-        Run one timestep of the environment’s dynamics using the agent actions.
+        Run one timestep of the environment's dynamics using the agent actions.
         When the end of an episode is reached (terminated or truncated),
-        it is necessary to call reset() to reset this environment’s state for the next episode.
+        it is necessary to call reset() to reset this environment's state for the next episode.
 
         Parameters
         ----------
@@ -113,7 +113,7 @@ class DrugEnv(gym.Env):
         Returns
         -------
         observation : ObsType
-            An element of the environment’s observation_space as the next observation due to the agent actions.
+            An element of the environment's observation_space as the next observation due to the agent actions.
             An example is a numpy array containing the positions and velocities of the pole in CartPole.
 
         reward: float
@@ -131,21 +131,25 @@ class DrugEnv(gym.Env):
 
         info: dict
             Contains auxiliary diagnostic information (helpful for debugging, learning, and logging).
-            This might, for instance, contain: metrics that describe the agent’s performance state,
+            This might, for instance, contain: metrics that describe the agent's performance state,
             variables that are hidden from observations, or individual reward terms that are combined
             to produce the total reward.
 
         """
+        # Unpack action
         action_name, parameters, molecules = action.values()
         
+        # Subset valid molecules
+        molecules = self._get_valid_molecules(molecules)
+
         # Perform action
         match action_name:
             case 'design':
                 self.library += self.design(molecules, **parameters)
             case 'make':
                 self.make(molecules)
-            case _:
-                self.test(action_name, molecules, *parameters)
+            case _ as test:
+                self.test(molecules, test, *parameters)
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -160,14 +164,10 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def design(self, molecule_indices, *args, **kwargs):
+    def design(self, molecules, *args, **kwargs):
         """
-        Returns the library of molecules.
+        Returns analogs of chosen molecules from the library.
         """
-        # Subset valid molecules
-        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
-        molecules = self.library[valid_indices]
-        
         # Design new library
         new_molecules = [
             self.designer.design(molecule, *args, **kwargs)
@@ -180,24 +180,20 @@ class DrugEnv(gym.Env):
 
         return new_molecules
     
-    def make(self, molecule_indices) -> None:
+    def make(self, molecules) -> None:
         """
-        Synthesize the molecules. Later, we can implement some stochasticity.
+        Synthesize molecules. Later, we can implement stochasticity.
         """
-        # Subset valid molecules
-        molecules = self._get_valid_molecules(molecule_indices)
-
         # Change status of molecules
         molecules['status'] = 'made'
         
         # Increment timestep
         self.time_elapsed += 1
 
-    def test(self, assay_name, molecule_indices, **params) -> None:
+    def test(self, molecules, assay_name, **params) -> None:
 
         # Subset assay and molecules
         assay = self.assays[assay_name]
-        molecules = self._get_valid_molecules(molecule_indices)
         
         # Real measurements only on made molecules
         if 'Noisy' not in assay_name:
