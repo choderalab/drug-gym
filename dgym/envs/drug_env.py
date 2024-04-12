@@ -97,7 +97,7 @@ class DrugEnv(gym.Env):
 
         # Initialize action mask
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
-        self.valid_actions[:] = True
+        # self.valid_actions[:] = True
 
 
     def step(self, action):

@@ -237,12 +237,15 @@ class RDKitOracle(Oracle):
     def __init__(
         self,
         name: str,
+        descriptor: Optional[str] = None
     ):
         super().__init__()
         self.name = name
 
         # load descriptor
-        self.descriptor = getattr(Descriptors, self.name)
+        if not descriptor:
+            descriptor = self.name
+        self.descriptor = getattr(Descriptors, descriptor)
 
     def predict(self, molecules: MoleculeCollection):
         scores = [self.descriptor(m.mol) for m in molecules]

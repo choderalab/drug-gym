@@ -104,13 +104,13 @@ class MultipleUtilityFunction:
         input,
         **kwargs
     ):
+        
         # Initialize utility array
-        utility = np.empty((len(input), len(self.utility_functions)))
+        input_size = len(input) if not isinstance(input[0], numbers.Number) else 1
+        utility = np.empty((input_size, len(self.utility_functions)))
 
         # Normalize input
-        if isinstance(input[0], numbers.Number):
-            input = [input]
-        elif isinstance(input[0], Iterable):
+        if isinstance(input[0], Iterable):
             input = np.array(input).T
         elif isinstance(input[0], Molecule):
             input = itertools.repeat(input)
