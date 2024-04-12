@@ -191,13 +191,17 @@ class DrugEnv(gym.Env):
         molecules['status'] = 'made'
         
         # Increment timestep
-        self.time_elapsed += 1        
+        self.time_elapsed += 1
 
     def test(self, assay_name, molecule_indices, **params) -> None:
 
         # Subset assay and molecules
         assay = self.assays[assay_name]
         molecules = self._get_valid_molecules(molecule_indices)
+        
+        # Real measurements only on made molecules
+        if 'Noisy' not in assay_name:
+            assert all(m['status'] == 'made' for m in molecules)
         
         # Perform inference
         results = assay(molecules, **params)
@@ -215,16 +219,18 @@ class DrugEnv(gym.Env):
         return self.library
 
     def get_reward(self):
-        
-        # Convert annotations into utility
-        is_annotated = lambda m: all(a in m.annotations for a in self.assays)
-        annotated = self.library.filter(is_annotated)
-        
+
+        # Filter molecules with complete measurements
+        is_complete = lambda m: all(
+            a in m.annotations
+            for a in self.assays
+            if 'Noisy' not in a
+        )
+
         # Compute reward
-        reward = -float('inf')
-        if annotated:
-            utility = self.utility_function(annotated)
-            reward = max([*utility, reward])
+        if completed := self.library.filter(is_complete):
+            utility = self.utility_function(completed)
+            reward = max([*utility, -float('inf')])
 
         return reward
 
@@ -236,7 +242,7 @@ class DrugEnv(gym.Env):
             or self.time_elapsed >= 100
 
     def reset(self):
-        self.design_cycle = 0
+        self.time_elapsed = 0
         self.library = self._library_0.clone()
         self.designer.reset_cache()
         return self.get_observation(), {}
