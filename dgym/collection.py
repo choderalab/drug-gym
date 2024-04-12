@@ -99,12 +99,12 @@ class Collection(torch.utils.data.Dataset):
 
     def filter(self, by: Callable):
         filtered = [
-            (it, ind)
+            [it, ind]
             for (it, ind) in zip(self._items, self.index)
             if by(it)
         ]
-        items, index = zip(*filtered) if filtered else (), ()
-        return self.__class__(items, index=index)
+        items, index = zip(*filtered) if filtered else ([], [])
+        return self.__class__(list(items), index=list(index))
 
     def apply(self, function):
         """Apply a function to all molecules in the collection.
@@ -157,7 +157,7 @@ class Collection(torch.utils.data.Dataset):
             the elements in the list.
         * If the key is a slice, slice the range and treat at as a list.
         """
-        if self._items is None:
+        if not self._items:
             raise RuntimeError("Empty Collection.")
         if isinstance(key, int):
             return self._items[key]
@@ -335,9 +335,10 @@ class MoleculeCollection(Collection):
         
         if isinstance(molecules, Molecule):
             molecules = [molecules]
-        
-        assert all(isinstance(molecule, Molecule) for molecule in molecules)
+
+        molecules = list(molecules)
         super().__init__(molecules, *args, **kwargs)
+        # assert all(isinstance(molecule, Molecule) for molecule in self.molecules)
 
     @property
     def molecules(self):

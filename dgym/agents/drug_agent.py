@@ -31,7 +31,10 @@ class DrugAgent:
             case 'make':
                 observations = observations.designed
             case _ as test:
-                observations = observations.made
+                if 'Noisy' in test:
+                    observations = observations.designed
+                else:
+                    observations = observations.made
 
         # Compute utility from the policy
         utility = self.policy(observations)
@@ -41,7 +44,7 @@ class DrugAgent:
             utility[~mask] = -1e8
 
         # Gather molecule indices
-        batch_size = min([action['batch_size'], len(observations)])
+        batch_size = min([action.pop('batch_size'), len(observations)])
         pending = self.exploration_strategy(utility, size=batch_size)
         molecules = [observations.index[p] for p in pending]
 
@@ -79,6 +82,9 @@ class SequentialDrugAgent(DrugAgent):
 
     def construct_action(self):
         return next(self._iter_sequence).copy()
+    
+    def reset(self):
+        self._iter_sequence = itertools.cycle(self.sequence)
 
 
 class LearningDrugAgent(DrugAgent):

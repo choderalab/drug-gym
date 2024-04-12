@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from typing import Iterable
 from abc import abstractmethod
 
@@ -21,7 +22,7 @@ class EpsilonGreedy(ExplorationStrategy):
     def select_action(self, utility, size):
         
         action = []
-        indices = utility.argsort().tolist()
+        indices = np.argsort(utility).tolist()
         
         for _ in range(size):
             if random.random() < self.epsilon:

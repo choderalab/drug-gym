@@ -97,7 +97,7 @@ class DrugEnv(gym.Env):
 
         # Initialize action mask
         self.valid_actions = np.zeros(self.max_molecules, dtype='int8')
-        # self.valid_actions[:] = True
+        self.valid_actions[:len(self.library)] = True
 
 
     def step(self, action):
@@ -170,17 +170,16 @@ class DrugEnv(gym.Env):
         Returns analogs of chosen molecules from the library.
         """
         # Design new library
-        new_molecules = [
-            self.designer.design(molecule, *args, **kwargs)
-            for molecule in molecules
-        ]
+        new_molecules = MoleculeCollection()
+        for molecule in molecules:
+            new_molecules += self.designer.design(molecule, *args, **kwargs)
         
         # Annotate status - TODO fix MoleculeCollection `update_annotations`
         new_molecules['timestep'] = self.time_elapsed + 1
         
         # Set status of molecules
         new_molecules.set_status('designed')
-
+        
         return new_molecules
     
     def make(self, molecules) -> None:
@@ -225,9 +224,10 @@ class DrugEnv(gym.Env):
         )
 
         # Compute reward
+        reward = -float('inf')
         if completed := self.library.filter(is_complete):
             utility = self.utility_function(completed, method='average')
-            reward = max([*utility, -float('inf')])
+            reward = max([*utility, reward])
 
         return reward
 
