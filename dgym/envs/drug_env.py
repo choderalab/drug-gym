@@ -191,8 +191,15 @@ class DrugEnv(gym.Env):
 
         # Set status of molecules
         molecules.set_status('made')
-
+        
     def test(self, molecules, assay_name, **params) -> None:
+        
+        # Helper function
+        _is_tested = lambda m: all(
+            a in m.annotations
+            for a in self.assays
+            if 'Noisy' not in a
+        )
 
         # Subset assay and molecules
         assay = self.assays[assay_name]
@@ -208,29 +215,24 @@ class DrugEnv(gym.Env):
         for molecule, result in zip(molecules, results):
             molecule.update_annotations({assay.name: result})
         
-        # Set status of molecules
-        molecules.set_status('tested')
+        # Set status of molecules - TODO make molecules.filter work
+        for molecule in molecules:
+            if _is_tested(molecule):
+                molecule.set_status('tested')
 
     def get_observations(self):
         return self.library
 
     def get_reward(self):
 
-        # Filter molecules with complete measurements
-        is_complete = lambda m: all(
-            a in m.annotations
-            for a in self.assays
-            if 'Noisy' not in a
-        )
-
         # Compute reward
         reward = -float('inf')
-        if completed := self.library.filter(is_complete):
-            utility = self.utility_function(completed, method='average')
+        if self.library.tested:
+            utility = self.utility_function(self.library.tested, method='average')
             reward = max([*utility, reward])
 
         return reward
-
+    
     def check_terminated(self):
         return self.reward_history[-1] == 1
 
