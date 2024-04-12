@@ -91,6 +91,7 @@ class MultipleUtilityFunction:
         method: str = 'hybrid',
         **kwargs
     ):
+        # Normalize inputs
         return_list = isinstance(input, Iterable) \
             and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
         

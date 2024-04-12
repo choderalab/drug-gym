@@ -241,7 +241,7 @@ class DrugEnv(gym.Env):
     def reset(self):
         self.time_elapsed = 0
         self.library = self._library_0.copy()
-        self.designer.reset_cache()
+        self.designer.reset()
         return self.get_observations(), {}
     
     def _get_valid_molecules(self, molecule_indices):
