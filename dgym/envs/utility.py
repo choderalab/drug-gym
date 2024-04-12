@@ -91,13 +91,16 @@ class MultipleUtilityFunction:
         method: str = 'hybrid',
         **kwargs
     ):
+        return_list = isinstance(input, Iterable) \
+            and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
+        
         # Score molecules
         utility = self.score(input, **kwargs)
 
         # Compose across objectives
         composite_utility = self.compose(utility, method=method)
         
-        return composite_utility.tolist()
+        return composite_utility.tolist() if return_list else composite_utility.item()
     
     def score(
         self,
@@ -129,7 +132,7 @@ class MultipleUtilityFunction:
         match method:
             case 'hybrid':
                 if len(utility) == 1:
-                    composite_utility = 1
+                    composite_utility = np.array([1])
                 else:
                     nds_ranks = self._non_dominated_sort(utility)
                     averages = self._weighted_average(utility)
