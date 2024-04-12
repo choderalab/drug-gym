@@ -226,7 +226,7 @@ class DrugEnv(gym.Env):
 
         # Compute reward
         if completed := self.library.filter(is_complete):
-            utility = self.utility_function(completed)
+            utility = self.utility_function(completed, method='average')
             reward = max([*utility, -float('inf')])
 
         return reward

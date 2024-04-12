@@ -79,6 +79,7 @@ class Molecule:
         self.inspiration = inspiration
         self._name_attr = name_attr
         self.annotations = annotations if annotations else {}
+        self.update_annotations()
 
     @property
     def smiles(self):
