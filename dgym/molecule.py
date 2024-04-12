@@ -52,11 +52,11 @@ class Molecule:
         self,
         mol: Optional[rdkit.Chem.Mol] = None,
         reactants: Optional[Iterable] = [],
-        name_attr: Optional[str] = 'smiles',
         reaction: Optional[str] = None,
+        annotations: Optional[dict] = None,
         status: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
-        annotations: Optional[dict] = None,
+        name_attr: Optional[str] = 'smiles',
     ) -> None:
         
         if isinstance(mol, Molecule):
@@ -75,10 +75,12 @@ class Molecule:
         self.mol = mol
         self.reactants = reactants
         self.reaction = reaction
+
+        self.annotations = annotations if annotations else {}
         self.status = status
         self.inspiration = inspiration
         self._name_attr = name_attr
-        self.annotations = annotations if annotations else {}
+        
         self.update_annotations()
 
     @property
@@ -289,7 +291,7 @@ class Molecule:
         return route
 
     @staticmethod
-    def load_from_route(route: dict) -> 'Molecule':
+    def load(route: dict) -> 'Molecule':
         """
         Recursively loads molecules and their synthesis pathways from a dictionary.
         
@@ -310,7 +312,7 @@ class Molecule:
         reactants_data = route.get('reactants', [])
         annotations = route.get('annotations', None)
         
-        reactants = [Molecule.load_from_route(reactant) for reactant in reactants_data]
+        reactants = [Molecule.load(reactant) for reactant in reactants_data]
         
         return Molecule(
             mol=product_mol,

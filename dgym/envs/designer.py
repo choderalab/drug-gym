@@ -273,7 +273,7 @@ class Designer:
         """
         # Normalize input
         if isinstance(molecule, dict):
-            molecule = Molecule.load_from_route(molecule)
+            molecule = Molecule.load(molecule)
         
         # Return reaction if already annotated
         if molecule.reaction and molecule.reaction in self.reactions.names:
