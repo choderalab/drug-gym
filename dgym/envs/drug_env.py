@@ -139,10 +139,13 @@ class DrugEnv(gym.Env):
         action_name, parameters, molecules = action.values()
         
         # Perform action
-        if action_name == 'ideate':
-            self.library += self.design_library(molecules, **parameters)
-        else:
-            self.perform_order(action_name, molecules, *parameters)
+        match action_name:
+            case 'design':
+                self.library += self.design(molecules, **parameters)
+            case 'make':
+                self.library[molecules] = self.make(molecules)
+            case _ as test:
+                self.test(test, molecules, *parameters)
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -157,43 +160,56 @@ class DrugEnv(gym.Env):
 
         return self.get_observation(), reward, terminated, truncated, {}
 
-    def design_library(self, molecule_indices, *args, **kwargs):
+    def design(self, molecule_indices, *args, **kwargs):
         """
         Returns the library of molecules.
         """
-        # subset valid molecules
+        # Subset valid molecules
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
         molecules = self.library[valid_indices]
         
-        # design new library
-        new_molecules = []
-        for molecule in molecules:
-            new_molecules += self.designer.design(
-                molecule,
-                mode='replace',
-                *args,
-                **kwargs
-            )
+        # Design new library
+        new_molecules = [
+            self.designer.design(molecule, *args, **kwargs)
+            for molecule in molecules
+        ]
         
+        # Increment timestep - TODO fix MoleculeCollection `update_annotations`
         self.time_elapsed += 1
         for new_molecule in new_molecules:
             new_molecule.update_annotations({'timestep': self.time_elapsed})
 
         return new_molecules
+    
+    def make(self, molecule_indices) -> MoleculeCollection:
+        """
+        Synthesize the molecules. Later, we can implement some stochasticity.
+        """
+        # Subset valid molecules
+        molecules = self._get_valid_molecules(molecule_indices)
 
-    def perform_order(self, assay_name, molecule_indices, **params) -> None:
-
-        # subset assay and molecules
-        assay = self.assays[assay_name]
-        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
-        molecules = self.library[valid_indices]
+        # Change status of molecules
+        molecules['status'] = 'made'
         
-        # perform inference
+        return molecules
+
+    def test(self, assay_name, molecule_indices, **params) -> None:
+
+        # Subset assay and molecules
+        assay = self.assays[assay_name]
+        molecules = self._get_valid_molecules(molecule_indices)
+        
+        # Perform inference
         results = assay(molecules, **params)
         
-        # update library annotations for molecules measured
+        # Update library annotations for molecules measured
         for molecule, result in zip(molecules, results):
             molecule.update_annotations({assay.name: result})
+            
+    def _get_valid_molecules(self, molecule_indices):
+        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
+        molecules = self.library[valid_indices]
+        return molecules        
 
     def get_observation(self):
         return self.library
@@ -213,11 +229,9 @@ class DrugEnv(gym.Env):
         return reward
 
     def check_terminated(self):
-        # Implement the logic for checking if the episode is done
         return self.reward_history[-1] == 1
 
     def check_truncated(self):
-        # Implement the logic for checking if the episode is done
         return len(self.library) >= self.budget \
             or self.time_elapsed >= 100
 

@@ -85,6 +85,12 @@ class Oracle:
 
     def predict(self, molecules: MoleculeCollection):
         raise NotImplementedError
+    
+    def surrogate(self, sigma: float = 0.1) -> NoisyOracle:
+        """
+        Initialize a NoisyOracle surrogate model.
+        """
+        return NoisyOracle(self, sigma=sigma)
 
 
 class NoisyOracle(Oracle):
@@ -97,6 +103,7 @@ class NoisyOracle(Oracle):
         - sigma (float, optional): The standard deviation of the Gaussian noise to add to the oracle's predictions.
         """
         super().__init__()
+        self.name = f'Noisy {oracle.name}'
         self.oracle = oracle
         self.sigma = sigma
 

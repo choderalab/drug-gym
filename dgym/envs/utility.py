@@ -8,7 +8,7 @@ from typing import Optional, Callable, Iterable
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 class UtilityFunction:
-    
+
     def __init__(
         self,
         oracle: Optional[Oracle] = None,
@@ -20,7 +20,7 @@ class UtilityFunction:
         self.acceptable = np.array(acceptable)
 
     def __call__(self, input, **kwargs):
-        
+
         # Normalize input
         return_list = isinstance(input, Iterable)
         input = input if return_list else np.array([input])
