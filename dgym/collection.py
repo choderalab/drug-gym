@@ -31,12 +31,18 @@ class Collection(torch.utils.data.Dataset):
         Generate a torch.utils.data.DataLoader from this Collection.
     
     """
-    def __init__(self, items: Optional[Iterable] = []) -> None:
+    def __init__(
+        self,
+        items: Optional[Iterable] = [],
+        index: Optional[Iterable] = None
+    ) -> None:
         super(Collection, self).__init__()
         assert isinstance(items, Iterable)
         
         self._items = items
         self._lookup = None
+        self._index = list(range(len(items))) \
+            if index is None else index
 
     def __repr__(self):
         
@@ -55,6 +61,10 @@ class Collection(torch.utils.data.Dataset):
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
         self._lookup = {item.name: item for item in self._items}
+
+    @property
+    def index(self):
+        return self._index.copy()
 
     @property
     def annotations(self):
@@ -88,7 +98,13 @@ class Collection(torch.utils.data.Dataset):
         return (item is not None) and (item.name in self.lookup)
 
     def filter(self, by: Callable):
-        return self.__class__([item for item in self._items if by(item)])
+        filtered = [
+            (it, ind)
+            for (it, ind) in zip(self._items, self.index)
+            if by(it)
+        ]
+        items, index = zip(*filtered) if filtered else (), ()
+        return self.__class__(items=items, index=index)
 
     def apply(self, function):
         """Apply a function to all molecules in the collection.
@@ -113,7 +129,7 @@ class Collection(torch.utils.data.Dataset):
         return self
 
     def __eq__(self, other):
-        """Determin if two objects are identical."""
+        """Determine if two objects are identical."""
         if not isinstance(other, self.__class__):
             return False
         return self._items == other._items
@@ -151,10 +167,11 @@ class Collection(torch.utils.data.Dataset):
             return self.lookup[key.name]
         elif isinstance(key, torch.Tensor):
             key = key.detach().flatten().cpu().numpy().tolist()
-        elif isinstance(key, Iterable):
-            return self.__class__([self._items[_idx] for _idx in key])
         elif isinstance(key, slice):
-            return self.__class__(self._items[key])
+            return self.__class__(self._items[key], index=self.index[key])
+        elif isinstance(key, Iterable):
+            return self.__class__(
+                [self._items[k] for k in key], index=[self.index[k] for k in key])
         else:
             raise RuntimeError("The slice is not recognized.")
 
@@ -314,13 +331,13 @@ class Collection(torch.utils.data.Dataset):
 
 class MoleculeCollection(Collection):
     
-    def __init__(self, molecules: Optional[Iterable] = []) -> None:
+    def __init__(self, molecules: Optional[Iterable] = [], *args, **kwargs) -> None:
         
         if isinstance(molecules, Molecule):
             molecules = [molecules]
         
         assert all(isinstance(molecule, Molecule) for molecule in molecules)
-        super().__init__(molecules)
+        super().__init__(molecules, *args, **kwargs)
 
     @property
     def molecules(self):
