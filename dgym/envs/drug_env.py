@@ -143,9 +143,9 @@ class DrugEnv(gym.Env):
             case 'design':
                 self.library += self.design(molecules, **parameters)
             case 'make':
-                self.library[molecules] = self.make(molecules)
-            case _ as test:
-                self.test(test, molecules, *parameters)
+                self.make(molecules)
+            case _:
+                self.test(action_name, molecules, *parameters)
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -174,14 +174,13 @@ class DrugEnv(gym.Env):
             for molecule in molecules
         ]
         
-        # Increment timestep - TODO fix MoleculeCollection `update_annotations`
-        self.time_elapsed += 1
+        # Annotate current timestep - TODO fix MoleculeCollection `update_annotations`
         for new_molecule in new_molecules:
-            new_molecule.update_annotations({'timestep': self.time_elapsed})
+            new_molecule.update_annotations({'timestep': self.time_elapsed + 1})
 
         return new_molecules
     
-    def make(self, molecule_indices) -> MoleculeCollection:
+    def make(self, molecule_indices) -> None:
         """
         Synthesize the molecules. Later, we can implement some stochasticity.
         """
@@ -191,7 +190,8 @@ class DrugEnv(gym.Env):
         # Change status of molecules
         molecules['status'] = 'made'
         
-        return molecules
+        # Increment timestep
+        self.time_elapsed += 1        
 
     def test(self, assay_name, molecule_indices, **params) -> None:
 
