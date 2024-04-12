@@ -68,6 +68,7 @@ class Collection(torch.utils.data.Dataset):
 
     @property
     def annotations(self):
+        self.update_annotations()
         return pd.DataFrame([item.annotations for item in self._items])
 
     @property

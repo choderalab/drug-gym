@@ -218,7 +218,7 @@ class DrugEnv(gym.Env):
         # Set status of molecules - TODO make molecules.filter work
         for molecule in molecules:
             if _is_tested(molecule):
-                molecule.set_status('tested')
+                molecule.status = 'tested'
 
     def get_observations(self):
         return self.library
