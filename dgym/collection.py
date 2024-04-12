@@ -104,7 +104,7 @@ class Collection(torch.utils.data.Dataset):
             if by(it)
         ]
         items, index = zip(*filtered) if filtered else (), ()
-        return self.__class__(items=items, index=index)
+        return self.__class__(items, index=index)
 
     def apply(self, function):
         """Apply a function to all molecules in the collection.
