@@ -54,6 +54,7 @@ class Molecule:
         reactants: Optional[Iterable] = [],
         name_attr: Optional[str] = 'smiles',
         reaction: Optional[str] = None,
+        status: Optional[str] = None,
         inspiration: Optional[Iterable] = None,
         annotations: Optional[dict] = None,
     ) -> None:
@@ -74,6 +75,7 @@ class Molecule:
         self.mol = mol
         self.reactants = reactants
         self.reaction = reaction
+        self.status = status
         self.inspiration = inspiration
         self._name_attr = name_attr
         self.annotations = annotations if annotations else {}
@@ -150,6 +152,7 @@ class Molecule:
 
         self.annotations.update(self.mol.GetPropsAsDict())
 
+        # Update immutable properties
         if 'smiles' not in self.annotations:
             self.annotations.update({'smiles': self.smiles})
         if 'design_cycle' not in self.annotations:
@@ -159,6 +162,10 @@ class Molecule:
         if 'reactants' not in self.annotations:
             self.annotations.update({'reactants': [r.smiles for r in self.reactants]})
         
+        # Update status
+        self.annotations.update({'status': self.status})
+        
+        # Update other annotations
         if other_annotations:
             self.annotations.update(other_annotations)
         

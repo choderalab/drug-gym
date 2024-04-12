@@ -28,29 +28,36 @@ class Experiment:
                 pbar = tqdm(total = self.drug_env.budget)
             
             while True:
+                
+                # Perform step
                 action = self.drug_agent.act(observations)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
+                
+                # Parse result
                 result = self.get_result(trial, out=out, **kwargs)
                 
                 if progress:
-                    pbar.n = len(self.drug_env.library)
+                    pbar.n = len(self.drug_env.library.tested)
                     pbar.update()
-                
+
                 if terminated or truncated:
                     break
 
             if terminated:
                 result.update({'outcome': 1})
-            
-            if truncated:
+            elif truncated:
                 result.update({'outcome': 0})
 
             results.append(result)
 
         return results
 
-    def get_result(self, trial: int, out: Optional[str] = None, **kwargs):
-        
+    def get_result(
+        self,
+        trial: int,
+        out: Optional[str] = None,
+        **kwargs
+    ):
         result = {
             'trial': trial,
             'cost': len(self.drug_env.library),

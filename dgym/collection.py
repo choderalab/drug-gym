@@ -39,11 +39,18 @@ class Collection(torch.utils.data.Dataset):
         self._lookup = None
 
     def __repr__(self):
-        return "{collection} with {size} {items}s".format(
-            collection = self.__class__.__name__,
-            size = len(self),
-            items = self._items[0].__class__.__name__
-        )
+        
+        if self._items:
+            repr_ = "{collection} with {size} {items}s".format(
+                collection = self.__class__.__name__,
+                size = len(self),
+                items = self._items[0].__class__.__name__
+            )
+        
+        else:
+            repr_ = f"Empty {self.__class__.__name__}"
+        
+        return repr_
 
     def _construct_lookup(self):
         """Construct lookup table for molecules."""
@@ -438,7 +445,22 @@ class MoleculeCollection(Collection):
         if len(ret) < 2:
             ret = ret[0]
         return ret
+    
+    def set_status(self, status):
+        for molecule in self.molecules:
+            molecule.status = status
+    
+    @property
+    def tested(self):
+        return self.filter(lambda x: x.status == 'tested')
+    
+    @property
+    def made(self):
+        return self.filter(lambda x: x.status == 'made')
 
+    @property
+    def designed(self):
+        return self.filter(lambda x: x.status == 'designed')
 
 class ReactionCollection(Collection):
     

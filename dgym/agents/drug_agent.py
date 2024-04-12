@@ -14,20 +14,18 @@ class DrugAgent:
         self,
         utility_function: Callable,
         exploration_strategy: ExplorationStrategy,
-        batch_size: int = 5,
     ) -> None:
 
         self.utility_function = utility_function
-        self.batch_size = batch_size
         self.exploration_strategy = exploration_strategy
 
     def act(self, observations, mask=None):
 
         # Construct action
         action = self.construct_action()
-        action_name = action['name']
         
-        match action_name:
+        # Filter observations by action
+        match action['name']:
             case 'design':
                 observations = observations.tested
             case 'make':
@@ -38,12 +36,12 @@ class DrugAgent:
         # Compute utility from the policy
         utility = self.policy(observations)
         
-        # Apply negative bias to utility of masked actions (True = valid)
+        # Apply negative bias to utility of masked actions
         if mask:
             utility[~mask] = -1e8
 
         # Gather molecule indices
-        batch_size = min([self.batch_size, len(observations)])
+        batch_size = min([action['batch_size'], len(observations)])
         pending = self.exploration_strategy(utility, size=batch_size)
         molecules = [observations.index[p] for p in pending]
 
@@ -77,15 +75,29 @@ class SequentialDrugAgent(DrugAgent):
         self._iter_sequence = itertools.cycle(sequence)
 
     def policy(self, observations):
-        """
-        """
-        # convert scores to utility
         return self.utility_function(observations)
 
     def construct_action(self):
         return next(self._iter_sequence).copy()
 
-    def learn(self, previous_observation, action, reward, observation, done):
+
+class LearningDrugAgent(DrugAgent):
+    
+    def __init__(
+        self,
+        *args,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+    def learn(
+        self,
+        previous_observation,
+        action,
+        reward,
+        observation,
+        done
+    ):
         pass
 
 

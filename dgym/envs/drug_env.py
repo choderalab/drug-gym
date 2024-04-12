@@ -87,7 +87,7 @@ class DrugEnv(gym.Env):
         if library is None:
             library = MoleculeCollection()
         if not library.tested:
-            library['status'] = 'tested'
+            library.set_status('tested')
         library['timestep'] = self.time_elapsed
 
         # Track history
@@ -179,7 +179,7 @@ class DrugEnv(gym.Env):
         new_molecules['timestep'] = self.time_elapsed + 1
         
         # Set status of molecules
-        new_molecules['status'] = 'designed'
+        new_molecules.set_status('designed')
 
         return new_molecules
     
@@ -191,7 +191,7 @@ class DrugEnv(gym.Env):
         self.time_elapsed += 1
 
         # Set status of molecules
-        molecules['status'] = 'made'
+        molecules.set_status('made')
 
     def test(self, molecules, assay_name, **params) -> None:
 
@@ -210,7 +210,7 @@ class DrugEnv(gym.Env):
             molecule.update_annotations({assay.name: result})
         
         # Set status of molecules
-        molecules['status'] = 'tested'
+        molecules.set_status('tested')
 
     def get_observations(self):
         return self.library
