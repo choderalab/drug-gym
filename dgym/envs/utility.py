@@ -85,10 +85,15 @@ class MultipleUtilityFunction:
         self.utility_functions = utility_functions
         self.weights = weights
     
+    @property
+    def oracle_names(self):
+        return [u_fn.oracle.name for u_fn in self.utility_functions]
+
     def __call__(
         self,
         input,
         method: str = 'hybrid',
+        use_precomputed: bool = False,
         **kwargs
     ):
         # Normalize inputs
@@ -96,7 +101,14 @@ class MultipleUtilityFunction:
             and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
         
         # Score molecules
-        utility = self.score(input, **kwargs)
+        if use_precomputed:
+            annotations = input.annotations.reindex(columns=self.oracle_names)
+            if annotations.dropna().empty: # Only noisy measurements are available
+                noisy_oracle_names = ['Noisy ' + o_n for o_n in self.oracle_names]
+                annotations = input.annotations.reindex(columns=noisy_oracle_names)
+            utility = self.score(annotations.values, **kwargs)
+        else:
+            utility = self.score(input, **kwargs)
 
         # Compose across objectives
         composite_utility = self.compose(utility, method=method)
