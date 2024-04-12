@@ -117,6 +117,14 @@ class Molecule:
         else:
             raise NotImplementedError
 
+    def __setitem__(self, key: Any, value: Any):
+        if not self.annotations:
+            raise RuntimeError("No annotations associated with Molecule.")
+        elif isinstance(key, str):
+            self.annotations[key] = value
+        else:
+            raise NotImplementedError
+
     def __eq__(self, other: Any):
         """Determine if two AssayedMolecule objects are equal.
         Parameters

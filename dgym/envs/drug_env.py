@@ -200,7 +200,7 @@ class DrugEnv(gym.Env):
         
         # Real measurements only on made molecules
         if 'Noisy' not in assay_name:
-            assert all(m['status'] == 'made' for m in molecules)
+            assert all(m.status == 'made' for m in molecules)
         
         # Perform inference
         results = assay(molecules, **params)

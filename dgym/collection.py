@@ -126,6 +126,7 @@ class Collection(torch.utils.data.Dataset):
 
     def __getitem__(self, key: Any):
         """Get item from the collection.
+        
         Parameters
         ----------
         key : Any
@@ -156,6 +157,11 @@ class Collection(torch.utils.data.Dataset):
             return self.__class__(self._items[key])
         else:
             raise RuntimeError("The slice is not recognized.")
+
+    def __setitem__(self, key: Any, value: Any):
+        """Set annotation for the collection."""
+        for item in self._items:
+            item[key] = value
 
     def shuffle(self, seed=None):
         """ Shuffle the collection and return it. """
