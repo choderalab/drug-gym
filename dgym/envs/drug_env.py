@@ -88,8 +88,8 @@ class DrugEnv(gym.Env):
         # for molecule in library:
         #     molecule.update_annotations({'timestep': self.time_elapsed})
 
-        self._library_0 = library.clone()
-        self.library = self._library_0.clone()
+        self._library_0 = library.copy()
+        self.library = self._library_0.copy()
         self.reward_history = []
 
         # Initialize the action mask
@@ -153,16 +153,16 @@ class DrugEnv(gym.Env):
 
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
-        
+
         # Calculate the reward
         reward = self.get_reward()
         self.reward_history.append(reward)
-        
+
         # Check if the episode is done
         terminated = self.check_terminated()
         truncated = self.check_truncated()
 
-        return self.get_observation(), reward, terminated, truncated, {}
+        return self.get_observations(), reward, terminated, truncated, {}
 
     def design(self, molecules, *args, **kwargs):
         """
@@ -174,21 +174,23 @@ class DrugEnv(gym.Env):
             for molecule in molecules
         ]
         
-        # Annotate current timestep - TODO fix MoleculeCollection `update_annotations`
-        for new_molecule in new_molecules:
-            new_molecule.update_annotations({'timestep': self.time_elapsed + 1})
+        # Annotate status - TODO fix MoleculeCollection `update_annotations`
+        new_molecules['timestep'] = self.time_elapsed + 1
+        
+        # Set status of molecules
+        new_molecules['status'] = 'designed'
 
         return new_molecules
     
     def make(self, molecules) -> None:
         """
         Synthesize molecules. Later, we can implement stochasticity.
-        """
-        # Change status of molecules
-        molecules['status'] = 'made'
-        
+        """        
         # Increment timestep
         self.time_elapsed += 1
+
+        # Set status of molecules
+        molecules['status'] = 'made'
 
     def test(self, molecules, assay_name, **params) -> None:
 
@@ -205,13 +207,11 @@ class DrugEnv(gym.Env):
         # Update library annotations for molecules measured
         for molecule, result in zip(molecules, results):
             molecule.update_annotations({assay.name: result})
-            
-    def _get_valid_molecules(self, molecule_indices):
-        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
-        molecules = self.library[valid_indices]
-        return molecules        
+        
+        # Set status of molecules
+        molecules['status'] = 'tested'
 
-    def get_observation(self):
+    def get_observations(self):
         return self.library
 
     def get_reward(self):
@@ -239,6 +239,11 @@ class DrugEnv(gym.Env):
 
     def reset(self):
         self.time_elapsed = 0
-        self.library = self._library_0.clone()
+        self.library = self._library_0.copy()
         self.designer.reset_cache()
-        return self.get_observation(), {}
+        return self.get_observations(), {}
+    
+    def _get_valid_molecules(self, molecule_indices):
+        valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
+        molecules = self.library[valid_indices]
+        return molecules

@@ -14,46 +14,27 @@ class DrugAgent:
         self,
         utility_function: Callable,
         exploration_strategy: ExplorationStrategy,
-        branch_factor: int = 5,
+        batch_size: int = 5,
     ) -> None:
 
         self.utility_function = utility_function
-        self.branch_factor = branch_factor
+        self.batch_size = batch_size
         self.exploration_strategy = exploration_strategy
 
     def act(self, observations, mask=None):
 
         # Construct action
         action = self.construct_action()
+        action_name = action['name']
         
-        if action['name'] == 'ideate':
-
-            # Only latest-cycle
-            current_cycle = max(o.design_cycle for o in observations)
-
-            # Only annotated molecules
-            indices = []
-            for idx in range(len(observations)):
-                if observations[idx].annotations:
-                # if observations[idx].annotations and \
-                #    observations[idx].design_cycle == current_cycle:
-                   indices.append(idx)
-            observations = observations[indices]
-        
-        else:
-
-            indices = list(range(len(observations)))
-
-            # # Only latest-cycle
-            # current_cycle = max(o.design_cycle for o in observations)
-
-            # # Only molecules from current cycle
-            # indices = []
-            # for idx in range(len(observations)):
-            #     if observations[idx].design_cycle == current_cycle:
-            #        indices.append(idx)
-            
-            # observations = observations[indices]
+        # Only design analogs for tested molecules
+        match action_name:
+            case 'design':
+                observations = observations.tested
+            case 'make':
+                observations = observations.designed
+            case _ as test:
+                observations = observations.made
 
         # Extract action utility from the policy
         utility = self.policy(observations)
@@ -63,10 +44,9 @@ class DrugAgent:
             utility[~mask] = -1e8
 
         # Gather indices
-        branches = min([self.branch_factor, len(observations)])
-        pending = self.exploration_strategy(utility, size=branches)
-        molecules = [indices[p] for p in pending]
-        # print(molecules)
+        batch_size = min([self.batch_size, len(observations)])
+        pending = self.exploration_strategy(utility, size=batch_size)
+        molecules = [observations.index[p] for p in pending]
 
         # Add molecules to action
         action.update({'molecules': molecules})
@@ -107,7 +87,6 @@ class SequentialDrugAgent(DrugAgent):
         return next(self._iter_sequence).copy()
 
     def learn(self, previous_observation, action, reward, observation, done):
-        """Implement your learning algorithm here"""
         pass
 
 
