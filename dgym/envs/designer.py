@@ -273,6 +273,7 @@ class Designer:
         """
         # Normalize input
         if isinstance(molecule, dict):
+            print(molecule)
             molecule = Molecule.load(molecule)
         
         # Return reaction if already annotated
@@ -280,20 +281,15 @@ class Designer:
             return [molecule.reaction]
 
         # Filter by reactions compatible with reactants
-        match_reactants = [
-            reaction
-            for reaction in self.reactions
-            if reaction.is_compatible(reactants = molecule.reactants)
-        ]
+        match_reactants = self.reactions.filter(
+            lambda r: r.is_compatible(reactants=molecule.reactants))
 
         # Filter those reactions by compatibility with product
-        match = [
-            reaction.name
-            for reaction in match_reactants
-            if reaction.is_compatible(product = molecule)
-        ]
+        match = match_reactants.filter(
+            lambda r: r.is_compatible(product=molecule))
         
-        return match if match else (match_reactants if match_reactants else [])
+        return match.names if match \
+            else (match_reactants.names if match_reactants else [])
 
     def generate_analogs(self, routes):
         """Initialize the reaction system with a random configuration variant."""

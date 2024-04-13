@@ -159,8 +159,7 @@ class Molecule:
         return self
 
     def update_annotations(self, other_annotations: Optional[dict] = None) -> Any:
-        """Update annotations. """
-
+        """Update annotations."""
         self.annotations.update(self.mol.GetPropsAsDict())
 
         # Update immutable properties

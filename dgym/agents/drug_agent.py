@@ -53,7 +53,6 @@ class DrugAgent:
         observations,
         action: Optional[dict] = None
     ):
-
         match action['name']:
             case 'design':
                 observations = (observations.scored + observations.tested) or observations
