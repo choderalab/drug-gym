@@ -86,8 +86,6 @@ class DrugEnv(gym.Env):
         # Initialize the library
         if library is None:
             library = MoleculeCollection()
-        if not library.tested:
-            library.set_status('tested')
         library['timestep'] = self.time_elapsed
 
         # Track history

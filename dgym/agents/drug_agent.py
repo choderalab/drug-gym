@@ -27,7 +27,7 @@ class DrugAgent:
         # Filter observations by action
         match action['name']:
             case 'design':
-                observations = observations.tested
+                observations = observations.tested or observations
             case 'make':
                 observations = observations.designed
             case _ as test:
@@ -78,7 +78,11 @@ class SequentialDrugAgent(DrugAgent):
         self._iter_sequence = itertools.cycle(sequence)
 
     def policy(self, observations):
-        return self.utility_function(observations)
+        return self.utility_function(
+            observations,
+            use_precomputed=True,
+            method='hybrid'
+        )
 
     def construct_action(self):
         return next(self._iter_sequence).copy()

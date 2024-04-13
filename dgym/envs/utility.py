@@ -100,20 +100,33 @@ class MultipleUtilityFunction:
         return_list = isinstance(input, Iterable) \
             and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
         
-        # Score molecules
         if use_precomputed:
-            annotations = input.annotations.reindex(columns=self.oracle_names)
-            if annotations.dropna().empty: # Only noisy measurements are available
-                noisy_oracle_names = ['Noisy ' + o_n for o_n in self.oracle_names]
-                annotations = input.annotations.reindex(columns=noisy_oracle_names)
-            utility = self.score(annotations.values, **kwargs)
-        else:
-            utility = self.score(input, **kwargs)
+            input = self._get_precomputed(input)
+        
+        # Score molecules
+        utility = self.score(input, **kwargs)
 
         # Compose across objectives
         composite_utility = self.compose(utility, method=method)
         
         return composite_utility.tolist() if return_list else composite_utility.item()
+    
+    def _get_precomputed(self, input):
+        """
+        Gracefully grabs precomputed data. Merges actual and surrogate data, preferring actual.
+        """
+        # Get actual data
+        actuals = input.annotations.reindex(columns=self.oracle_names)
+        
+        # Get surrogate data
+        surrogates = actuals.add_prefix('Noisy ').columns
+        surrogates = input.annotations.reindex(columns=surrogates)
+        surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
+        
+        # Merge and score
+        annotations = actuals.combine_first(surrogates).values
+        
+        return annotations
     
     def score(
         self,
