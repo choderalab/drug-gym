@@ -80,8 +80,8 @@ class SequentialDrugAgent(DrugAgent):
     def policy(self, observations):
         return self.utility_function(
             observations,
+            method='hybrid',
             use_precomputed=True,
-            method='hybrid'
         )
 
     def construct_action(self):
