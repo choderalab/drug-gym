@@ -471,21 +471,40 @@ class MoleculeCollection(Collection):
             ret = ret[0]
         return ret
     
-    def set_status(self, status):
+    def set_status(
+        self,
+        status: str,
+        by: Optional[Callable] = None
+    ) -> None:
+        """
+        Set the status of molecules in the self.molecules collection based on a filter.
+
+        Parameters
+        ----------
+        status : str
+            The new status to set for the molecule.
+        by : callable, optional
+            Determines if a molecule's status should be changed. Accept a dg.Molecule, returns a boolean.
+        """
         for molecule in self.molecules:
-            molecule.status = status
-    
+            if by is None or by(molecule):
+                molecule.status = status
+
     @property
-    def tested(self):
-        return self.filter(lambda x: x.status == 'tested')
-    
+    def designed(self):
+        return self.filter(lambda x: x.status in ['designed', 'scored'])
+
     @property
     def made(self):
         return self.filter(lambda x: x.status == 'made')
 
     @property
-    def designed(self):
-        return self.filter(lambda x: x.status == 'designed')
+    def scored(self):
+        return self.filter(lambda x: x.status == 'scored')
+
+    @property
+    def tested(self):
+        return self.filter(lambda x: x.status == 'tested')
 
 class ReactionCollection(Collection):
     

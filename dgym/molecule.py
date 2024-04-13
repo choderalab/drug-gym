@@ -310,7 +310,7 @@ class Molecule:
         product_mol = rdkit.Chem.MolFromSmiles(product_smiles) if product_smiles else None
         reaction_name = route.get('reaction', None)
         reactants_data = route.get('reactants', [])
-        annotations = route.get('annotations', None)
+        annotations = route.get('annotations', {})
         
         reactants = [Molecule.load(reactant) for reactant in reactants_data]
         

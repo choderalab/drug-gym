@@ -184,3 +184,4 @@ class MultipleUtilityFunction:
     
     def _weighted_average(self, utility):
         return np.average(utility, axis=1, weights=self.weights)
+    

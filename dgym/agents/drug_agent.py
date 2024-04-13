@@ -1,6 +1,7 @@
 import dgl
 import dgllife
 import numpy as np
+from typing import Iterable
 from rdkit import Chem
 from typing import Optional
 from collections.abc import Callable
@@ -23,18 +24,9 @@ class DrugAgent:
 
         # Construct action
         action = self.construct_action()
-        
+
         # Filter observations by action
-        match action['name']:
-            case 'design':
-                observations = observations.tested or observations
-            case 'make':
-                observations = observations.designed
-            case _ as test:
-                if 'Noisy' in test:
-                    observations = observations.designed
-                else:
-                    observations = observations.made
+        observations = self._filter_observations(observations, action)
 
         # Compute utility from the policy
         utility = self.policy(observations)
@@ -43,12 +35,9 @@ class DrugAgent:
         if mask:
             utility[~mask] = -1e8
 
-        # Gather molecule indices
-        batch_size = min([action.pop('batch_size'), len(observations)])
-        pending = self.exploration_strategy(utility, size=batch_size)
-        molecules = [observations.index[p] for p in pending]
-
         # Add molecules to action
+        molecules = self._gather_molecules(
+            observations, utility, batch_size=action.pop('batch_size'))
         action.update({'molecules': molecules})
 
         return action
@@ -58,6 +47,36 @@ class DrugAgent:
 
     def construct_action(self, molecules):
         raise NotImplementedError
+    
+    def _filter_observations(
+        self,
+        observations,
+        action: Optional[dict] = None
+    ):
+
+        match action['name']:
+            case 'design':
+                observations = (observations.scored + observations.tested) or observations
+            case 'make':
+                observations = observations.designed
+            case _ as test:
+                if 'Noisy' in test:
+                    observations = observations.designed
+                else:
+                    observations = observations.made
+
+        return observations
+    
+    def _gather_molecules(
+        self,
+        observations,
+        utility: Iterable,
+        batch_size: int,
+    ):
+        batch_size = min([batch_size, len(observations)])
+        pending = self.exploration_strategy(utility, size=batch_size)
+        molecules = [observations.index[p] for p in pending]
+        return molecules
 
 
 class SequentialDrugAgent(DrugAgent):
@@ -74,7 +93,7 @@ class SequentialDrugAgent(DrugAgent):
         for seq in sequence:
             seq.setdefault('parameters', {})
 
-        self.sequence = sequence
+        self.sequence = self._expand_sequence(sequence)
         self._iter_sequence = itertools.cycle(sequence)
 
     def policy(self, observations):
@@ -86,6 +105,39 @@ class SequentialDrugAgent(DrugAgent):
 
     def construct_action(self):
         return next(self._iter_sequence).copy()
+    
+    def _expand_sequence(self, sequence: Iterable[dict]):
+        return [
+            action_
+            for action in sequence
+            for action_ in self._expand_action(action)
+        ]
+    
+    def _expand_action(self, action: dict):
+        """
+        Transforms a dictionary with any keys containing lists into a list of dictionaries,
+        representing all possible combinations of list elements for each key.
+        Non-list values are copied directly.
+
+        """
+        list_keys = {k: v for k, v in action.items() if isinstance(v, list)}
+        constant_keys = {k: v for k, v in action.items() if not isinstance(v, list)}
+        
+        if not list_keys:
+            return [action]
+
+        # Loop Cartesian product of all action keys
+        keys, values_lists = zip(*list_keys.items())
+        combinations = list(itertools.product(*values_lists))
+        
+        actions = []
+        for combination in combinations:
+            combined_dict = dict(zip(keys, combination))
+            combined_dict.update(constant_keys)
+            actions.append(combined_dict)
+        
+        return actions
+
     
     def reset(self):
         self._iter_sequence = itertools.cycle(self.sequence)

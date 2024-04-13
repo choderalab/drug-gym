@@ -135,21 +135,9 @@ class DrugEnv(gym.Env):
             to produce the total reward.
 
         """
-        # Unpack action
-        action_name, parameters, molecules = action.values()
-        
-        # Subset valid molecules
-        molecules = self._get_valid_molecules(molecules)
-
         # Perform action
-        match action_name:
-            case 'design':
-                self.library += self.design(molecules, **parameters)
-            case 'make':
-                self.make(molecules)
-            case _ as test:
-                self.test(molecules, test, *parameters)
-
+        self.perform_action(action)
+        
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
 
@@ -162,6 +150,23 @@ class DrugEnv(gym.Env):
         truncated = self.check_truncated()
 
         return self.get_observations(), reward, terminated, truncated, {}
+    
+    def perform_action(self, action):
+        
+        # Unpack action
+        action_name, parameters, molecules = action.values()
+        
+        # Subset valid molecules
+        molecules = self._get_valid_molecules(molecules)
+        
+        # Perform action
+        match action_name:
+            case 'design':
+                self.library += self.design(molecules, **parameters)
+            case 'make':
+                self.make(molecules)
+            case _ as test:
+                self.test(molecules, test, *parameters)
 
     def design(self, molecules, *args, **kwargs):
         """
@@ -192,13 +197,6 @@ class DrugEnv(gym.Env):
         
     def test(self, molecules, assay_name, **params) -> None:
         
-        # Helper function
-        _is_tested = lambda m: all(
-            a in m.annotations
-            for a in self.assays
-            if 'Noisy' not in a
-        )
-
         # Subset assay and molecules
         assay = self.assays[assay_name]
         
@@ -213,10 +211,13 @@ class DrugEnv(gym.Env):
         for molecule, result in zip(molecules, results):
             molecule.update_annotations({assay.name: result})
         
-        # Set status of molecules - TODO make molecules.filter work
-        for molecule in molecules:
-            if _is_tested(molecule):
-                molecule.status = 'tested'
+        # Set status of molecules
+        is_scored = lambda m: all(
+            a in m.annotations for a in self.assays if 'Noisy' in a)
+        is_tested = lambda m: all(
+            a in m.annotations for a in self.assays if 'Noisy' not in a)
+        molecules.set_status('scored', by=is_scored)
+        molecules.set_status('tested', by=is_tested)
 
     def get_observations(self):
         return self.library
