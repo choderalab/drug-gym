@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import rdkit
 from typing import Iterable, Callable, Optional
+import dgym as dg
 
 import gymnasium as gym
 import numpy as np
@@ -152,7 +153,7 @@ class DrugEnv(gym.Env):
         return self.get_observations(), reward, terminated, truncated, {}
     
     def perform_action(self, action):
-        
+                
         # Unpack action
         action_name, parameters, molecules = action.values()
         
@@ -160,13 +161,14 @@ class DrugEnv(gym.Env):
         molecules = self._get_valid_molecules(molecules)
         
         # Perform action
-        match action_name:
-            case 'design':
-                self.library += self.design(molecules, **parameters)
-            case 'make':
-                self.make(molecules)
-            case _ as test:
-                self.test(molecules, test, *parameters)
+        for action_name in dg.utils.normalize_list(action_name):
+            match action_name:
+                case 'design':
+                    self.library += self.design(molecules, **parameters)
+                case 'make':
+                    self.make(molecules)
+                case _ as test:
+                    self.test(molecules, test, *parameters)
 
     def design(self, molecules, *args, **kwargs):
         """

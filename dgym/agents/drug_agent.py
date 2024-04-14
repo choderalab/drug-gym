@@ -24,8 +24,8 @@ class DrugAgent:
 
         # Construct action
         action = self.construct_action()
-
-        # Filter observations by action
+        
+        # Filter observations
         observations = self._filter_observations(observations, action)
 
         # Compute utility from the policy
@@ -53,7 +53,11 @@ class DrugAgent:
         observations,
         action: Optional[dict] = None
     ):
-        match action['name']:
+        # Normalize input
+        action_name = dg.utils.normalize_list(action['name'])[0]
+        
+        # Filter observations
+        match action_name:
             case 'design':
                 observations = (observations.scored + observations.tested) or observations
             case 'make':
@@ -76,41 +80,6 @@ class DrugAgent:
         pending = self.exploration_strategy(utility, size=batch_size)
         molecules = [observations.index[p] for p in pending]
         return molecules
-
-
-class SequentialDrugAgent(DrugAgent):
-
-    def __init__(
-        self,
-        sequence,
-        *args,
-        **kwargs
-    ) -> None:
-
-        super().__init__(*args, **kwargs)
-
-        for seq in sequence:
-            seq.setdefault('parameters', {})
-
-        self.sequence = self._expand_sequence(sequence)
-        self._iter_sequence = itertools.cycle(sequence)
-
-    def policy(self, observations):
-        return self.utility_function(
-            observations,
-            method='hybrid',
-            use_precomputed=True,
-        )
-
-    def construct_action(self):
-        return next(self._iter_sequence).copy()
-    
-    def _expand_sequence(self, sequence: Iterable[dict]):
-        return [
-            action_
-            for action in sequence
-            for action_ in self._expand_action(action)
-        ]
     
     def _expand_action(self, action: dict):
         """
@@ -137,6 +106,33 @@ class SequentialDrugAgent(DrugAgent):
         
         return actions
 
+
+class SequentialDrugAgent(DrugAgent):
+
+    def __init__(
+        self,
+        sequence,
+        *args,
+        **kwargs
+    ) -> None:
+
+        super().__init__(*args, **kwargs)
+
+        for seq in sequence:
+            seq.setdefault('parameters', {})
+
+        self.sequence = sequence
+        self._iter_sequence = itertools.cycle(sequence)
+
+    def policy(self, observations):
+        return self.utility_function(
+            observations,
+            method='hybrid',
+            use_precomputed=True,
+        )
+
+    def construct_action(self):
+        return next(self._iter_sequence).copy()
     
     def reset(self):
         self._iter_sequence = itertools.cycle(self.sequence)

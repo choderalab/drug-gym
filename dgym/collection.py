@@ -492,7 +492,7 @@ class MoleculeCollection(Collection):
 
     @property
     def designed(self):
-        return self.filter(lambda x: x.status in ['designed', 'scored'])
+        return self.filter(lambda x: x.status == 'designed')
 
     @property
     def made(self):

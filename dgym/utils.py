@@ -71,6 +71,9 @@ def draw(hit, reaction, prods, rowsize=3):
 
 # General utility
 # -----------------------------------------------
+def normalize_list(object):
+    return object if isinstance(object, list) else [object]
+
 def apply_recursive(object, function):
     """
     Apply a function to elements in a nested object structure if they are of a specific type.
