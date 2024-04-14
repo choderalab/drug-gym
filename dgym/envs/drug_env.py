@@ -199,8 +199,13 @@ class DrugEnv(gym.Env):
         
     def test(self, molecules, assay_name, **params) -> None:
         
+        _is_tested = lambda m: all(
+            a in m.annotations for a in self.assays if 'Noisy' not in a)
+        _is_scored = lambda m: all(
+            a in m.annotations for a in self.assays if 'Noisy' in a)
+        
         # Real measurements only on made molecules
-        if is_actual := 'Noisy' not in assay_name:
+        if is_test := 'Noisy' not in assay_name:
             assert all(m.status == 'made' for m in molecules)
 
         # Subset assay and molecules
@@ -214,14 +219,10 @@ class DrugEnv(gym.Env):
             molecule.update_annotations({assay.name: result})
         
         # Set status of molecules
-        is_tested = lambda m: all(
-            a in m.annotations for a in self.assays if 'Noisy' not in a)
-        is_scored = lambda m: all(
-            a in m.annotations for a in self.assays if 'Noisy' in a)
-        if is_actual:
-            molecules.set_status('tested', by=is_tested)
+        if is_test:
+            molecules.set_status('tested', by=_is_tested)
         else:
-            molecules.set_status('scored', by=is_scored)
+            molecules.set_status('scored', by=_is_scored)
 
     def get_observations(self):
         return self.library
