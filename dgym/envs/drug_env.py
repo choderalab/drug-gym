@@ -218,8 +218,10 @@ class DrugEnv(gym.Env):
             a in m.annotations for a in self.assays if 'Noisy' in a)
         is_tested = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' not in a)
-        molecules.set_status('scored', by=is_scored)
-        molecules.set_status('tested', by=is_tested)
+        if is_tested:
+            molecules.set_status('tested')
+        elif is_scored:
+            molecules.set_status('scored')
 
     def get_observations(self):
         return self.library
