@@ -273,7 +273,6 @@ class Designer:
         """
         # Normalize input
         if isinstance(molecule, dict):
-            print(molecule)
             molecule = Molecule.load(molecule)
         
         # Return reaction if already annotated
@@ -420,7 +419,8 @@ class Designer:
         # Recursive case: Construct reactants and apply reaction
         if 'reactants' in route:
             reactants = [self.construct_reaction(reactant) for reactant in route['reactants']]
-            reaction_name = route.get('reaction', self.match_reactions(route)[0])
+            reaction_name = route['reaction'] if 'reaction' in route \
+                else self.match_reactions(route)[0]
             reaction = self.reactions[reaction_name]
             return reaction.run(reactants)
 
