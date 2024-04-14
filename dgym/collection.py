@@ -34,7 +34,7 @@ class Collection(torch.utils.data.Dataset):
     def __init__(
         self,
         items: Optional[Iterable] = [],
-        index: Optional[Iterable] = None
+        index: Optional[Iterable] = []
     ) -> None:
         super(Collection, self).__init__()
         assert isinstance(items, Iterable)
@@ -42,7 +42,7 @@ class Collection(torch.utils.data.Dataset):
         self._items = items
         self._lookup = None
         self._index = list(range(len(items))) \
-            if index is None else index
+            if not index else index
 
     def __repr__(self):
         
@@ -65,6 +65,11 @@ class Collection(torch.utils.data.Dataset):
     @property
     def index(self):
         return self._index.copy()
+    
+    def reset_index(self):
+        self._index = list(range(len(self._items)))
+        return self
+        
 
     @property
     def annotations(self):
@@ -229,10 +234,14 @@ class Collection(torch.utils.data.Dataset):
         >>> len(collection)
         2
         """
-        if isinstance(other, Iterable):
-            return self.__class__(self._items + list(other))
-        elif isinstance(other, Collection):
-            return self.__class__(self._items + other._items)
+        if isinstance(other, Collection):
+            return self.__class__(
+                self._items + other._items, index=self.index + other.index)
+        elif isinstance(other, Iterable):
+            start = max(self.index) + 1 if self.index else 0
+            other_index = list(range(start, start + len(other)))
+            return self.__class__(
+                self._items + list(other), index=self.index + other_index)
         else:
             raise RuntimeError("Addition only supports list and Collection.")
 

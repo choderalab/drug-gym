@@ -137,7 +137,7 @@ class DrugEnv(gym.Env):
 
         """
         # Perform action
-        self.perform_action(action)
+        self.library = self.perform_action(action)
         
         # Update valid actions
         self.valid_actions[:len(self.library)] = True
@@ -170,10 +170,14 @@ class DrugEnv(gym.Env):
                 case _ as test:
                     self.test(molecules, test, *parameters)
 
+        return self.library.reset_index()
+
     def design(self, molecules, *args, **kwargs):
         """
         Returns analogs of chosen molecules from the library.
         """
+        assert all(m.status not in ['made', 'designed'] for m in molecules)
+
         # Design new library
         new_molecules = MoleculeCollection()
         for molecule in molecules:
@@ -190,7 +194,9 @@ class DrugEnv(gym.Env):
     def make(self, molecules) -> None:
         """
         Synthesize molecules. Later, we can implement stochasticity.
-        """        
+        """
+        assert all(m.status in ['designed', 'scored', None] for m in molecules)
+        
         # Increment timestep
         self.time_elapsed += 1
 
@@ -198,7 +204,7 @@ class DrugEnv(gym.Env):
         molecules.set_status('made')
         
     def test(self, molecules, assay_name, **params) -> None:
-        
+
         _is_tested = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' not in a)
         _is_scored = lambda m: all(
@@ -241,7 +247,7 @@ class DrugEnv(gym.Env):
         return self.reward_history[-1] == 1
 
     def check_truncated(self):
-        return len(self.library) >= self.budget \
+        return len(self.library.tested) >= self.budget \
             or self.time_elapsed >= 100
 
     def reset(self):

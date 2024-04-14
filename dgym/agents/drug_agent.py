@@ -61,7 +61,7 @@ class DrugAgent:
             case 'design':
                 observations = (observations.scored + observations.tested) or observations
             case 'make':
-                observations = observations.designed + observations.scored
+                observations = observations.scored + observations.designed
             case _ as test:
                 if 'Noisy' in test:
                     observations = observations.designed
