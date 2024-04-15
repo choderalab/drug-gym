@@ -1,5 +1,7 @@
+import uuid
 import argparse
 import dgym as dg
+import pandas as pd
 
 def get_data(path):
 
@@ -14,8 +16,10 @@ def get_data(path):
         classes_col = 'functional_groups'
     )
 
-    building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
-    fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
+    building_blocks = dg.datasets.disk_loader(
+        f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
+    fingerprints = dg.datasets.fingerprints(
+        f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
     import torch
     import pyarrow.parquet as pq
@@ -24,9 +28,140 @@ def get_data(path):
 
     return deck, reactions, building_blocks, fingerprints, sizes
 
+def get_initial_library(deck, designer):
+    
+    # select first molecule
+    import random
+    def _select_molecule(deck):
+        initial_index = random.randint(0, len(deck) - 1)
+        initial_molecule = deck[initial_index]
+        if len(initial_molecule.reactants) == 2 \
+            and designer.match_reactions(initial_molecule):
+            return initial_molecule
+        else:
+            return _select_molecule(deck)
+
+    initial_molecules = [_select_molecule(deck) for _ in range(5)]
+    library = dg.MoleculeCollection(initial_molecules).update_annotations()
+    
+    return library
+    
+def get_docking_config(path: str, target_index: int):
+    
+    import os
+
+    dockstring_dir = f'{path}/dockstring_targets/'
+    files = os.listdir(dockstring_dir)
+    configs = sorted([f for f in files if 'conf' in f])
+    targets = sorted([f for f in files if 'target' in f])
+
+    with open(dockstring_dir + configs[target_index], 'r') as f:
+        config_ = f.readlines()
+        config_ = [c.replace('\n', '') for c in config_]
+        config_ = [c.split(' = ') for c in config_ if c]
+        config_ = {c[0]: float(c[1]) for c in config_}
+
+    target_file = targets[target_index]
+    target = target_file.split('_')[0]
+    
+    name = f'{target} affinity'
+    config = {
+        'search_mode': 'detailed',
+        'scoring': 'vina',
+        'seed': 5,
+        'size_x': 22.5,
+        'size_y': 22.5,
+        'size_z': 22.5,
+        **config_
+    }
+    
+    return name, config
+
+def get_oracles(path: str, target_index: int):
+
+    from dgym.envs.oracle import \
+        DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
+    from dgym.envs.utility import ClassicUtilityFunction
+    
+    name, config = get_docking_config(path, target_index)
+
+    pIC50_oracle = DockingOracle(
+        f'{name} pIC50',
+        receptor_path=f'{path}/dockstring_targets/{name}_target.pdbqt',
+        config=config
+    )
+    log_P_oracle = RDKitOracle('Log P', descriptor='MolLogP')
+    log_S_oracle = CatBoostOracle(
+        'Log S', path='../dgym/envs/models/aqsolcb.model')
+    
+    return pIC50_oracle, log_P_oracle, log_S_oracle
+
+def get_multiple_utility_functions(
+    pIC50_oracle,
+    log_P_oracle,
+    log_S_oracle,
+    sigma=1.0
+):
+    from dgym.envs.utility import (
+        ClassicUtilityFunction, MultipleUtilityFunction
+    )
+
+    # Define utility functions
+    pIC50_utility = ClassicUtilityFunction(
+        pIC50_oracle, ideal=(9.5, 13), acceptable=(8, 13))
+    log_P_utility = ClassicUtilityFunction(
+        log_P_oracle, ideal=(0.5, 1.85), acceptable=(-0.5, 3.5))
+    log_S_utility = ClassicUtilityFunction(
+        log_S_oracle, ideal=(-3, 1), acceptable=(-4, 1))
+
+    # Assemble assays and surrogate models
+    assays = [
+        pIC50_oracle,
+        log_P_oracle,
+        log_S_oracle,
+        pIC50_oracle.surrogate(sigma=sigma),
+        log_P_oracle.surrogate(sigma=sigma),
+        log_S_oracle.surrogate(sigma=sigma),
+    ]
+
+    # Environment tolerates acceptable ADMET
+    from copy import deepcopy
+    utility_agent = MultipleUtilityFunction(
+        utility_functions = [pIC50_utility, log_P_utility, log_S_utility],
+        weights = [0.8, 0.1, 0.1]
+    )
+    utility_env = deepcopy(utility_agent)
+    utility_env.utility_functions[1].ideal = utility_env.utility_functions[1].acceptable
+    utility_env.utility_functions[2].ideal = utility_env.utility_functions[2].acceptable
+    
+    return assays, utility_agent, utility_env
+
+def get_agent_sequence():
+    """
+    Make the sequence for the DrugAgent.
+    """
+
+    design_grow = {'name': 'design', 'batch_size': 5, 'parameters': {'strategy': 'grow', 'size': 8}}
+    design_replace = {'name': 'design', 'batch_size': 5, 'parameters': {'strategy': 'replace', 'size': 8, 'temperature': 0.2}}
+    score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 40}
+    make = {'name': 'make', 'batch_size': 8}
+    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8} # 8
+    design_and_score = [design_replace, score]
+
+    return [*(design_and_score * 1), design_grow, score, make, test]
+
+# Parse command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--out_dir", type=str, help="Where to put the resulting JSONs")
+parser.add_argument(
+    "--sigma", type=float, help="Size of model error on surrogate assays")
+args = parser.parse_args()
+
+# Run experiment
+path = '../../../../dgym-data'
 
 # Load all data
-path = '../../../../dgym-data'
 (
     deck,
     reactions,
@@ -35,137 +170,63 @@ path = '../../../../dgym-data'
     sizes
 ) = get_data(path)
 
-# Docking oracles
-from dgym.envs.oracle import DockingOracle, NoisyOracle
-from dgym.envs.utility import ClassicUtilityFunction
+# Get random starting library
+from dgym.envs.designer import Designer, Generator
+designer = Designer(
+    Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
+library = get_initial_library(deck, designer)
 
-config = {
-    'center_x': 44.294,
-    'center_y': 28.123,
-    'center_z': 2.617,
-    'size_x': 22.5,
-    'size_y': 22.5,
-    'size_z': 22.5,
-    'search_mode': 'balanced',
-    'scoring': 'gnina',
-    'seed': 5
-}
-
-# Create noiseless evaluators
-docking_oracle = DockingOracle(
-    'ADAM17 affinity',
-    receptor_path=f'{path}/ADAM17.pdbqt',
-    config=config
+# Get oracles
+(
+    pIC50_oracle,
+    log_P_oracle,
+    log_S_oracle
+) = get_oracles(
+    path=path,
+    target_index=0,
 )
 
-docking_utility = ClassicUtilityFunction(
-    docking_oracle,
-    ideal=(8.5, 11),
-    acceptable=(7.125, 11)
+# Create multiple utility functions
+(
+    assays,
+    utility_agent,
+    utility_env
+) = get_multiple_utility_functions(
+    pIC50_oracle,
+    log_P_oracle,
+    log_S_oracle
 )
 
-# Create noisy evaluator
-noisy_docking_oracle = NoisyOracle(
-    docking_oracle,
-    sigma=0.7
+# Create DrugEnv
+from dgym.envs import DrugEnv
+drug_env = DrugEnv(
+    designer = designer,
+    library = library,
+    assays = assays,
+    utility_function = utility_env
 )
 
-noisy_docking_utility = ClassicUtilityFunction(
-    noisy_docking_oracle,
-    ideal=(8.5, 11),
-    acceptable=(7.125, 11)
-)
-
-def get_drug_env(
-        deck,
-        reactions, building_blocks, fingerprints, sizes,
-        docking_oracle,
-        docking_utility
-    ):
-    
-    import pandas as pd
-    from dgym.molecule import Molecule
-    from dgym.envs.designer import Designer, Generator
-    from dgym.envs.drug_env import DrugEnv
-
-    designer = Designer(
-        Generator(building_blocks, fingerprints, sizes),
-        reactions,
-        cache = True
-    )
-
-    # select first molecule
-    import random
-    def select_molecule(deck):
-        initial_index = random.randint(0, len(deck) - 1)
-        initial_molecule = deck[initial_index]
-        if len(initial_molecule.reactants) == 2 \
-            and designer.match_reactions(initial_molecule):
-            return initial_molecule
-        else:
-            return select_molecule(deck)
-
-    initial_molecules = [select_molecule(deck) for _ in range(5)]
-    initial_library = dg.MoleculeCollection(initial_molecules) # 659
-    initial_library.update_annotations()
-
-    drug_env = DrugEnv(
-        designer,
-        library = initial_library,
-        assays = [docking_oracle],
-        budget = 500,
-        utility_function = docking_utility,
-    )
-
-    return drug_env
-
-# Parse command line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--sigma", type=float, help="Spread of the noise distribution")
-parser.add_argument("--out_dir", type=str, help="Where to put the resulting JSONs")
-
-args = parser.parse_args()
-
-# Run experiment
-from dgym.experiment import Experiment
+# Create DrugAgent
 from dgym.agents import SequentialDrugAgent
 from dgym.agents.exploration import EpsilonGreedy
-
-import pandas as pd
-from dgym.molecule import Molecule
-from dgym.envs.designer import Designer, Generator
-from dgym.envs.drug_env import DrugEnv
-
-# Get environment
-drug_env = get_drug_env(
-    deck,
-    reactions, building_blocks, fingerprints, sizes,
-    docking_oracle,
-    docking_utility
-)
-
-sequence = [
-    {'name': 'ideate', 'parameters': {'temperature': 0.1, 'size': 10, 'strict': False}},
-    {'name': 'ideate', 'parameters': {'temperature': 0.0, 'size': 10, 'strict': True}},
-    {'name': 'ADAM17 affinity'},
-]
-
+sequence = get_agent_sequence()
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
-    utility_function = noisy_docking_utility,
-    exploration_strategy = EpsilonGreedy(epsilon = 0.0),
-    branch_factor = 1
+    exploration_strategy = EpsilonGreedy(epsilon=0.2),
+    utility_function = utility_agent
 )
 
-drug_agent.utility_function.oracle.sigma = args.sigma
-experiment = Experiment(drug_agent, drug_env)
-result = experiment.run(**vars(args))
+# Create and run Experiment
+from dgym.experiment import Experiment
+
+experiment = Experiment(drug_env, drug_agent)
+file_path = f'{args.out_dir}/selection_noise_sigma_{args.sigma}_{uuid.uuid4()}.json'
+result = experiment.run(**vars(args), out=file_path)
 
 # Export results
 import json
 import uuid
 from utils import serialize_with_class_names
 
-file_path = f'{args.out_dir}/selection_noise_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))

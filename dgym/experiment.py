@@ -1,13 +1,18 @@
 import json
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from typing import Optional
 from dgym.utils import serialize_with_class_names
+from dgym.envs import DrugEnv
+from dgym.agents import DrugAgent
 
 class Experiment:
     
-    def __init__(self, drug_agent, drug_env):
-        
+    def __init__(
+        self,
+        drug_agent: DrugAgent,
+        drug_env: DrugEnv
+    ):
         self.drug_agent = drug_agent
         self.drug_env = drug_env
     
@@ -22,6 +27,7 @@ class Experiment:
         results = []
         for trial in tqdm(range(num_trials)):
 
+            self.drug_agent.reset()
             observations, info = self.drug_env.reset()
 
             if progress:
@@ -35,6 +41,7 @@ class Experiment:
                 
                 # Parse result
                 result = self.get_result(trial, out=out, **kwargs)
+                print(self.drug_env.get_reward())
                 
                 if progress:
                     pbar.n = len(self.drug_env.library.tested)
