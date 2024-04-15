@@ -69,12 +69,14 @@ class Collection(torch.utils.data.Dataset):
     def reset_index(self):
         self._index = list(range(len(self._items)))
         return self
-        
 
     @property
     def annotations(self):
         self.update_annotations()
-        return pd.DataFrame([item.annotations for item in self._items])
+        return pd.DataFrame(
+            [item.annotations for item in self._items],
+            index=self.index
+        )
 
     @property
     def annotated(self):

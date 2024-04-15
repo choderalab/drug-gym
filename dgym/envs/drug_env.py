@@ -238,7 +238,8 @@ class DrugEnv(gym.Env):
         # Compute reward
         reward = -float('inf')
         if self.library.tested:
-            utility = self.utility_function(self.library.tested, method='average')
+            utility = self.utility_function(
+                self.library.tested, method='average', use_precomputed=True)
             reward = max([*utility, reward])
 
         return reward
