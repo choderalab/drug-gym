@@ -64,7 +64,6 @@ def get_docking_config(path: str, target_index: int):
     target_file = targets[target_index]
     target = target_file.split('_')[0]
     
-    name = f'{target} affinity'
     config = {
         'search_mode': 'detailed',
         'scoring': 'vina',
@@ -75,7 +74,7 @@ def get_docking_config(path: str, target_index: int):
         **config_
     }
     
-    return name, config
+    return target, config
 
 def get_oracles(path: str, target_index: int):
 
@@ -83,11 +82,11 @@ def get_oracles(path: str, target_index: int):
         DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
     from dgym.envs.utility import ClassicUtilityFunction
     
-    name, config = get_docking_config(path, target_index)
+    target, config = get_docking_config(path, target_index)
 
     pIC50_oracle = DockingOracle(
-        f'{name} pIC50',
-        receptor_path=f'{path}/dockstring_targets/{name}_target.pdbqt',
+        f'{target} pIC50',
+        receptor_path=f'{path}/dockstring_targets/{target}_target.pdbqt',
         config=config
     )
     log_P_oracle = RDKitOracle('Log P', descriptor='MolLogP')
