@@ -176,7 +176,7 @@ class DrugEnv(gym.Env):
         """
         Returns analogs of chosen molecules from the library.
         """
-        assert all(m.status not in ['made', 'designed'] for m in molecules)
+        assert all(m.status not in ['Made', 'Designed'] for m in molecules)
 
         # Design new library
         new_molecules = MoleculeCollection()
@@ -184,10 +184,10 @@ class DrugEnv(gym.Env):
             new_molecules += self.designer.design(molecule, *args, **kwargs)
         
         # Annotate status - TODO fix MoleculeCollection `update_annotations`
-        new_molecules['timestep'] = self.time_elapsed + 1
+        new_molecules['Timestep'] = self.time_elapsed + 1
         
         # Set status of molecules
-        new_molecules.set_status('designed')
+        new_molecules.set_status('Designed', step=self.time_elapsed)
         
         return new_molecules
     
@@ -195,24 +195,24 @@ class DrugEnv(gym.Env):
         """
         Synthesize molecules. Later, we can implement stochasticity.
         """
-        assert all(m.status in ['designed', 'scored', None] for m in molecules)
+        assert all(m.status in ['Designed', 'Scored', None] for m in molecules)
         
         # Increment timestep
         self.time_elapsed += 1
 
         # Set status of molecules
-        molecules.set_status('made')
+        molecules.set_status('Made', step=self.time_elapsed)
         
     def test(self, molecules, assay_name, **params) -> None:
 
-        _is_tested = lambda m: all(
+        is_tested = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' not in a)
-        _is_scored = lambda m: all(
+        is_scored = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' in a)
         
         # Real measurements only on made molecules
         if is_test := 'Noisy' not in assay_name:
-            assert all(m.status == 'made' for m in molecules)
+            assert all(m.status == 'Made' for m in molecules)
 
         # Subset assay and molecules
         assay = self.assays[assay_name]
@@ -223,12 +223,14 @@ class DrugEnv(gym.Env):
         # Update library annotations for molecules measured
         for molecule, result in zip(molecules, results):
             molecule.update_annotations({assay.name: result})
-        
+
         # Set status of molecules
         if is_test:
-            molecules.set_status('tested', by=_is_tested)
+            molecules.set_status(
+                'Tested', by=is_tested, step=self.time_elapsed)
         else:
-            molecules.set_status('scored', by=_is_scored)
+            molecules.set_status(
+                'Scored', by=is_scored, step=self.time_elapsed)
 
     def get_observations(self):
         return self.library
@@ -253,8 +255,9 @@ class DrugEnv(gym.Env):
 
     def reset(self):
         self.time_elapsed = 0
-        self.library = self._library_0.copy()
         self.designer.reset()
+        self.reward_history = []
+        self.library = self._library_0.copy()
         return self.get_observations(), {}
     
     def _get_valid_molecules(self, molecule_indices):

@@ -7,7 +7,7 @@ import rdkit
 import torch
 import dgllife
 import numpy as np
-from typing import Union, Optional
+from typing import Union, Optional, Iterable
 from collections import defaultdict
 from scipy.special import logsumexp
 from rdkit import Chem
@@ -34,7 +34,15 @@ class Oracle:
         self.cache = OracleCache()
 
     def __call__(self, molecules: Union[MoleculeCollection, list], **kwargs):
-        return self.get_predictions(molecules, **kwargs)
+
+        # Normalize input            
+        return_list = isinstance(molecules, Iterable)
+        molecules = MoleculeCollection(molecules)
+
+        # Make predictions
+        predictions = self.get_predictions(molecules, **kwargs)
+
+        return predictions if return_list else predictions[0]        
     
     def reset(self):
         self.cache = OracleCache()
@@ -66,9 +74,6 @@ class Oracle:
         molecules: Union[MoleculeCollection, list],
         **kwargs
     ):
-        # Normalize input            
-        molecules = MoleculeCollection(molecules)
-
         # Identify molecules not in cache
         if uncached_molecules := set([
             m for m in molecules

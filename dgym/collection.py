@@ -485,7 +485,8 @@ class MoleculeCollection(Collection):
     def set_status(
         self,
         status: str,
-        by: Optional[Callable] = None
+        by: Optional[Callable] = None,
+        step: Optional[int] = None,
     ) -> None:
         """
         Set the status of molecules in the self.molecules collection based on a filter.
@@ -500,22 +501,23 @@ class MoleculeCollection(Collection):
         for molecule in self.molecules:
             if by is None or by(molecule):
                 molecule.status = status
+                molecule.annotations[status] = f'Step {step}'
 
     @property
     def designed(self):
-        return self.filter(lambda x: x.status == 'designed')
+        return self.filter(lambda x: x.status == 'Designed')
 
     @property
     def made(self):
-        return self.filter(lambda x: x.status == 'made')
+        return self.filter(lambda x: x.status == 'Made')
 
     @property
     def scored(self):
-        return self.filter(lambda x: x.status == 'scored')
+        return self.filter(lambda x: x.status == 'Scored')
 
     @property
     def tested(self):
-        return self.filter(lambda x: x.status == 'tested')
+        return self.filter(lambda x: x.status == 'Tested')
 
 class ReactionCollection(Collection):
     

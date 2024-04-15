@@ -163,17 +163,17 @@ class Molecule:
         self.annotations.update(self.mol.GetPropsAsDict())
 
         # Update immutable properties
-        if 'smiles' not in self.annotations:
-            self.annotations.update({'smiles': self.smiles})
-        if 'design_cycle' not in self.annotations:
-            self.annotations.update({'design_cycle': self.design_cycle})
-        if 'inspiration' not in self.annotations and self.inspiration:
-            self.annotations.update({'inspiration': self.inspiration.smiles})
-        if 'reactants' not in self.annotations:
-            self.annotations.update({'reactants': [r.smiles for r in self.reactants]})
+        if 'SMILES' not in self.annotations:
+            self.annotations.update({'SMILES': self.smiles})
+        if 'Design Cycle' not in self.annotations:
+            self.annotations.update({'Design Cycle': self.design_cycle})
+        if 'Inspiration' not in self.annotations and self.inspiration:
+            self.annotations.update({'Inspiration': self.inspiration.smiles})
+        if 'Reactants' not in self.annotations:
+            self.annotations.update({'Reactants': [r.smiles for r in self.reactants]})
         
         # Update status
-        self.annotations.update({'status': self.status})
+        self.annotations.update({'Current Status': self.status})
         
         # Update other annotations
         if other_annotations:

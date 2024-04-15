@@ -100,7 +100,8 @@ class Generator:
     def _generator_factory(self, sampler, original=None, strict=False):
         
         for index in sampler:
-            building_block = self._get_building_block(index)
+            building_block = self._get_building_block(
+                index, original=original, strict=strict)
             yield building_block
     
     @lru_cache(maxsize=None)
@@ -422,6 +423,6 @@ class Designer:
             reaction_name = route['reaction'] if 'reaction' in route \
                 else self.match_reactions(route)[0]
             reaction = self.reactions[reaction_name]
-            return reaction.run(reactants)
+            return reaction.run(reactants, protect=True)
 
         raise Exception('`route` must include a reaction or reactants.')
