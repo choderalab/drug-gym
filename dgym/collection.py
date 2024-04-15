@@ -501,7 +501,7 @@ class MoleculeCollection(Collection):
         for molecule in self.molecules:
             if by is None or by(molecule):
                 molecule.status = status
-                molecule.annotations[status] = f'Step {step}'
+                molecule.annotations[f'Step {status}'] = step
 
     @property
     def designed(self):

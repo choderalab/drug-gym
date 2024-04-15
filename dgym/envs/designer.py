@@ -423,6 +423,6 @@ class Designer:
             reaction_name = route['reaction'] if 'reaction' in route \
                 else self.match_reactions(route)[0]
             reaction = self.reactions[reaction_name]
-            return reaction.run(reactants, protect=True)
+            return reaction.run(reactants)
 
         raise Exception('`route` must include a reaction or reactants.')
