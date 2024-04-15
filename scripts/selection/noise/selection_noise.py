@@ -182,7 +182,7 @@ library = get_initial_library(deck, designer)
     log_S_oracle
 ) = get_oracles(
     path=path,
-    target_index=0,
+    target_index=0
 )
 
 # Create multiple utility functions
@@ -193,7 +193,8 @@ library = get_initial_library(deck, designer)
 ) = get_multiple_utility_functions(
     pIC50_oracle,
     log_P_oracle,
-    log_S_oracle
+    log_S_oracle,
+    sigma = args.sigma
 )
 
 # Create DrugEnv
