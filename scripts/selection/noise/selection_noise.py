@@ -92,7 +92,7 @@ def get_oracles(path: str, target_index: int):
     )
     log_P_oracle = RDKitOracle('Log P', descriptor='MolLogP')
     log_S_oracle = CatBoostOracle(
-        'Log S', path='../dgym/envs/models/aqsolcb.model')
+        'Log S', path='../../../dgym/envs/models/aqsolcb.model')
     
     return pIC50_oracle, log_P_oracle, log_S_oracle
 
@@ -170,13 +170,13 @@ path = '../../../../dgym-data'
     sizes
 ) = get_data(path)
 
-# Get random starting library
+# Get starting library
 from dgym.envs.designer import Designer, Generator
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
 library = get_initial_library(deck, designer)
 
-# Get oracles
+# Get Oracles
 (
     pIC50_oracle,
     log_P_oracle,
@@ -218,7 +218,6 @@ drug_agent = SequentialDrugAgent(
 
 # Create and run Experiment
 from dgym.experiment import Experiment
-
 experiment = Experiment(drug_env, drug_agent)
 file_path = f'{args.out_dir}/selection_noise_sigma_{args.sigma}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)

@@ -34,13 +34,11 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for noise $NOISE"
         
         # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:30 \
-             -o "${LOGS_DIR}/logs/noise_${NOISE}_trial_${TRIAL}.stdout" \
-             -eo "${LOGS_DIR}/logs/noise_${NOISE}_trial_${TRIAL}.stderr" \
+        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 0:45 \
+             -o "${LOGS_DIR}/noise_${NOISE}_trial_${TRIAL}.stdout" \
+             -eo "${LOGS_DIR}/noise_${NOISE}_trial_${TRIAL}.stderr" \
              python3 "$PYTHON_SCRIPT" --sigma "$NOISE" --out_dir "$RUN_DIR"
     done
-    
     echo "Completed all trials for noise level: $NOISE"
 done
-
 echo "All trials completed."
