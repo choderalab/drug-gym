@@ -93,10 +93,10 @@ class MultipleUtilityFunction:
 
     def __call__(
         self,
-        input,
+        input: Iterable,
         method: str = 'hybrid',
         use_precomputed: bool = False,
-        adjust: bool = False,
+        rescale: bool = True,
         **kwargs
     ):
         # Normalize inputs
@@ -104,7 +104,7 @@ class MultipleUtilityFunction:
             and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
         
         if use_precomputed:
-            input = self._get_precomputed(input, adjust=adjust)         
+            input = self._get_precomputed(input, rescale=rescale)         
 
         # Score molecules
         utility = self.score(input, **kwargs)
@@ -117,7 +117,7 @@ class MultipleUtilityFunction:
     def _get_precomputed(
         self,
         input: Iterable,
-        adjust: bool = False
+        rescale: bool = True
     ):
         """
         Gracefully grabs precomputed data. Merges actual and surrogate data, preferring actual.
@@ -132,23 +132,32 @@ class MultipleUtilityFunction:
         surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
                 
         # Correct selection bias with OLS
-        if adjust: 
-            surrogates = self._perform_adjustment(surrogates, actuals)
+        if rescale:
+            surrogates = self._rescale_surrogates(surrogates, actuals)
 
         # Merge actuals and surrogates
         annotations = actuals.combine_first(surrogates).values
         
         return annotations
     
-    def _perform_adjustment(surrogates, actuals):
-        
+    def _rescale_surrogates(self, surrogates, actuals):
+        """
+        Rescales surrogates to reduce selection bias.
+        """
+        if len(actuals.dropna()) <= 10:
+            return surrogates
+
+        # Create filter for complete measurements
+        check_complete = lambda df: ~df.isna().any(axis=1)
+        is_complete = check_complete(actuals) & check_complete(surrogates)
+
+        # Rescale each column        
         for column in actuals:
             
-            is_tested = ~actuals.isna().any(axis=1)
-            actuals_subset = actuals[column][is_tested]
+            actuals_subset = actuals[column][is_complete]
 
             surrogates_column = sm.add_constant(surrogates[column])
-            surrogates_subset = surrogates_column[is_tested]
+            surrogates_subset = surrogates_column[is_complete]
 
             regressor = OLS(actuals_subset, surrogates_subset).fit()
             surrogates[column] = regressor.predict(surrogates_column)
