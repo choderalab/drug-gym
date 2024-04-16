@@ -6,6 +6,8 @@ from dgym.molecule import Molecule
 from dgym.envs.oracle import Oracle
 from typing import Optional, Callable, Iterable
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 
 class UtilityFunction:
 
@@ -94,6 +96,7 @@ class MultipleUtilityFunction:
         input,
         method: str = 'hybrid',
         use_precomputed: bool = False,
+        adjust: bool = False,
         **kwargs
     ):
         # Normalize inputs
@@ -101,8 +104,8 @@ class MultipleUtilityFunction:
             and (isinstance(input[0], Iterable) or isinstance(input[0], Molecule))
         
         if use_precomputed:
-            input = self._get_precomputed(input)
-        
+            input = self._get_precomputed(input, adjust=adjust)         
+
         # Score molecules
         utility = self.score(input, **kwargs)
 
@@ -111,9 +114,10 @@ class MultipleUtilityFunction:
         
         return composite_utility.tolist() if return_list else composite_utility.item()
     
-    def _get_precomputed(self, input):
+    def _get_precomputed(self, input, adjust: bool = False):
         """
         Gracefully grabs precomputed data. Merges actual and surrogate data, preferring actual.
+        Uses ordinary least squares to correct selection bias in surrogate model scores.
         """
         # Get actual data
         actuals = input.annotations.reindex(columns=self.oracle_names)
@@ -121,12 +125,21 @@ class MultipleUtilityFunction:
         # Get surrogate data
         surrogates = actuals.add_prefix('Noisy ').columns
         surrogates = input.annotations.reindex(columns=surrogates)
-        surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
+        
+        # Correct selection bias with OLS
+        if adjust: 
+            surrogates = self._perform_adjustment(surrogates, actuals)
         
         # Merge and score
+        surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
         annotations = actuals.combine_first(surrogates).values
         
         return annotations
+    
+    def _perform_adjustment(surrogates, actuals):
+        ols = OLS(actuals, sm.add_constant(surrogates))
+        regressor = ols.fit()
+        return regressor.predict(surrogates)
     
     def score(
         self,

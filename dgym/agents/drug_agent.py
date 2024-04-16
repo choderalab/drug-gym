@@ -103,7 +103,7 @@ class DrugAgent:
             combined_dict = dict(zip(keys, combination))
             combined_dict.update(constant_keys)
             actions.append(combined_dict)
-        
+
         return actions
 
 
