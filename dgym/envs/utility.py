@@ -114,7 +114,11 @@ class MultipleUtilityFunction:
         
         return composite_utility.tolist() if return_list else composite_utility.item()
     
-    def _get_precomputed(self, input, adjust: bool = False):
+    def _get_precomputed(
+        self,
+        input: Iterable,
+        adjust: bool = False
+    ):
         """
         Gracefully grabs precomputed data. Merges actual and surrogate data, preferring actual.
         Uses ordinary least squares to correct selection bias in surrogate model scores.
@@ -125,21 +129,31 @@ class MultipleUtilityFunction:
         # Get surrogate data
         surrogates = actuals.add_prefix('Noisy ').columns
         surrogates = input.annotations.reindex(columns=surrogates)
-        
+        surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
+                
         # Correct selection bias with OLS
         if adjust: 
             surrogates = self._perform_adjustment(surrogates, actuals)
-        
-        # Merge and score
-        surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
+
+        # Merge actuals and surrogates
         annotations = actuals.combine_first(surrogates).values
         
         return annotations
     
     def _perform_adjustment(surrogates, actuals):
-        ols = OLS(actuals, sm.add_constant(surrogates))
-        regressor = ols.fit()
-        return regressor.predict(surrogates)
+        
+        for column in actuals:
+            
+            is_tested = ~actuals.isna().any(axis=1)
+            actuals_subset = actuals[column][is_tested]
+
+            surrogates_column = sm.add_constant(surrogates[column])
+            surrogates_subset = surrogates_column[is_tested]
+
+            regressor = OLS(actuals_subset, surrogates_subset).fit()
+            surrogates[column] = regressor.predict(surrogates_column)
+
+        return surrogates
     
     def score(
         self,
