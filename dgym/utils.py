@@ -8,12 +8,15 @@ from collections import defaultdict
 from functools import wraps
 from inspect import ismethod
 from typing import Iterable
+from rdkit import Chem
+from rdkit.Chem import rdFMCS, AllChem, Draw
 
 __all__ = [
     'sort_fingerprints',
     'partition_building_blocks',
     'get_unique_reactants',
-    'match_reactions'
+    'match_reactions',
+    'align_lineage'
 ]
 
 import chemfp
@@ -44,6 +47,48 @@ def compute_fingerprints(sdf_path: str = './', out_path: str = './out'):
 
 # Plotting.
 # -----------------------------------------------
+def align_lineage(molecule):
+    """
+    Recursively aligns a molecule to its chain of inspirations, going back to the first molecule.
+
+    Parameters
+    ----------
+    molecule : dg.Molecule
+
+    Returns
+    -------
+    list
+        A list of aligned RDKit molecule objects, starting from the origin.
+    """
+    # Get molecule lineage
+    lineage = molecule.lineage
+    
+    # Generate 3D coordinates for all molecules if not already present
+    for molecule in lineage:
+        mol = molecule.mol
+        AllChem.Compute2DCoords(mol)
+
+    # Align each molecule with its inspiration
+    for i in range(1, len(lineage)):
+        current_mol = lineage[i].mol
+        inspiration_mol = lineage[i-1].mol
+
+        # Find MCS between current molecule and its inspiration
+        mcs_result = rdFMCS.FindMCS([current_mol, inspiration_mol])
+        mcs_smarts = mcs_result.smartsString
+        if not mcs_smarts:
+            continue  # Skip if no MCS is found
+
+        mcs_mol = Chem.MolFromSmarts(mcs_smarts)
+
+        # Align the molecule to its inspiration based on MCS
+        match1 = current_mol.GetSubstructMatch(mcs_mol)
+        match2 = inspiration_mol.GetSubstructMatch(mcs_mol)
+        if match1 and match2:
+            atom_map = list(zip(match1, match2))
+            AllChem.AlignMol(current_mol, inspiration_mol, atomMap=atom_map)
+
+    return [molecule for molecule in lineage]
 
 def draw(hit, reaction, prods, rowsize=3):
     """
