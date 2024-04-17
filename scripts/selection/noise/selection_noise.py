@@ -221,7 +221,7 @@ from dgym.experiment import Experiment
 experiment = Experiment(
     drug_agent=drug_agent, drug_env=drug_env)
 file_path = f'{args.out_dir}/selection_noise_sigma_{args.sigma}_{uuid.uuid4()}.json'
-result = experiment.run(**vars(args), out=file_path)
+result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
 import json
