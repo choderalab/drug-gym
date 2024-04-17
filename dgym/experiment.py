@@ -65,11 +65,24 @@ class Experiment:
         out: Optional[str] = None,
         **kwargs
     ):
+        annotations = self.drug_env.library.annotations.reindex(
+            columns=[
+                'SMILES',
+                'Reactants',
+                'Step Designed',
+                'Step Scored',
+                'Step Made',
+                'Step Tested',
+                'Current Status',
+                *self.drug_env.assays
+            ]
+        ).to_dict()
+
         result = {
             'trial': trial,
             'cost': len(self.drug_env.library.tested),
             'time_elapsed': self.drug_env.time_elapsed,
-            'annotations': self.drug_env.library.annotations.to_dict(),
+            'annotations': annotations,
             **vars(self.drug_agent),
             **kwargs
         }
