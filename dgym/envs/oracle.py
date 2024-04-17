@@ -250,7 +250,11 @@ class RDKitOracle(Oracle):
         # load descriptor
         if not descriptor:
             descriptor = self.name
-        self.descriptor = getattr(Descriptors, descriptor)
+        
+        if hasattr(Descriptors, descriptor):
+            self.descriptor = getattr(Descriptors, descriptor)
+        elif descriptor == 'QED':
+            self.descriptor = rdkit.Chem.QED.default
 
     def predict(self, molecules: MoleculeCollection):
         scores = [self.descriptor(m.mol) for m in molecules]

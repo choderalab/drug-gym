@@ -284,7 +284,7 @@ class Molecule:
         if self.reaction:
             route['reaction'] = self.reaction
         if self.reactants:
-            route['reactants'] = [reactant.dump() for reactant in self.reactants]
+            route['reactants'] = [reactant.dump(detailed=detailed) for reactant in self.reactants]
         if detailed and self.annotations:
             route['annotations'] = self.annotations
         return route
