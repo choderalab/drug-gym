@@ -8,6 +8,7 @@ from typing import Optional, Callable, Iterable
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 import statsmodels.api as sm
 from statsmodels.regression.linear_model import OLS
+import pandas as pd
 
 class UtilityFunction:
 
@@ -123,12 +124,17 @@ class MultipleUtilityFunction:
         Gracefully grabs precomputed data. Merges actual and surrogate data, preferring actual.
         Uses ordinary least squares to correct selection bias in surrogate model scores.
         """
+        # Normalize input
+        annotations = input.annotations
+        if not isinstance(annotations, pd.DataFrame):
+            annotations = pd.DataFrame([annotations])
+
         # Get actual data
-        actuals = input.annotations.reindex(columns=self.oracle_names)
+        actuals = annotations.reindex(columns=self.oracle_names)
         
         # Get surrogate data
         surrogates = actuals.add_prefix('Noisy ').columns
-        surrogates = input.annotations.reindex(columns=surrogates)
+        surrogates = annotations.reindex(columns=surrogates)
         surrogates.columns = surrogates.columns.str.removeprefix('Noisy ')
                 
         # Correct selection bias with OLS
