@@ -194,7 +194,6 @@ library = get_initial_library(deck, designer)
     pIC50_oracle,
     log_P_oracle,
     log_S_oracle,
-    sigma = args.sigma
 )
 
 # Create DrugEnv
