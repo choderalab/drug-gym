@@ -107,7 +107,7 @@ def get_multiple_utility_functions(
 
     # Define utility functions
     pIC50_utility = ClassicUtilityFunction(
-        pIC50_oracle, ideal=(9.5, 13), acceptable=(8, 13))
+        pIC50_oracle, ideal=(9, 13), acceptable=(8, 13))
     log_P_utility = ClassicUtilityFunction(
         log_P_oracle, ideal=(0.5, 1.85), acceptable=(-0.5, 3.5))
     log_S_utility = ClassicUtilityFunction(
