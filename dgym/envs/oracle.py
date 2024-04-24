@@ -159,19 +159,28 @@ class CatBoostOracle(Oracle):
         self.path = path
         self.regressor = CatBoostRegressor().load_model(path)
     
-    def predict(self, molecules: MoleculeCollection):
+    def predict(
+        self,
+        molecules: MoleculeCollection,
+        parallel: Union[bool, int] = True,
+        **kwargs
+    ):
         
         # Get SMILES
         smiles = [m.smiles for m in molecules]
         mols = [m.mol for m in molecules]
 
         # Score molecules
-        X = self._featurize(mols)
+        X = self._featurize(mols, parallel=parallel)
         scores = self.regressor.predict(X)
         
         return smiles, scores
     
-    def _featurize(self, rd_mols):
+    def _featurize(
+        self,
+        rd_mols: Iterable,
+        parallel: Union[bool, int] = True
+    ):
         
         desc_list = [
             'ExactMolWt', 'FpDensityMorgan1',
@@ -192,7 +201,7 @@ class CatBoostOracle(Oracle):
         ]
 
         transformer = MolecularDescriptorTransformer(
-            desc_list, parallel=True)
+            desc_list, parallel=parallel)
         X = transformer.transform(rd_mols)
         X = normalize(np.nan_to_num(X))
         
@@ -220,7 +229,7 @@ class DGLOracle(Oracle):
         self.model = self.model.to(self.device)
         self.model.eval()
         
-    def predict(self, molecules: MoleculeCollection):
+    def predict(self, molecules: MoleculeCollection, **kwargs):
         
         # featurize
         graphs = [
@@ -256,7 +265,7 @@ class RDKitOracle(Oracle):
         elif descriptor == 'QED':
             self.descriptor = rdkit.Chem.QED.default
 
-    def predict(self, molecules: MoleculeCollection):
+    def predict(self, molecules: MoleculeCollection, **kwargs):
         scores = [self.descriptor(m.mol) for m in molecules]
         smiles = [m.smiles for m in molecules]
         return smiles, scores
@@ -279,7 +288,8 @@ class DockingOracle(Oracle):
         self,
         molecules: MoleculeCollection,
         path: Optional[str] = None,
-        units: Optional[str] = 'pIC50'
+        units: Optional[str] = 'pIC50',
+        **kwargs
     ):
         with self._managed_directory(path) as directory:
 
@@ -484,7 +494,7 @@ class NeuralOracle(Oracle):
         # load model weights
         self.model = self.load_state_dict(model, state_dict_path)
 
-    def predict(self, molecules: MoleculeCollection):
+    def predict(self, molecules: MoleculeCollection, **kwargs):
 
         # make mol_to_graph util
         mol_to_graph = dgllife.utils.MolToBigraph(
