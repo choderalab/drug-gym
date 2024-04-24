@@ -366,7 +366,7 @@ class Designer:
         if 'reactants' in route and route['reactants']:
             paths = []
             for i, reactant in enumerate(route['reactants']):
-                paths.extend(self._flatten_route(reactant, path + (i,)))
+                paths.extend(self._get_reactant_paths(reactant, path + (i,)))
             return paths
         else:
             return [path]

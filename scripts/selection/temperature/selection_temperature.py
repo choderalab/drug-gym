@@ -141,7 +141,11 @@ def get_agent_sequence(temperature: float):
     """
 
     design_grow = {'name': 'design', 'batch_size': 5, 'parameters': {'strategy': 'grow', 'size': 8}}
-    design_replace = {'name': 'design', 'batch_size': 5, 'parameters': {'strategy': 'replace', 'size': 8, 'temperature': temperature}}
+    design_replace = {
+        'name': 'design',
+        'batch_size': 5,
+        'parameters': {'strategy': 'replace', 'size': 8, 'temperature': temperature, 'limit': 10}
+    }
     score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 40}
     make = {'name': 'make', 'batch_size': 8}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8} # 8
