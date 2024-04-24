@@ -330,8 +330,13 @@ class Designer:
         list
             A list of all unique reaction tree variants with annotations applied.
         """
-        paths = self._flatten_route(route)
+        # Get paths associated with each reactants
+        paths = self._get_reactant_paths(route)
 
+        # Normalize input
+        limit = min(limit, len(paths))
+
+        # Apply annotations
         reactant_variants = []
         for combo in combinations(paths, limit):
             new_tree = deepcopy(route)
@@ -342,9 +347,9 @@ class Designer:
         
         return reactant_variants
 
-    def _flatten_route(self, route, path=()):
+    def _get_reactant_paths(self, route, path=()):
         """
-        Flattens the synthetic route tree to a list of paths to each reactant.
+        Finds path to every reactant in synthetic route tree.
 
         Parameters
         ----------
