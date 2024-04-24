@@ -140,15 +140,15 @@ def get_agent_sequence(temperature: float):
     Make the sequence for the DrugAgent.
     """
 
-    design_grow = {'name': 'design', 'batch_size': 5, 'parameters': {'strategy': 'grow', 'size': 8}}
+    design_grow = {'name': 'design', 'batch_size': 24, 'parameters': {'strategy': 'grow', 'size': 5}}
     design_replace = {
         'name': 'design',
-        'batch_size': 5,
-        'parameters': {'strategy': 'replace', 'size': 8, 'temperature': temperature, 'limit': 10}
+        'batch_size': 24,
+        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': 10}
     }
-    score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 40}
-    make = {'name': 'make', 'batch_size': 8}
-    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8} # 8
+    score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 24 * 5}
+    make = {'name': 'make', 'batch_size': 24}
+    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 24} # 8
     design_and_score = [design_replace, score]
 
     return [*(design_and_score * 1), design_grow, score, make, test]
