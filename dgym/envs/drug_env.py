@@ -47,7 +47,7 @@ class DrugEnv(gym.Env):
     def __init__(
         self,
         designer,
-        budget: int = 10_000,
+        budget: int = 3_000,
         assays: list = [],
         library: Optional[MoleculeCollection] = None,
         utility_function: Optional[Callable] = None,
@@ -251,7 +251,7 @@ class DrugEnv(gym.Env):
 
     def check_truncated(self):
         return len(self.library.tested) >= self.budget \
-            or self.time_elapsed >= 100
+            or self.time_elapsed >= 200
 
     def reset(self):
         self.time_elapsed = 0
