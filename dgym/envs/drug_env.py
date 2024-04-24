@@ -168,7 +168,7 @@ class DrugEnv(gym.Env):
                 case 'make':
                     self.make(molecules)
                 case _ as test:
-                    self.test(molecules, test, *parameters)
+                    self.test(molecules, test, **parameters)
 
         return self.library.reset_index()
 
