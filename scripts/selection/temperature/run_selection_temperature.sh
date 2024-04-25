@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Disable core dumps
+ulimit -c 0
+
 # Define the path to your Python script
 PYTHON_SCRIPT="./selection_temperature.py"
 
@@ -34,7 +37,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for temperature $TEMP"
         
         # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 1:30 \
+        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 4:59 \
              -o "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stderr" \
              python3 "$PYTHON_SCRIPT" --temperature "$TEMP" --out_dir "$RUN_DIR"
