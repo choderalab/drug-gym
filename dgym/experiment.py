@@ -37,13 +37,13 @@ class Experiment:
                 
                 # Perform step
                 action = self.drug_agent.act(observations)
-                print('Created action')
-                print(action)
+                print('Created action', flush=True)
+                print(action, flush=True)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
                 
                 # Parse result
                 result = self.get_result(trial, out=out, **kwargs)
-                print(self.drug_env.get_reward())
+                print(self.drug_env.get_reward(), flush=True)
                 
                 if progress:
                     pbar.n = len(self.drug_env.library.tested)
