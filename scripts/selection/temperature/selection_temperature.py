@@ -177,11 +177,15 @@ path = '../../../../dgym-data'
     sizes
 ) = get_data(path)
 
+print('Loaded data.')
+
 # Get starting library
 from dgym.envs.designer import Designer, Generator
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
 library = get_initial_library(deck, designer)
+
+print('Loaded library and designer.')
 
 # Get Oracles
 (
@@ -192,6 +196,8 @@ library = get_initial_library(deck, designer)
     path=path,
     target_index=0
 )
+
+print('Loaded oracles.')
 
 # Create multiple utility functions
 (
@@ -204,6 +210,8 @@ library = get_initial_library(deck, designer)
     log_S_oracle,
 )
 
+print('Loaded utility functions.')
+
 # Create DrugEnv
 from dgym.envs import DrugEnv
 drug_env = DrugEnv(
@@ -212,6 +220,8 @@ drug_env = DrugEnv(
     assays = assays,
     utility_function = utility_env
 )
+
+print('Loaded DrugEnv.')
 
 # Create DrugAgent
 from dgym.agents import SequentialDrugAgent
@@ -222,6 +232,7 @@ drug_agent = SequentialDrugAgent(
     exploration_strategy = EpsilonGreedy(epsilon=0.2),
     utility_function = utility_agent
 )
+print('Loaded DrugAgent.')
 
 # Create and run Experiment
 from dgym.experiment import Experiment

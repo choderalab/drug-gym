@@ -37,6 +37,7 @@ class Experiment:
                 
                 # Perform step
                 action = self.drug_agent.act(observations)
+                print('Created action')
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
                 
                 # Parse result
