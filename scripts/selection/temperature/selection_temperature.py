@@ -146,7 +146,11 @@ def get_agent_sequence(temperature: float):
         'batch_size': 24,
         'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': 10}
     }
-    score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 24 * 5}
+    score = {
+        'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
+        'batch_size': 24 * 5,
+        'parameters': {'parallel': False}
+    }
     make = {'name': 'make', 'batch_size': 24}
     test = {
         'name': ['ABL1 pIC50', 'Log S', 'Log P'],
