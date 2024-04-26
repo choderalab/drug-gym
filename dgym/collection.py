@@ -5,6 +5,8 @@
 import dgl
 import dgym as dg
 import torch
+import random
+import itertools
 import pandas as pd
 from rdkit import Chem
 from dgym.molecule import Molecule
@@ -293,8 +295,37 @@ class Collection(torch.utils.data.Dataset):
         self._items.append(item)
         return self
 
-    def batch(items=None):
-        raise NotImplementedError
+    def batch(
+        self,
+        batch_size: int,
+    ):
+        """
+        Generates batches from the collection based on the input specification.
+
+        Parameters:
+        - batch_size (int): Specifies the batch.
+
+        Returns:
+        - Iterator[Collection]: An iterator over Collections, each being a batch of the original collection.
+
+        Raises:
+        - ValueError: If spec is a list and does not sum to approximately 1.0 when it is meant to specify ratios.
+        """
+        def _batched(iterable, n):
+            if n < 1:
+                raise ValueError('n must be at least one')
+            it = iter(iterable)
+            while batch := tuple(itertools.islice(it, n)):
+                yield batch
+
+        if not isinstance(batch_size, int) or batch_size < 1:
+            raise ValueError('batch_size must be a positive integer')
+
+        batched_items = _batched(self._items, batch_size)
+        batched_indices = _batched(self.index, batch_size)
+        
+        for items, indices in zip(batched_items, batched_indices):
+            yield self.__class__(list(items), index=list(indices))
 
     def unique(self):
         return self.__class__(list(set(self._items)))
@@ -426,61 +457,6 @@ class MoleculeCollection(Collection):
         
         molecules = [_make_mol(r) for r in records]
         return cls(molecules)
-
-    def batch(self, *args, **kwargs):
-        return super()._batch(self.molecules, *args, **kwargs)
-
-    @staticmethod
-    def _batch(
-        molecules=None, by=['g', 'y'],
-        **kwargs,
-    ):
-        """Batches molecules by provided keys.
-        Parameters
-        ----------
-        molecules : list of molecules
-            Defaults to all molecules in Collection if none provided.
-        assay : Union[None, str]
-            Filter metadata using assay key.
-        by : Union[Iterable, str]
-            Attributes of molecule on which to batch.
-        Returns
-        -------
-        ret : Union[tuple, dgl.Graph, torch.Tensor]
-            Batched data, in order of keys passed in `by` argument.
-        """
-        from collections import defaultdict
-        ret = defaultdict(list)
-
-        # guarantee keys are a list
-        by = [by] if isinstance(by, str) else by
-
-        # loop through molecules
-        for molecule in molecules:
-
-            for key in by:
-                if key == 'g':
-                    # featurize graphs
-                    if not molecule.is_featurized():
-                        molecule.featurize()
-                    ret['g'].append(molecule.g)
-
-                else:
-                    m = molecule.metadata[key]
-                    ret[key].append(m)
-
-        # collate batches
-        for key in by:
-            if key == 'g':
-                ret['g'] = dgl.batch(ret['g'])
-            else:
-                ret[key] = torch.tensor(ret[key])
-
-        # return batches
-        ret = (*ret.values(), )
-        if len(ret) < 2:
-            ret = ret[0]
-        return ret
     
     def set_status(
         self,

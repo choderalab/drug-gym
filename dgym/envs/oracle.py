@@ -72,17 +72,20 @@ class Oracle:
     def _get_predictions(
         self,
         molecules: Union[MoleculeCollection, list],
+        batch_size: Optional[int] = None,
         **kwargs
     ):
-        # Identify molecules not in cache
-        if uncached_molecules := set([
-            m for m in molecules
-            if m.smiles not in self.cache
-        ]):
-            # Predict only uncached molecules and update cache
-            smiles, predictions = self.predict(uncached_molecules, **kwargs)
-            self.cache.update(zip(smiles, predictions))
-        
+        # Normalize input
+        if batch_size is None:
+            batch_size = len(molecules)
+
+        # Predict only uncached molecules and update cache
+        uncached = lambda m: m.smiles not in self.cache
+        if uncached_molecules := molecules.filter(uncached):
+            for batch in uncached_molecules.batch(batch_size):
+                smiles, predictions = self.predict(batch, **kwargs)
+                self.cache.update(zip(smiles, predictions))
+
         # Match input ordering
         predictions = [self.cache[m.smiles] for m in molecules]
         

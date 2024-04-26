@@ -1,0 +1,10 @@
+pkgs/main/linux-64                                          Using cache
+pkgs/main/noarch                                            Using cache
+pkgs/r/linux-64                                             Using cache
+pkgs/r/noarch                                               Using cache
+
+Looking for: ['python', '3.12']
+
+Could not solve for environment specs
+The following package could not be installed
+└─ 3.12 does not exist (perhaps a typo or a missing channel).
