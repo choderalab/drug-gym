@@ -91,6 +91,7 @@ class Experiment:
         
         if out:
             result_serialized = serialize_with_class_names(result)
-            json.dump(result_serialized, open(out, 'w'))
+            with open(out, 'w') as f:
+                json.dump(result_serialized, f)
             
         return result
