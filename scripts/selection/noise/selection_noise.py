@@ -229,4 +229,5 @@ import uuid
 from utils import serialize_with_class_names
 
 result_serialized = serialize_with_class_names(result)
-json.dump(result_serialized, open(file_path, 'w'))
+with open(file_path, 'w') as f:
+    json.dump(result_serialized, f)
