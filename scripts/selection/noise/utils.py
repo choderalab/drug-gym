@@ -1,4 +1,5 @@
 import json
+import psutil
 
 def serialize_with_class_names(data):
     """

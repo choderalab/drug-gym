@@ -98,13 +98,13 @@ class Generator:
     
     @viewable
     def _generator_factory(self, sampler, original=None, strict=False):
-        
+
         for index in sampler:
             building_block = self._get_building_block(
                 index, original=original, strict=strict)
             yield building_block
     
-    @lru_cache(maxsize=None)
+    @lru_cache(maxsize=10_000)
     def _get_building_block(self, index, original=None, strict=False, deprotect=True):
         if building_block := self.building_blocks[index]:
             if strict:

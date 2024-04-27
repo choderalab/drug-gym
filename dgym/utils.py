@@ -3,6 +3,7 @@ import json
 import pickle
 import itertools
 import pandas as pd
+import psutil
 from rdkit import Chem
 from collections import defaultdict
 from functools import wraps
@@ -116,6 +117,17 @@ def draw(hit, reaction, prods, rowsize=3):
 
 # General utility
 # -----------------------------------------------
+def print_memory_usage():
+    try:
+        # Getting memory usage information
+        memory = psutil.virtual_memory()
+        # Converting bytes to a more human-readable form (GB)
+        memory_in_gb = memory.used / (1024 ** 3)
+        print(f"Memory Usage: {memory_in_gb:.2f} GB")
+    except Exception as e:
+        # Handling possible exceptions that could occur during memory retrieval
+        print(f"An error occurred: {e}")
+
 def normalize_list(object):
     return object if isinstance(object, list) else [object]
 

@@ -2,7 +2,7 @@ import json
 import numpy as np
 from tqdm.auto import tqdm
 from typing import Optional
-from dgym.utils import serialize_with_class_names
+from dgym.utils import serialize_with_class_names, print_memory_usage
 from dgym.envs import DrugEnv
 from dgym.agents import DrugAgent
 
@@ -37,9 +37,13 @@ class Experiment:
                 
                 # Perform step
                 action = self.drug_agent.act(observations)
+                print('Memory before action: ', end='')
+                print_memory_usage()
                 print('Created action', flush=True)
                 print(action, flush=True)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
+                print('Memory after action: ', end='')
+                print_memory_usage()
                 
                 # Parse result
                 result = self.get_result(trial, out=out, **kwargs)

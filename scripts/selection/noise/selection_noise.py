@@ -226,7 +226,7 @@ result = experiment.run(**vars(args), out=file_path)[0]
 # Export results
 import json
 import uuid
-from utils import serialize_with_class_names
+from utils import serialize_with_class_names, print_memory_usage
 
 result_serialized = serialize_with_class_names(result)
 with open(file_path, 'w') as f:
