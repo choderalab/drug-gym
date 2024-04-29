@@ -11,7 +11,7 @@ def get_data(path):
     )
 
     reactions = dg.ReactionCollection.from_json(
-        path = f'{path}/All_Rxns_rxn_library.json',
+        path = f'{path}/All_Rxns_rxn_library_sorted.json',
         smarts_col = 'reaction_string',
         classes_col = 'functional_groups'
     )
@@ -149,7 +149,7 @@ def get_agent_sequence(temperature: float):
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
         'batch_size': 24 * 5,
-        'parameters': {'parallel': False, 'batch_size': 24}
+        'parameters': {'parallel': False, 'batch_size': 40}
     }
     make = {'name': 'make', 'batch_size': 24}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 24}
