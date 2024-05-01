@@ -265,7 +265,7 @@ class Designer:
                     self._cache.add(analog)
                 else:
                     return products
-                
+
         return products
     
     def match_reactions(self, molecule):

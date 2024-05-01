@@ -207,7 +207,7 @@ class CatBoostOracle(Oracle):
             desc_list, parallel=parallel)
         X = transformer.transform(rd_mols)
         X = normalize(np.nan_to_num(X))
-        
+
         return X
 
 class DGLOracle(Oracle):
