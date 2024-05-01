@@ -7,7 +7,7 @@ PYTHON_SCRIPT="./selection_noise.py"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # Define the base output directory for results
-BASE_OUT_DIR="./out"
+BASE_OUT_DIR="/data/chodera/retchinm/noise"
 
 # Create a new directory for this run with the timestamp
 RUN_DIR="${BASE_OUT_DIR}/${TIMESTAMP}"
@@ -34,7 +34,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for noise $NOISE"
         
         # Submit the job with bsub
-        bsub -q gpuqueue -n 2 -gpu "num=1:j_exclusive=yes" -R "rusage[mem=8] span[hosts=1]" -W 1:30 \
+        bsub -q gpuqueue -n 1 -gpu "num=1" -R "rusage[mem=8] span[hosts=1]" -W 4:59 \
              -o "${LOGS_DIR}/noise_${NOISE}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/noise_${NOISE}_trial_${TRIAL}.stderr" \
              python3 "$PYTHON_SCRIPT" --sigma "$NOISE" --out_dir "$RUN_DIR"

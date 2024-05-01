@@ -144,7 +144,7 @@ def get_agent_sequence():
     design_replace = {
         'name': 'design',
         'batch_size': 24,
-        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.2, 'limit': 10}
+        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.2}
     }
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
