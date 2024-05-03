@@ -33,7 +33,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for temperature $TEMP"
 
         # Submit a bsub job to run the script in parallel instances
-        bsub -q gpuqueue -n 4 -gpu "num=1" -R "rusage[mem=16] span[hosts=1]" -W 4:59 \
+        bsub -q gpuqueue -n 4 -gpu "num=1" -R "rusage[mem=8] span[hosts=1]" -W 4:59 \
              -o "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stderr" \
              "for i in $(seq 1 $NUM_PARALLEL); do python3 '$PYTHON_SCRIPT' --temperature '$TEMP' --out_dir '$RUN_DIR' & done; wait"
