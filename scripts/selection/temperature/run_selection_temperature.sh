@@ -21,7 +21,7 @@ mkdir -p "$RUN_DIR"
 mkdir -p "$LOGS_DIR"
 
 # Number of trials to run for each temperature level
-NUM_TRIALS=100
+NUM_TRIALS=25
 
 # Number of parallel processes within each job
 NUM_PARALLEL=4
