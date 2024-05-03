@@ -20,10 +20,10 @@ mkdir -p "$LOGS_DIR"
 # Define start, end, and increment for noise levels
 START=0
 END=20  # For noise levels up to 2
-INCREMENT=1
+INCREMENT=2
 
 # Number of trials to run for each noise level
-NUM_TRIALS=200
+NUM_TRIALS=100
 
 # Run multiple trials for this noise level
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
@@ -32,7 +32,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
     for NOISE_INT in $(seq $START $INCREMENT $END); do
         NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
         echo "Trial $TRIAL for noise $NOISE"
-        
+
         # Submit the job with bsub
         bsub -q gpuqueue -n 1 -gpu "num=1" -R "rusage[mem=8] span[hosts=1]" -W 4:59 \
              -o "${LOGS_DIR}/noise_${NOISE}_trial_${TRIAL}.stdout" \

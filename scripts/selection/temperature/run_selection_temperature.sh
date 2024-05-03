@@ -20,27 +20,23 @@ LOGS_DIR="${RUN_DIR}/logs"
 mkdir -p "$RUN_DIR"
 mkdir -p "$LOGS_DIR"
 
-# Define start, end, and increment for noise levels
-START=0
-END=10  # For noise levels up to 2
-INCREMENT=2
+# Number of trials to run for each temperature level
+NUM_TRIALS=100
 
-# Number of trials to run for each noise level
-NUM_TRIALS=200
+# Number of parallel processes within each job
+NUM_PARALLEL=4
 
-# Run multiple trials for this noise level
+# Run multiple trials for each temperature level
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
-
-    # Generate noise levels from 0 to 2 with a step of 0.1
-    for TEMP_INT in $(seq $START $INCREMENT $END); do
-        TEMP=$(echo "scale=2; $TEMP_INT / 10" | bc)
+    # Run the python script several times in parallel within a single bsub job for each temperature from 0 to 20
+    for TEMP in $(seq 0 20); do
         echo "Trial $TRIAL for temperature $TEMP"
 
-        # Submit the job with bsub
-        bsub -q gpuqueue -n 1 -gpu "num=1" -R "rusage[mem=8] span[hosts=1]" -W 4:59 \
+        # Submit a bsub job to run the script in parallel instances
+        bsub -q gpuqueue -n 4 -gpu "num=1" -R "rusage[mem=16] span[hosts=1]" -W 4:59 \
              -o "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${TEMP}_trial_${TRIAL}.stderr" \
-             python3 "$PYTHON_SCRIPT" --temperature "$TEMP" --out_dir "$RUN_DIR"
+             "for i in $(seq 1 $NUM_PARALLEL); do python3 '$PYTHON_SCRIPT' --temperature '$TEMP' --out_dir '$RUN_DIR' & done; wait"
     done
     echo "Completed all trials for temperature level: $TEMP"
 done
