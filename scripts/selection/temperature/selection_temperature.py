@@ -139,28 +139,28 @@ def get_temperature_routine(temperature_index: int):
     """
     Given index, selects the combination of temperature and number of reactants to modify.
     """
-    routines =  [
-        {'limit': 1, 'temperature': 0.0},
-        {'limit': 1, 'temperature': 0.02},
-        {'limit': 1, 'temperature': 0.04},
-        {'limit': 1, 'temperature': 0.08},
-        {'limit': 1, 'temperature': 0.16},
-        {'limit': 1, 'temperature': 0.32},
-        {'limit': 1, 'temperature': 0.64},
-        {'limit': 2, 'temperature': 0.0},
-        {'limit': 2, 'temperature': 0.02},
-        {'limit': 2, 'temperature': 0.04},
-        {'limit': 2, 'temperature': 0.08},
-        {'limit': 2, 'temperature': 0.16},
-        {'limit': 2, 'temperature': 0.32},
-        {'limit': 2, 'temperature': 0.64},
-        {'limit': 10, 'temperature': 0.0},
-        {'limit': 10, 'temperature': 0.02},
-        {'limit': 10, 'temperature': 0.04},
-        {'limit': 10, 'temperature': 0.08},
-        {'limit': 10, 'temperature': 0.16},
-        {'limit': 10, 'temperature': 0.32},
-        {'limit': 10, 'temperature': 0.64},
+    routines = [
+        {'temperature': 0.0, 'limit': 1},
+        {'temperature': 0.02, 'limit': 1},
+        {'temperature': 0.04, 'limit': 1},
+        {'temperature': 0.08, 'limit': 1},
+        {'temperature': 0.16, 'limit': 1},
+        {'temperature': 0.32, 'limit': 1},
+        {'temperature': 0.64, 'limit': 1},
+        {'temperature': 0.0, 'limit': 2},
+        {'temperature': 0.02, 'limit': 2},
+        {'temperature': 0.04, 'limit': 2},
+        {'temperature': 0.08, 'limit': 2},
+        {'temperature': 0.16, 'limit': 2},
+        {'temperature': 0.32, 'limit': 2},
+        {'temperature': 0.64, 'limit': 2},
+        {'temperature': 0.0, 'limit': 10},
+        {'temperature': 0.02, 'limit': 10},
+        {'temperature': 0.04, 'limit': 10},
+        {'temperature': 0.08, 'limit': 10},
+        {'temperature': 0.16, 'limit': 10},
+        {'temperature': 0.32, 'limit': 10},
+        {'temperature': 0.64, 'limit': 10}
     ]
     
     return routines[temperature_index]
