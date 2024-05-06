@@ -269,7 +269,7 @@ print('Loaded DrugAgent.', flush=True)
 from dgym.experiment import Experiment
 experiment = Experiment(
     drug_agent=drug_agent, drug_env=drug_env)
-file_path = f'{args.out_dir}/selection_noise_{args.noise}_{uuid.uuid4()}.json'
+file_path = f'{args.out_dir}/selection_noise_{args.sigma}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
