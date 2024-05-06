@@ -192,7 +192,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--out_dir", type=str, help="Where to put the resulting JSONs")
 parser.add_argument(
-    "--sigma", type=int, help="Spread of Gaussian to use with the NoisyOracle functions.")
+    "--sigma", type=float, help="Spread of Gaussian to use with the NoisyOracle functions.")
 args = parser.parse_args()
 
 # Run experiment
