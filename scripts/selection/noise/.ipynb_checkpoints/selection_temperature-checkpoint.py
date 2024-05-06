@@ -11,7 +11,7 @@ def get_data(path):
     )
 
     reactions = dg.ReactionCollection.from_json(
-        path = f'{path}/All_Rxns_rxn_library_sorted.json',
+        path = f'{path}/All_Rxns_rxn_library.json',
         smarts_col = 'reaction_string',
         classes_col = 'functional_groups'
     )
@@ -135,64 +135,30 @@ def get_multiple_utility_functions(
     
     return assays, utility_agent, utility_env
 
-def get_temperature_routine(temperature_index: int):
-    """
-    Given index, selects the combination of temperature and number of reactants to modify.
-    """
-    routines = [
-        {'temperature': 0.0, 'limit': 1},
-        {'temperature': 0.02, 'limit': 1},
-        {'temperature': 0.04, 'limit': 1},
-        {'temperature': 0.08, 'limit': 1},
-        {'temperature': 0.16, 'limit': 1},
-        {'temperature': 0.32, 'limit': 1},
-        {'temperature': 0.64, 'limit': 1},
-        {'temperature': 0.0, 'limit': 2},
-        {'temperature': 0.02, 'limit': 2},
-        {'temperature': 0.04, 'limit': 2},
-        {'temperature': 0.08, 'limit': 2},
-        {'temperature': 0.16, 'limit': 2},
-        {'temperature': 0.32, 'limit': 2},
-        {'temperature': 0.64, 'limit': 2},
-        {'temperature': 0.0, 'limit': 10},
-        {'temperature': 0.02, 'limit': 10},
-        {'temperature': 0.04, 'limit': 10},
-        {'temperature': 0.08, 'limit': 10},
-        {'temperature': 0.16, 'limit': 10},
-        {'temperature': 0.32, 'limit': 10},
-        {'temperature': 0.64, 'limit': 10}
-    ]
-    
-    return routines[temperature_index]
-
-def get_agent_sequence(temperature_index: int):
+def get_agent_sequence(temperature: float):
     """
     Make the sequence for the DrugAgent.
     """
-    routine = get_temperature_routine(temperature_index)
-    temperature, limit = routine.values()
+
     design_grow = {'name': 'design', 'batch_size': 24, 'parameters': {'strategy': 'grow', 'size': 5}}
     design_replace = {
         'name': 'design',
         'batch_size': 24,
-        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': limit}
+        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': 10}
     }
-    score = {
-        'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
-        'batch_size': 24 * 5,
-        'parameters': {'parallel': False, 'batch_size': 40}
-    }
+    score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': 24 * 5}
     make = {'name': 'make', 'batch_size': 24}
-    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 24}
+    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 24} # 8
+    design_and_score = [design_replace, score]
 
-    return [design_replace, score, design_grow, score, make, test]
+    return [*(design_and_score * 1), design_grow, score, make, test]
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--out_dir", type=str, help="Where to put the resulting JSONs")
 parser.add_argument(
-    "--sigma", type=int, help="Spread of Gaussian to use with the NoisyOracle functions.")
+    "--temperature", type=float, help="Boltzmann temperature for building block sampling")
 args = parser.parse_args()
 
 # Run experiment
@@ -207,15 +173,11 @@ path = '../../../../dgym-data'
     sizes
 ) = get_data(path)
 
-print('Loaded data.', flush=True)
-
 # Get starting library
 from dgym.envs.designer import Designer, Generator
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
 library = get_initial_library(deck, designer)
-
-print('Loaded library and designer.', flush=True)
 
 # Get Oracles
 (
@@ -227,8 +189,6 @@ print('Loaded library and designer.', flush=True)
     target_index=0
 )
 
-print('Loaded oracles.', flush=True)
-
 # Create multiple utility functions
 (
     assays,
@@ -238,10 +198,7 @@ print('Loaded oracles.', flush=True)
     pIC50_oracle,
     log_P_oracle,
     log_S_oracle,
-    sigma=args.sigma
 )
-
-print('Loaded utility functions.', flush=True)
 
 # Create DrugEnv
 from dgym.envs import DrugEnv
@@ -252,24 +209,21 @@ drug_env = DrugEnv(
     utility_function = utility_env
 )
 
-print('Loaded DrugEnv.', flush=True)
-
 # Create DrugAgent
 from dgym.agents import SequentialDrugAgent
 from dgym.agents.exploration import EpsilonGreedy
-sequence = get_agent_sequence(temperature_index = 0)
+sequence = get_agent_sequence(temperature = args.temperature)
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
     exploration_strategy = EpsilonGreedy(epsilon=0.2),
     utility_function = utility_agent
 )
-print('Loaded DrugAgent.', flush=True)
 
 # Create and run Experiment
 from dgym.experiment import Experiment
 experiment = Experiment(
     drug_agent=drug_agent, drug_env=drug_env)
-file_path = f'{args.out_dir}/selection_noise_{args.noise}_{uuid.uuid4()}.json'
+file_path = f'{args.out_dir}/selection_temperature_{args.temperature}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
@@ -278,5 +232,4 @@ import uuid
 from utils import serialize_with_class_names
 
 result_serialized = serialize_with_class_names(result)
-with open(file_path, 'w') as f:
-    json.dump(result_serialized, f)
+json.dump(result_serialized, open(file_path, 'w'))
