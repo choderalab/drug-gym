@@ -257,7 +257,7 @@ print('Loaded DrugEnv.', flush=True)
 # Create DrugAgent
 from dgym.agents import SequentialDrugAgent
 from dgym.agents.exploration import EpsilonGreedy
-sequence = get_agent_sequence(temperature_index = 0)
+sequence = get_agent_sequence(temperature_index = 4)
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
     exploration_strategy = EpsilonGreedy(epsilon=0.2),
