@@ -141,7 +141,7 @@ def get_agent_sequence(batch_size: int, score_ratio: int = 5):
     """
 
     design_grow = {'name': 'design', 'batch_size': batch_size, 'parameters': {'strategy': 'grow', 'size': 5}}
-    design_replace = {'name': 'design', 'batch_size': batch_size, 'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.2}}
+    design_replace = {'name': 'design', 'batch_size': batch_size, 'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.16, 'limit': 1}}
     score = {'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'], 'batch_size': batch_size * score_ratio}
     make = {'name': 'make', 'batch_size': batch_size}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': batch_size}
