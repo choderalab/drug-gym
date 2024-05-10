@@ -210,8 +210,6 @@ class DrugEnv(gym.Env):
         is_scored = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' in a)
         
-        print([m.status for m in molecules])
-        
         # Real measurements only on made molecules
         if is_test := 'Noisy' not in assay_name:
             assert all(m.status == 'Made' for m in molecules)

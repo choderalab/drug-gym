@@ -477,7 +477,6 @@ class MoleculeCollection(Collection):
         for molecule in self.molecules:
             if by is None or by(molecule):
                 molecule.status = status
-                print(f'Step {status}', step)
                 molecule.annotations[f'Step {status}'] = step
 
     @property

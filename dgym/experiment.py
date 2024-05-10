@@ -105,8 +105,7 @@ class Experiment:
             
         return result
     
-    @staticmethod
-    def load_result(result):
+    def load_result(self, result):
         """
         Load a result JSON from `get_result` and return MoleculeCollection for loading DrugEnv.
         
@@ -114,13 +113,7 @@ class Experiment:
         -----
         ```
         result = experiment.get_result(trial=1)
-        library = Experiment.load_result(result)
-        drug_env = DrugEnv(
-            library = library,
-            designer = designer,
-            assays = assays,
-            utility_function = utility_function
-        )
+        experiment = experiment.load_result(result)
         ```
         """
         annotations = pd.DataFrame(result['annotations'])
@@ -142,4 +135,7 @@ class Experiment:
             # Append to library
             molecules.append(molecule)
 
-        return MoleculeCollection(molecules)
+        # Load collection
+        self.drug_env.library = MoleculeCollection(molecules)
+        
+        return self
