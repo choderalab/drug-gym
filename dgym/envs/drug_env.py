@@ -87,7 +87,7 @@ class DrugEnv(gym.Env):
         # Initialize the library
         if library is None:
             library = MoleculeCollection()
-        library['timestep'] = self.time_elapsed
+        library['Timestep'] = self.time_elapsed
 
         # Track history
         self._library_0 = library.copy()
@@ -209,6 +209,8 @@ class DrugEnv(gym.Env):
             a in m.annotations for a in self.assays if 'Noisy' not in a)
         is_scored = lambda m: all(
             a in m.annotations for a in self.assays if 'Noisy' in a)
+        
+        print([m.status for m in molecules])
         
         # Real measurements only on made molecules
         if is_test := 'Noisy' not in assay_name:

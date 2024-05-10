@@ -477,6 +477,7 @@ class MoleculeCollection(Collection):
         for molecule in self.molecules:
             if by is None or by(molecule):
                 molecule.status = status
+                print(f'Step {status}', step)
                 molecule.annotations[f'Step {status}'] = step
 
     @property
@@ -484,12 +485,12 @@ class MoleculeCollection(Collection):
         return self.filter(lambda x: x.status == 'Designed')
 
     @property
-    def made(self):
-        return self.filter(lambda x: x.status == 'Made')
-
-    @property
     def scored(self):
         return self.filter(lambda x: x.status == 'Scored')
+
+    @property
+    def made(self):
+        return self.filter(lambda x: x.status == 'Made')
 
     @property
     def tested(self):

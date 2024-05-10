@@ -99,20 +99,25 @@ class Molecule:
         """
         Current status of the molecule.
         """
-        steps = {
-            'Step Tested': 'Tested',
-            'Step Made': 'Made',
-            'Step Scored': 'Scored',
-            'Step Designed': 'Designed'
-        }
+        steps = [
+            ('Step Tested', 'Tested'),
+            ('Step Made', 'Made'),
+            ('Step Scored', 'Scored'),
+            ('Step Designed', 'Designed')
+        ]
 
-        for step, status in steps.items():
+        for step, status in steps:
             if not (math.isnan(self.annotations.get(step, float('nan'))) \
                 or self.annotations.get(step) is None):
+                self.annotations['Current Status'] = status
                 return status
 
         # Return default status if none of the steps are set
         return self._status
+    
+    @status.setter
+    def status(self, value):
+        self._status = value
 
     def _repr_html_(self):
         return self.mol._repr_html_()
@@ -197,7 +202,7 @@ class Molecule:
         
         # Update status
         self.annotations.update({'Current Status': self.status})
-        
+                
         # Update other annotations
         if other_annotations:
             self.annotations.update(other_annotations)
@@ -205,6 +210,12 @@ class Molecule:
             # synchronize with rdkit mol
             for key, value in self.annotations.items():
                 self.mol.SetProp(str(key), str(value))
+                
+        # Remove any annotations that are NaN or None
+        self.annotations = {
+            k: v for k, v in self.annotations.items()
+            if not (isinstance(v, float) and math.isnan(v))
+        }
 
         return self
     

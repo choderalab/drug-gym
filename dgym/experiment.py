@@ -1,10 +1,14 @@
+import ast
 import json
 import numpy as np
+import pandas as pd
 from tqdm.auto import tqdm
 from typing import Optional
 from dgym.utils import serialize_with_class_names, print_memory_usage
 from dgym.envs import DrugEnv
 from dgym.agents import DrugAgent
+from dgym.molecule import Molecule
+from dgym.collection import MoleculeCollection
 
 class Experiment:
     
@@ -100,3 +104,42 @@ class Experiment:
                 json.dump(result_serialized, f)
             
         return result
+    
+    @staticmethod
+    def load_result(result):
+        """
+        Load a result JSON from `get_result` and return MoleculeCollection for loading DrugEnv.
+        
+        Usage
+        -----
+        ```
+        result = experiment.get_result(trial=1)
+        library = Experiment.load_result(result)
+        drug_env = DrugEnv(
+            library = library,
+            designer = designer,
+            assays = assays,
+            utility_function = utility_function
+        )
+        ```
+        """
+        annotations = pd.DataFrame(result['annotations'])
+        molecules = []
+        for _, annotation in annotations.iterrows():
+
+            # Parse data structure
+            annotation = annotation.to_dict()
+            route = annotation.pop('Synthetic Route')
+            try:
+                route = ast.literal_eval(route)
+            except:
+                pass
+            route['annotations'] = annotation
+
+            # Load molecule
+            molecule = Molecule.load(route)
+
+            # Append to library
+            molecules.append(molecule)
+
+        return MoleculeCollection(molecules)
