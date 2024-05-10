@@ -50,7 +50,7 @@ class Experiment:
                 print_memory_usage()
                 
                 # Parse result
-                result = self.get_result(trial, out=out, **kwargs)
+                result = self.dump(trial, out=out, **kwargs)
                 print(self.drug_env.get_reward(), flush=True)
                 
                 if progress:
@@ -69,7 +69,7 @@ class Experiment:
 
         return results
 
-    def get_result(
+    def dump(
         self,
         trial: int,
         out: Optional[str] = None,
@@ -105,15 +105,15 @@ class Experiment:
             
         return result
     
-    def load_result(self, result):
+    def load(self, result):
         """
         Load a result JSON from `get_result` and return MoleculeCollection for loading DrugEnv.
         
         Usage
         -----
         ```
-        result = experiment.get_result(trial=1)
-        experiment = experiment.load_result(result)
+        result = experiment.dump(trial=1)
+        experiment = experiment.load(result)
         ```
         """
         annotations = pd.DataFrame(result['annotations'])
