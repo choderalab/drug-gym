@@ -91,7 +91,7 @@ class DrugEnv(gym.Env):
 
         # Track history
         self._library_0 = library.copy()
-        self.library = self._library_0.copy()
+        self._library = self._library_0.copy()
         self.reward_history = []
 
         # Initialize action mask
@@ -260,6 +260,15 @@ class DrugEnv(gym.Env):
         self.reward_history = []
         self.library = self._library_0.copy()
         return self.get_observations(), {}
+    
+    @property
+    def library(self):
+        return self._library
+    
+    @library.setter
+    def library(self, value):
+        self._library = self._library_0 = value
+        return self._library
     
     def _get_valid_molecules(self, molecule_indices):
         valid_indices = [m for m in molecule_indices if self.valid_actions[m]]
