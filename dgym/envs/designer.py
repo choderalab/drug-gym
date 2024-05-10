@@ -257,9 +257,10 @@ class Designer:
                 if strategy == 'grow':
                     analog.reactants[0] = molecule
 
-                # Collect products
+                # Collect non-duplicate products
                 if len(products) < size:
-                    if self.cache and (analog in self._cache or analog == molecule):
+                    if (analog == molecule) \
+                        or (self.cache and analog in self._cache):
                         continue
                     products.add(analog)
                     self._cache.add(analog)
