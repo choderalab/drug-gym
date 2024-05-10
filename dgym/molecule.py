@@ -7,6 +7,7 @@ import functools
 import dgl
 import rdkit
 import copy
+import math
 import torch
 import itertools
 from rdkit.Chem import Mol
@@ -77,8 +78,8 @@ class Molecule:
         self.reaction = reaction
 
         self.annotations = annotations if annotations else {}
-        self.status = status
         self.inspiration = inspiration
+        self._status = status
         self._name_attr = name_attr
         
         self.update_annotations()
@@ -92,6 +93,26 @@ class Molecule:
     @property
     def name(self):
         return getattr(self, self._name_attr, None)
+    
+    @property
+    def status(self):
+        """
+        Current status of the molecule.
+        """
+        steps = {
+            'Step Tested': 'Tested',
+            'Step Made': 'Made',
+            'Step Scored': 'Scored',
+            'Step Designed': 'Designed'
+        }
+
+        for step, status in steps.items():
+            if not (math.isnan(self.annotations.get(step, float('nan'))) \
+                or self.annotations.get(step) is None):
+                return status
+
+        # Return default status if none of the steps are set
+        return self._status
 
     def _repr_html_(self):
         return self.mol._repr_html_()
