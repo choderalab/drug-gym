@@ -4,13 +4,13 @@
 ulimit -c 0
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection_batch_size.py"
+PYTHON_SCRIPT="./selection_score_ratio.py"
 
 # Generate a timestamp for the current time
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # Define the base output directory for results
-BASE_OUT_DIR="/data/chodera/retchinm/batch_size"
+BASE_OUT_DIR="/data/chodera/retchinm/score_ratio"
 
 # Create a new directory for this run with the timestamp
 RUN_DIR="${BASE_OUT_DIR}/${TIMESTAMP}"
@@ -29,9 +29,8 @@ NUM_PARALLEL=4
 # Define specific batch sizes
 SCORE_RATIOS=(1 2 5 10 20)
 
-# Run multiple trials for each batch size
+# Run multiple trials for each score ratio
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
-    # Run the python script several times in parallel for each batch size
     for SCORE_RATIO in "${SCORE_RATIOS[@]}"; do
         echo "Trial $TRIAL for score_ratio $SCORE_RATIO"
 
