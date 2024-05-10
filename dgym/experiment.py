@@ -74,7 +74,7 @@ class Experiment:
         annotations = self.drug_env.library.annotations.reindex(
             columns=[
                 'SMILES',
-                'Reactants',
+                'Synthetic Route',
                 'Inspiration',
                 'Step Designed',
                 'Step Scored',

@@ -172,8 +172,8 @@ class Molecule:
         if 'Reactants' not in self.annotations:
             self.annotations.update({'Reactants': [r.smiles for r in self.reactants]})
         if 'Synthetic Route' not in self.annotations:
-            self.annotations.update({'Route': self.dump()})
-
+            self.annotations.update({'Synthetic Route': self.dump()})
+        
         # Update status
         self.annotations.update({'Current Status': self.status})
         
@@ -280,13 +280,15 @@ class Molecule:
         finally:
             self.reactants = original_reactants
 
-    def dump(self):
+    def dump(self, detailed: bool = False):
         """Recursively dumps the molecule and its synthesis pathway to a dictionary."""
         route = {'product': self.name}
         if self.reaction:
             route['reaction'] = self.reaction
         if self.reactants:
             route['reactants'] = [reactant.dump() for reactant in self.reactants]
+        if detailed and self.annotations:
+            route['annotations'] = self.annotations
         return route
 
     @staticmethod
