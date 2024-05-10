@@ -139,8 +139,8 @@ def get_agent_sequence(batch_size: int = 8, score_ratio: int = 5):
     """
     Make the sequence for the DrugAgent.
     """
-    design_size_1 = max(score_ratio // 2, 1)
-    design_size_2 = max(score_ratio - design_size_1, 1)
+    design_size_1 = max(1, score_ratio // 2)
+    design_size_2 = max(1, score_ratio - design_size_1)
     design_replace = {
         'name': 'design',
         'batch_size': batch_size,

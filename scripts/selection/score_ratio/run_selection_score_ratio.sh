@@ -27,7 +27,7 @@ NUM_TRIALS=25
 NUM_PARALLEL=4
 
 # Define specific batch sizes
-SCORE_RATIOS=(1 2 5 10 20)
+SCORE_RATIOS=(1 2 5 10 20 40)
 
 # Run multiple trials for each score ratio
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
