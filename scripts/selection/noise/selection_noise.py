@@ -233,6 +233,11 @@ drug_agent = SequentialDrugAgent(
 )
 print('Loaded DrugAgent.', flush=True)
 
+# Prevent memory issues by stagging start
+import time
+import numpy as np
+time.sleep(np.random.choice([0, 20, 40, 60]))
+
 # Create and run Experiment
 from dgym.experiment import Experiment
 experiment = Experiment(
