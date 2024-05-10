@@ -171,19 +171,19 @@ def get_agent_sequence(temperature_index: int):
     """
     routine = get_temperature_routine(temperature_index)
     temperature, limit = routine.values()
-    design_grow = {'name': 'design', 'batch_size': 24, 'parameters': {'strategy': 'grow', 'size': 5}}
+    design_grow = {'name': 'design', 'batch_size': 8, 'parameters': {'strategy': 'grow', 'size': 5}}
     design_replace = {
         'name': 'design',
-        'batch_size': 24,
+        'batch_size': 8,
         'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': limit}
     }
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
-        'batch_size': 24 * 5,
+        'batch_size': 8 * 5,
         'parameters': {'parallel': False, 'batch_size': 40}
     }
-    make = {'name': 'make', 'batch_size': 24}
-    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 24}
+    make = {'name': 'make', 'batch_size': 8}
+    test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8}
 
     return [design_replace, score, design_grow, score, make, test]
 

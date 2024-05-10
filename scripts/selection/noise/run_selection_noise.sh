@@ -29,7 +29,7 @@ NUM_PARALLEL=4
 # Run multiple trials for each noise level
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
     # Run the python script several times in parallel for each noise from 0.0 to 2.0
-    for NOISE_INT in $(seq 0 2 20); do
+    for NOISE_INT in $(seq 0 5 20); do
         NOISE=$(echo "scale=2; $NOISE_INT / 10" | bc)
         echo "Trial $TRIAL for noise $NOISE"
 
