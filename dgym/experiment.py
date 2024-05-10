@@ -75,6 +75,7 @@ class Experiment:
             columns=[
                 'SMILES',
                 'Reactants',
+                'Inspiration',
                 'Step Designed',
                 'Step Scored',
                 'Step Made',
