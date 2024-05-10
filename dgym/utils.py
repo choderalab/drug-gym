@@ -123,7 +123,9 @@ def print_memory_usage():
         memory = psutil.virtual_memory()
         # Converting bytes to a more human-readable form (GB)
         memory_in_gb = memory.used / (1024 ** 3)
-        print(f"Memory Usage: {memory_in_gb:.2f} GB")
+        print(f"Memory Used: {memory_in_gb:.2f} GB")
+        memory_in_gb = memory.available / (1024 ** 3)
+        print(f"Memory Free: {memory_in_gb:.2f} GB")
     except Exception as e:
         # Handling possible exceptions that could occur during memory retrieval
         print(f"An error occurred: {e}")
