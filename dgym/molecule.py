@@ -171,7 +171,7 @@ class Molecule:
             self.annotations.update({'Inspiration': self.inspiration.smiles})
         if 'Reactants' not in self.annotations:
             self.annotations.update({'Reactants': [r.smiles for r in self.reactants]})
-        if 'Route' not in self.annotations:
+        if 'Synthetic Route' not in self.annotations:
             self.annotations.update({'Route': self.dump()})
 
         # Update status
