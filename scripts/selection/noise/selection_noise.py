@@ -135,47 +135,15 @@ def get_multiple_utility_functions(
     
     return assays, utility_agent, utility_env
 
-def get_temperature_routine(temperature_index: int):
-    """
-    Given index, selects the combination of temperature and number of reactants to modify.
-    """
-    routines = [
-        {'temperature': 0.0, 'limit': 1},
-        {'temperature': 0.02, 'limit': 1},
-        {'temperature': 0.04, 'limit': 1},
-        {'temperature': 0.08, 'limit': 1},
-        {'temperature': 0.16, 'limit': 1},
-        {'temperature': 0.32, 'limit': 1},
-        {'temperature': 0.64, 'limit': 1},
-        {'temperature': 0.0, 'limit': 2},
-        {'temperature': 0.02, 'limit': 2},
-        {'temperature': 0.04, 'limit': 2},
-        {'temperature': 0.08, 'limit': 2},
-        {'temperature': 0.16, 'limit': 2},
-        {'temperature': 0.32, 'limit': 2},
-        {'temperature': 0.64, 'limit': 2},
-        {'temperature': 0.0, 'limit': 10},
-        {'temperature': 0.02, 'limit': 10},
-        {'temperature': 0.04, 'limit': 10},
-        {'temperature': 0.08, 'limit': 10},
-        {'temperature': 0.16, 'limit': 10},
-        {'temperature': 0.32, 'limit': 10},
-        {'temperature': 0.64, 'limit': 10}
-    ]
-    
-    return routines[temperature_index]
-
-def get_agent_sequence(temperature_index: int):
+def get_agent_sequence():
     """
     Make the sequence for the DrugAgent.
     """
-    routine = get_temperature_routine(temperature_index)
-    temperature, limit = routine.values()
     design_grow = {'name': 'design', 'batch_size': 8, 'parameters': {'strategy': 'grow', 'size': 5}}
     design_replace = {
         'name': 'design',
         'batch_size': 8,
-        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': temperature, 'limit': limit}
+        'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.16, 'limit': 1}
     }
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
@@ -257,7 +225,7 @@ print('Loaded DrugEnv.', flush=True)
 # Create DrugAgent
 from dgym.agents import SequentialDrugAgent
 from dgym.agents.exploration import EpsilonGreedy
-sequence = get_agent_sequence(temperature_index = 4)
+sequence = get_agent_sequence()
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
     exploration_strategy = EpsilonGreedy(epsilon=0.2),
