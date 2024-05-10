@@ -222,6 +222,7 @@ class DrugEnv(gym.Env):
         # Perform inference
         print(params, flush=True)
         results = assay(molecules, **params)
+        print(results)
         
         # Update library annotations for molecules measured
         for molecule, result in zip(molecules, results):
