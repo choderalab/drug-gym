@@ -160,6 +160,8 @@ class DrugEnv(gym.Env):
         # Subset valid molecules
         molecules = self._get_valid_molecules(molecules)
         
+        print([m.status for m in molecules])
+        
         # Perform action
         for action_name in dg.utils.normalize_list(action_name):
             match action_name:
