@@ -259,7 +259,7 @@ class Designer:
 
                 # Collect products
                 if len(products) < size:
-                    if self.cache and analog in self._cache:
+                    if self.cache and (analog in self._cache or analog == molecule):
                         continue
                     products.add(analog)
                     self._cache.add(analog)
