@@ -148,7 +148,7 @@ def get_agent_sequence():
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
         'batch_size': 8 * 5,
-        'parameters': {'parallel': False, 'batch_size': 40}
+        'parameters': {'parallel': False, 'batch_size': 40, 'path': f'/data/chodera/retchinm/noise/{uuid.uuid4()}'}
     }
     make = {'name': 'make', 'batch_size': 8}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8}
@@ -232,11 +232,6 @@ drug_agent = SequentialDrugAgent(
     utility_function = utility_agent
 )
 print('Loaded DrugAgent.', flush=True)
-
-# Prevent memory issues by stagging start
-import time
-import numpy as np
-time.sleep(np.random.choice([0, 20, 40, 60]))
 
 # Create and run Experiment
 from dgym.experiment import Experiment
