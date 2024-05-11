@@ -16,11 +16,15 @@ mkdir -p "$LOGS_DIR"
 
 # Loop over each JSON file in the directory
 for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
+
+    # Extract the filename from the path
+    EXPERIMENT_STATE_FILENAME=$(basename "$EXPERIMENT_STATE")
+
     # Submit a bsub job to run the script in parallel instances
-    bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8] span[hosts=1]" -W 5:59 \
-            -o "${LOGS_DIR}/${EXPERIMENT_STATE}.stdout" \
-            -eo "${LOGS_DIR}/${EXPERIMENT_STATE}.stderr" \
-            python3 '$PYTHON_SCRIPT' --experiment_state_path '$EXPERIMENT_STATE' --out_dir '$RUN_DIR'
+    bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+            -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
+            -eo "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stderr" \
+            python3 $PYTHON_SCRIPT --experiment_state_path "$EXPERIMENT_STATE" --out_dir "$RUN_DIR"
     echo "Submitted experiment: $EXPERIMENT_STATE"
 done
 echo "All trials completed."
