@@ -145,10 +145,13 @@ def get_agent_sequence():
         'batch_size': 8,
         'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.16, 'limit': 1}
     }
+    import os
+    score_path = f'/data/chodera/retchinm/noise/scratch/{uuid.uuid4()}'
+    os.makedirs(score_path)
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
         'batch_size': 8 * 5,
-        'parameters': {'parallel': False, 'batch_size': 40, 'path': f'/data/chodera/retchinm/noise/{uuid.uuid4()}'}
+        'parameters': {'parallel': False, 'batch_size': 40, 'path': score_path}
     }
     make = {'name': 'make', 'batch_size': 8}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8}
