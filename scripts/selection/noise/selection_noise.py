@@ -151,7 +151,7 @@ def get_agent_sequence():
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
         'batch_size': 8 * 5,
-        'parameters': {'parallel': False, 'batch_size': 40, 'path': score_path}
+        'parameters': {'parallel': False, 'batch_size': 40, 'path': score_path, 'max_gpu_memory': 1000}
     }
     make = {'name': 'make', 'batch_size': 8}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8}
