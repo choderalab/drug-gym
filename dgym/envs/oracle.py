@@ -298,6 +298,7 @@ class DockingOracle(Oracle):
 
             # prepare ligands
             failed = self._prepare_ligands(molecules, directory)
+            print(failed)
 
             # prepare command
             command = self._prepare_command(self.config, directory)
