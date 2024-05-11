@@ -145,13 +145,10 @@ def get_agent_sequence():
         'batch_size': 8,
         'parameters': {'strategy': 'replace', 'size': 5, 'temperature': 0.16, 'limit': 1}
     }
-    import os
-    score_path = f'/data/chodera/retchinm/noise/scratch/{uuid.uuid4()}'
-    os.makedirs(score_path)
     score = {
         'name': ['Noisy ABL1 pIC50', 'Noisy Log S', 'Noisy Log P'],
         'batch_size': 8 * 5,
-        'parameters': {'parallel': False, 'batch_size': 40, 'path': score_path, 'max_gpu_memory': 1000}
+        'parameters': {'parallel': False, 'batch_size': 40}
     }
     make = {'name': 'make', 'batch_size': 8}
     test = {'name': ['ABL1 pIC50', 'Log S', 'Log P'], 'batch_size': 8}
@@ -164,6 +161,8 @@ parser.add_argument(
     "--out_dir", type=str, help="Where to put the resulting JSONs")
 parser.add_argument(
     "--sigma", type=float, help="Spread of Gaussian to use with the NoisyOracle functions.")
+parser.add_argument(
+    "--experiment_state_path", type=float, help="Path to file for loading experiment state.")
 args = parser.parse_args()
 
 # Run experiment
@@ -200,6 +199,14 @@ print('Loaded library and designer.', flush=True)
 
 print('Loaded oracles.', flush=True)
 
+# Load sigma off disk if available
+with open(args.experiment_state_path) as f:
+    try:
+        experiment_state = json.load(f)
+    except:
+        experiment_state = {}
+    sigma = experiment_state.get('sigma', None) or args.sigma
+
 # Create multiple utility functions
 (
     assays,
@@ -209,7 +216,7 @@ print('Loaded oracles.', flush=True)
     pIC50_oracle,
     log_P_oracle,
     log_S_oracle,
-    sigma=args.sigma
+    sigma=sigma
 )
 
 print('Loaded utility functions.', flush=True)
@@ -238,9 +245,9 @@ print('Loaded DrugAgent.', flush=True)
 
 # Create and run Experiment
 from dgym.experiment import Experiment
-experiment = Experiment(
-    drug_agent=drug_agent, drug_env=drug_env)
-file_path = f'{args.out_dir}/selection_noise_{args.sigma}_{uuid.uuid4()}.json'
+experiment = Experiment(drug_agent=drug_agent, drug_env=drug_env).load(experiment_state)
+file_path = args.experiment_state_path \
+    or f'{args.out_dir}/selection_noise_{args.sigma}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
