@@ -302,13 +302,14 @@ class DockingOracle(Oracle):
 
             # prepare command
             command = self._prepare_command(self.config, directory)
+            print(command)
 
             # run docking
             resp = self._dock(command)
+            print(resp)
             
             # gather results
             smiles, scores = self._gather_results(directory)
-            # import json; print(json.dumps(list(zip(smiles, scores)), indent=4))
 
             # convert units
             scores = self._convert_units(scores, units)
