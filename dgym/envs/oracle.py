@@ -470,6 +470,7 @@ class DockingOracle(Oracle):
         is_temp_dir = False
         if dir_path is None:
             dir_path = tempfile.mkdtemp()
+            print(dir_path)
             is_temp_dir = True
         try:
             yield dir_path
