@@ -162,7 +162,7 @@ parser.add_argument(
 parser.add_argument(
     "--sigma", type=float, help="Spread of Gaussian to use with the NoisyOracle functions.")
 parser.add_argument(
-    "--experiment_state_path", type=float, help="Path to file for loading experiment state.")
+    "--experiment_state_path", type=str, help="Path to file for loading experiment state.")
 args = parser.parse_args()
 
 # Run experiment
