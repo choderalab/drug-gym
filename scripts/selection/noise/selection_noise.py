@@ -199,12 +199,10 @@ print('Loaded library and designer.', flush=True)
 
 print('Loaded oracles.', flush=True)
 
-# Load sigma off disk if available
+# Load experiment state off disk if available
+import json
 with open(args.experiment_state_path) as f:
-    try:
-        experiment_state = json.load(f)
-    except:
-        experiment_state = {}
+    experiment_state = json.load(f)
     sigma = experiment_state.get('sigma', None) or args.sigma
 
 # Create multiple utility functions
@@ -251,7 +249,6 @@ file_path = args.experiment_state_path \
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
-import json
 import uuid
 from utils import serialize_with_class_names
 
