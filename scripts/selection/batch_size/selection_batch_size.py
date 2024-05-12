@@ -1,7 +1,6 @@
 import uuid
 import argparse
 import dgym as dg
-import pandas as pd
 
 def get_data(path):
 

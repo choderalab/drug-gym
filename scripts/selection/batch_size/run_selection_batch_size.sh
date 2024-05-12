@@ -23,9 +23,6 @@ mkdir -p "$LOGS_DIR"
 # Number of trials to run for each noise level
 NUM_TRIALS=25
 
-# Number of parallel processes within each job
-NUM_PARALLEL=4
-
 # Define specific batch sizes
 BATCH_SIZES=(8 12 16 24 48 96 192 384)
 
@@ -39,7 +36,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         bsub -q gpuqueue -n 4 -gpu "num=1" -R "rusage[mem=8] span[hosts=1]" -W 5:59 \
              -o "${LOGS_DIR}/temp_${BATCH_SIZE}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${BATCH_SIZE}_trial_${TRIAL}.stderr" \
-             "for i in $(seq -s ' ' 1 $NUM_PARALLEL); do python3 '$PYTHON_SCRIPT' --batch_size $BATCH_SIZE --out_dir '$RUN_DIR' & done; wait"
+             python3 $PYTHON_SCRIPT --batch_size $BATCH_SIZE --out_dir "$RUN_DIR"
     done
     echo "Completed all trials for batch size: $BATCH_SIZE"
 done

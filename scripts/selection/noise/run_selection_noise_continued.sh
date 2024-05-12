@@ -25,7 +25,7 @@ for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
 
     # Check if the penultimate character of the content is '1'
     if [[ "$LAST_SECOND_CHAR" == "1" ]]; then
-        echo "Skipping file: $EXPERIMENT_STATE_FILENAME due to penultimate character of content being '1'"
+        echo "Skipping file: $EXPERIMENT_STATE_FILENAME terminated successfully."
         continue
     fi
 
