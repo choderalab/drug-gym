@@ -298,15 +298,12 @@ class DockingOracle(Oracle):
 
             # prepare ligands
             failed = self._prepare_ligands(molecules, directory)
-            print(failed)
 
             # prepare command
             command = self._prepare_command(self.config, directory)
-            print(command)
 
             # run docking
             resp = self._dock(command)
-            print(resp)
             
             # gather results
             smiles, scores = self._gather_results(directory)
@@ -470,7 +467,6 @@ class DockingOracle(Oracle):
         is_temp_dir = False
         if dir_path is None:
             dir_path = tempfile.mkdtemp()
-            print(dir_path)
             is_temp_dir = True
         try:
             yield dir_path

@@ -21,7 +21,7 @@ mkdir -p "$RUN_DIR"
 mkdir -p "$LOGS_DIR"
 
 # Number of trials to run for each noise level
-NUM_TRIALS=25
+NUM_TRIALS=100
 
 # Define specific batch sizes
 BATCH_SIZES=(8 12 16 24 48 96 192 384)

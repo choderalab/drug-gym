@@ -116,26 +116,27 @@ class Experiment:
         experiment = experiment.load(result)
         ```
         """
-        annotations = pd.DataFrame(result['annotations'])
-        molecules = []
-        for _, annotation in annotations.iterrows():
+        if result:
+            annotations = pd.DataFrame(result['annotations'])
+            molecules = []
+            for _, annotation in annotations.iterrows():
 
-            # Parse data structure
-            annotation = annotation.to_dict()
-            route = annotation.pop('Synthetic Route')
-            try:
-                route = ast.literal_eval(route)
-            except:
-                pass
-            route['annotations'] = annotation
+                # Parse data structure
+                annotation = annotation.to_dict()
+                route = annotation.pop('Synthetic Route')
+                try:
+                    route = ast.literal_eval(route)
+                except:
+                    pass
+                route['annotations'] = annotation
 
-            # Load molecule
-            molecule = Molecule.load(route)
+                # Load molecule
+                molecule = Molecule.load(route)
 
-            # Append to library
-            molecules.append(molecule)
+                # Append to library
+                molecules.append(molecule)
 
-        # Load collection
-        self.drug_env.library = MoleculeCollection(molecules)
+            # Load collection
+            self.drug_env.library = MoleculeCollection(molecules)
         
         return self
