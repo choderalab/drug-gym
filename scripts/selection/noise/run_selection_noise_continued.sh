@@ -20,6 +20,15 @@ for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
     # Extract the filename from the path
     EXPERIMENT_STATE_FILENAME=$(basename "$EXPERIMENT_STATE")
 
+    # Use tail to get the last 2 characters of the file and head to pick the second last character
+    LAST_SECOND_CHAR=$(tail -c 2 "$EXPERIMENT_STATE" | head -c 1)
+
+    # Check if the penultimate character of the content is '1'
+    if [[ "$LAST_SECOND_CHAR" == "1" ]]; then
+        echo "Skipping file: $EXPERIMENT_STATE_FILENAME due to penultimate character of content being '1'"
+        continue
+    fi
+
     # Submit a bsub job to run the script in parallel instances
     bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
             -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
