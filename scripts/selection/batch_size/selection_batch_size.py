@@ -252,7 +252,8 @@ print('Loaded DrugAgent.', flush=True)
 from dgym.experiment import Experiment
 experiment = Experiment(
     drug_agent=drug_agent, drug_env=drug_env)
-file_path = f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
+file_path = args.experiment_state_path \
+    or f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
