@@ -240,7 +240,7 @@ print('Loaded DrugEnv.', flush=True)
 # Create DrugAgent
 from dgym.agents import SequentialDrugAgent
 from dgym.agents.exploration import EpsilonGreedy
-sequence = get_agent_sequence(batch_size=args.batch_size, score_ratio=args.score_ratio).load(experiment_state)
+sequence = get_agent_sequence(batch_size=args.batch_size, score_ratio=args.score_ratio)
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
     exploration_strategy = EpsilonGreedy(epsilon=0.2),
@@ -250,8 +250,7 @@ print('Loaded DrugAgent.', flush=True)
 
 # Create and run Experiment
 from dgym.experiment import Experiment
-experiment = Experiment(
-    drug_agent=drug_agent, drug_env=drug_env)
+experiment = Experiment(drug_agent=drug_agent, drug_env=drug_env).load(experiment_state)
 file_path = args.experiment_state_path \
     or f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
