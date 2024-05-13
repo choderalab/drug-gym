@@ -210,8 +210,8 @@ import json
 with open(args.experiment_state_path, 'r') as f:
     experiment_state = json.load(f)
     args_dict = vars(args)
-    for key, value in experiment_state.items():
-        args_dict[key] = value
+    for key in ['batch_size', 'score_ratio']:
+        args_dict[key] = experiment_state[key]
 
 # Create multiple utility functions
 (
