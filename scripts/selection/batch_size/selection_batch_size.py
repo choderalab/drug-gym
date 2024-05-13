@@ -163,9 +163,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--out_dir", type=str, help="Where to put the resulting JSONs")
 parser.add_argument(
-    "--batch_size", type=int, help="Batch size in each design cycle.")
+    "--batch_size", type=int, default=8, help="Batch size in each design cycle.")
 parser.add_argument(
     "--score_ratio", type=int, default=5, help="Number to score for every compound tested.")
+parser.add_argument(
+    "--experiment_state_path", type=str, help="Path to file for loading experiment state. Overrides the other args.")
 args = parser.parse_args()
 
 # Run experiment
@@ -201,6 +203,15 @@ print('Loaded library and designer.', flush=True)
 )
 
 print('Loaded oracles.', flush=True)
+
+# Load experiment state off disk if available
+import json
+# Load experiment state off disk if available
+with open(args.experiment_state_path, 'r') as f:
+    experiment_state = json.load(f)
+    args_dict = vars(args)
+    for key, value in experiment_state.items():
+        args_dict[key] = value
 
 # Create multiple utility functions
 (
