@@ -41,13 +41,9 @@ class Experiment:
                 
                 # Perform step
                 action = self.drug_agent.act(observations)
-                print('Memory before action: ', end='')
-                print_memory_usage()
                 print('Created action', flush=True)
                 print(action, flush=True)
                 observations, _, terminated, truncated, _ = self.drug_env.step(action)
-                print('Memory after action: ', end='')
-                print_memory_usage()
                 
                 # Parse result
                 result = self.dump(trial, out=out, **kwargs)
