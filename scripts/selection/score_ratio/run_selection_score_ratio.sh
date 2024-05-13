@@ -4,13 +4,13 @@
 ulimit -c 0
 
 # Define the path to your Python script
-PYTHON_SCRIPT="./selection_batch_size.py"
+PYTHON_SCRIPT="./selection_score_ratio.py"
 
 # Generate a timestamp for the current time
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # Define the base output directory for results
-BASE_OUT_DIR="/data/chodera/retchinm/batch_size"
+BASE_OUT_DIR="/data/chodera/retchinm/score_ratio"
 
 # Create a new directory for this run with the timestamp
 RUN_DIR="${BASE_OUT_DIR}/${TIMESTAMP}"
