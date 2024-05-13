@@ -1,7 +1,6 @@
 import uuid
 import argparse
 import dgym as dg
-import pandas as pd
 
 def get_data(path):
 
@@ -135,7 +134,7 @@ def get_multiple_utility_functions(
     
     return assays, utility_agent, utility_env
 
-def get_agent_sequence(batch_size: int = 8, score_ratio: int = 5):
+def get_agent_sequence(batch_size: int = 24, score_ratio: int = 5):
     """
     Make the sequence for the DrugAgent.
     """
@@ -169,6 +168,8 @@ parser.add_argument(
     "--batch_size", type=int, default=8, help="Batch size in each design cycle.")
 parser.add_argument(
     "--score_ratio", type=int, default=5, help="Number to score for every compound tested.")
+parser.add_argument(
+    "--experiment_state_path", type=str, help="Path to file for loading experiment state. Overrides the other args.")
 args = parser.parse_args()
 
 # Run experiment
@@ -204,6 +205,15 @@ print('Loaded library and designer.', flush=True)
 )
 
 print('Loaded oracles.', flush=True)
+
+# Load experiment state off disk if available
+import json
+# Load experiment state off disk if available
+with open(args.experiment_state_path, 'r') as f:
+    experiment_state = json.load(f)
+    args_dict = vars(args)
+    for key in ['batch_size', 'score_ratio']:
+        args_dict[key] = experiment_state[key]
 
 # Create multiple utility functions
 (
@@ -242,9 +252,9 @@ print('Loaded DrugAgent.', flush=True)
 
 # Create and run Experiment
 from dgym.experiment import Experiment
-experiment = Experiment(
-    drug_agent=drug_agent, drug_env=drug_env)
-file_path = f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
+experiment = Experiment(drug_agent=drug_agent, drug_env=drug_env).load(experiment_state)
+file_path = args.experiment_state_path \
+    or f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
