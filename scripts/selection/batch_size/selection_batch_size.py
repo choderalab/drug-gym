@@ -203,15 +203,17 @@ print('Loaded library and designer.', flush=True)
 )
 
 print('Loaded oracles.', flush=True)
-
+        
 # Load experiment state off disk if available
 import json
-# Load experiment state off disk if available
-with open(args.experiment_state_path, 'r') as f:
-    experiment_state = json.load(f)
-    args_dict = vars(args)
-    for key in ['batch_size', 'score_ratio']:
-        args_dict[key] = experiment_state[key]
+try:
+    with open(args.experiment_state_path, 'r') as f:
+        experiment_state = json.load(f)
+        args_dict = vars(args)
+        for key in ['batch_size', 'score_ratio']:
+            args_dict[key] = experiment_state[key]
+except:
+    pass
 
 # Create multiple utility functions
 (
