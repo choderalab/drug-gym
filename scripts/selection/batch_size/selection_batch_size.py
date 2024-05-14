@@ -213,7 +213,7 @@ try:
         for key in ['batch_size', 'score_ratio']:
             args_dict[key] = experiment_state[key]
 except:
-    pass
+    experiment_state = {}
 
 # Create multiple utility functions
 (
