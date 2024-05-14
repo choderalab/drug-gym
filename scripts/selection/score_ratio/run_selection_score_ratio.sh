@@ -33,7 +33,9 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
         echo "Trial $TRIAL for score ratio $SCORE_RATIO"
 
         # Submit a bsub job to run the script in parallel instances
-        bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+        bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" \
+             -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+             -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
              -o "${LOGS_DIR}/temp_${SCORE_RATIO}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${SCORE_RATIO}_trial_${TRIAL}.stderr" \
              python3 $PYTHON_SCRIPT --score_ratio $SCORE_RATIO --out_dir "$RUN_DIR"
