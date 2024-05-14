@@ -12,7 +12,6 @@ import itertools
 from rdkit.Chem import Mol
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dgllife.utils import smiles_to_bigraph, CanonicalAtomFeaturizer
 import dgym as dg
 from dgym.utils import ViewableGenerator
 
