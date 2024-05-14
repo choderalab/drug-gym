@@ -4,7 +4,6 @@
 # =============================================================================
 from typing import Union, Any, Optional, Iterable, Mapping, Callable, Sequence
 import functools
-import dgl
 import rdkit
 import copy
 import math

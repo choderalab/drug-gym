@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import os
-import dgl
 import math
 import rdkit
 import torch
-import dgllife
 import numpy as np
 from typing import Union, Optional, Iterable
 from collections import defaultdict
