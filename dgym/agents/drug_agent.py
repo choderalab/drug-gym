@@ -1,5 +1,3 @@
-import dgl
-import dgllife
 import numpy as np
 from typing import Iterable
 from rdkit import Chem
