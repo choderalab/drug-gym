@@ -208,43 +208,43 @@ class CatBoostOracle(Oracle):
 
         return X
 
-class DGLOracle(Oracle):
+# class DGLOracle(Oracle):
 
-    def __init__(
-        self,
-        name: str,
-        mol_to_graph=dgllife.utils.MolToBigraph(
-            add_self_loop=True,
-            node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
-        )
-    ):
-        super().__init__()
-        self.name = name
-        self.mol_to_graph = mol_to_graph
+#     def __init__(
+#         self,
+#         name: str,
+#         mol_to_graph=dgllife.utils.MolToBigraph(
+#             add_self_loop=True,
+#             node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
+#         )
+#     ):
+#         super().__init__()
+#         self.name = name
+#         self.mol_to_graph = mol_to_graph
 
-        # load model
-        # TODO - avoid internet download if the model is already local
-        # if f'{name}_pre_trained.pth' in os.listdir():
-        self.model = dgllife.model.load_pretrained(self.name, log=False)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = self.model.to(self.device)
-        self.model.eval()
+#         # load model
+#         # TODO - avoid internet download if the model is already local
+#         # if f'{name}_pre_trained.pth' in os.listdir():
+#         self.model = dgllife.model.load_pretrained(self.name, log=False)
+#         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         self.model = self.model.to(self.device)
+#         self.model.eval()
         
-    def predict(self, molecules: MoleculeCollection, **kwargs):
+#     def predict(self, molecules: MoleculeCollection, **kwargs):
         
-        # featurize
-        graphs = [
-            self.mol_to_graph(m.update_cache().mol)
-            for m in molecules
-        ]
-        graph_batch = dgl.batch(graphs).to(self.device)
-        feats_batch = graph_batch.ndata['h']
+#         # featurize
+#         graphs = [
+#             self.mol_to_graph(m.update_cache().mol)
+#             for m in molecules
+#         ]
+#         graph_batch = dgl.batch(graphs).to(self.device)
+#         feats_batch = graph_batch.ndata['h']
         
-        # perform inference
-        scores = self.model(graph_batch, feats_batch).flatten().tolist()
-        smiles = [m.smiles for m in molecules]
+#         # perform inference
+#         scores = self.model(graph_batch, feats_batch).flatten().tolist()
+#         smiles = [m.smiles for m in molecules]
 
-        return smiles, scores
+#         return smiles, scores
 
 
 class RDKitOracle(Oracle):
@@ -474,127 +474,127 @@ class DockingOracle(Oracle):
 
 
 
-class NeuralOracle(Oracle):
+# class NeuralOracle(Oracle):
 
-    def __init__(
-        self,
-        name: str,
-        state_dict_path: str = None,
-        config: Optional[dict] = None,
-    ):
-        super().__init__()
-        self.name = name
+#     def __init__(
+#         self,
+#         name: str,
+#         state_dict_path: str = None,
+#         config: Optional[dict] = None,
+#     ):
+#         super().__init__()
+#         self.name = name
 
-        if torch.cuda.is_available():
-            self.device = torch.device('cuda')
+#         if torch.cuda.is_available():
+#             self.device = torch.device('cuda')
 
-        # load model architecture
-        model = self.model_factory(config=config)
+#         # load model architecture
+#         model = self.model_factory(config=config)
 
-        # load model weights
-        self.model = self.load_state_dict(model, state_dict_path)
+#         # load model weights
+#         self.model = self.load_state_dict(model, state_dict_path)
 
-    def predict(self, molecules: MoleculeCollection, **kwargs):
+#     def predict(self, molecules: MoleculeCollection, **kwargs):
 
-        # make mol_to_graph util
-        mol_to_graph = dgllife.utils.MolToBigraph(
-            add_self_loop=True,
-            node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
-        )
+#         # make mol_to_graph util
+#         mol_to_graph = dgllife.utils.MolToBigraph(
+#             add_self_loop=True,
+#             node_featurizer=dgllife.utils.CanonicalAtomFeaturizer()
+#         )
 
-        # featurize
-        graphs = [
-            mol_to_graph(m.update_cache().mol)
-            for m in molecules
-        ]
+#         # featurize
+#         graphs = [
+#             mol_to_graph(m.update_cache().mol)
+#             for m in molecules
+#         ]
 
-        # batch
-        graph_batch = dgl.batch(graphs).to(self.device)
+#         # batch
+#         graph_batch = dgl.batch(graphs).to(self.device)
 
-        # perform inference
-        with torch.no_grad():
-            preds = self.model({'g': graph_batch})
+#         # perform inference
+#         with torch.no_grad():
+#             preds = self.model({'g': graph_batch})
 
-        # clip to limit of detection
-        scores = torch.clamp(preds, 4.0, None).ravel().tolist()
-        smiles = [m.smiles for m in molecules]
+#         # clip to limit of detection
+#         scores = torch.clamp(preds, 4.0, None).ravel().tolist()
+#         smiles = [m.smiles for m in molecules]
 
-        return smiles, scores
+#         return smiles, scores
 
-    def model_factory(self, config=None):
-        """
-        Build appropriate 2D graph model.
+#     def model_factory(self, config=None):
+#         """
+#         Build appropriate 2D graph model.
 
-        Parameters
-        ----------
-        config : Union[str, dict], optional
-            Either a dict or JSON file with model config options. If not passed,
-            `config` will be taken from `wandb`.
+#         Parameters
+#         ----------
+#         config : Union[str, dict], optional
+#             Either a dict or JSON file with model config options. If not passed,
+#             `config` will be taken from `wandb`.
 
-        Returns
-        -------
-        mtenn.conversion_utils.GAT
-            GAT graph model
-        """
-        from dgllife.utils import CanonicalAtomFeaturizer
-        from mtenn.conversion_utils import GAT
+#         Returns
+#         -------
+#         mtenn.conversion_utils.GAT
+#             GAT graph model
+#         """
+#         from dgllife.utils import CanonicalAtomFeaturizer
+#         from mtenn.conversion_utils import GAT
 
-        # defaults
-        if not config:
-            config = {
-                "dropout": 0.05,
-                "gnn_hidden_feats": 64,
-                "num_heads": 8,
-                "alpha": 0.06,
-                "predictor_hidden_feats": 128,
-                "num_gnn_layers": 5,
-                "residual": True
-            }
+#         # defaults
+#         if not config:
+#             config = {
+#                 "dropout": 0.05,
+#                 "gnn_hidden_feats": 64,
+#                 "num_heads": 8,
+#                 "alpha": 0.06,
+#                 "predictor_hidden_feats": 128,
+#                 "num_gnn_layers": 5,
+#                 "residual": True
+#             }
 
 
-        # config.update({"in_node_feats": CanonicalAtomFeaturizer().feat_size()})
-        in_node_feats = CanonicalAtomFeaturizer().feat_size()
+#         # config.update({"in_node_feats": CanonicalAtomFeaturizer().feat_size()})
+#         in_node_feats = CanonicalAtomFeaturizer().feat_size()
 
-        model = GAT(
-            in_feats=in_node_feats,
-            hidden_feats=[config["gnn_hidden_feats"]] * config["num_gnn_layers"],
-            num_heads=[config["num_heads"]] * config["num_gnn_layers"],
-            feat_drops=[config["dropout"]] * config["num_gnn_layers"],
-            attn_drops=[config["dropout"]] * config["num_gnn_layers"],
-            alphas=[config["alpha"]] * config["num_gnn_layers"],
-            residuals=[config["residual"]] * config["num_gnn_layers"],
-        )
+#         model = GAT(
+#             in_feats=in_node_feats,
+#             hidden_feats=[config["gnn_hidden_feats"]] * config["num_gnn_layers"],
+#             num_heads=[config["num_heads"]] * config["num_gnn_layers"],
+#             feat_drops=[config["dropout"]] * config["num_gnn_layers"],
+#             attn_drops=[config["dropout"]] * config["num_gnn_layers"],
+#             alphas=[config["alpha"]] * config["num_gnn_layers"],
+#             residuals=[config["residual"]] * config["num_gnn_layers"],
+#         )
 
-        return model
+#         return model
 
-    def load_state_dict(self, model, state_dict_path):
-        """
-        Get the state dictionary for the neural net from disk.
+#     def load_state_dict(self, model, state_dict_path):
+#         """
+#         Get the state dictionary for the neural net from disk.
 
-        Parameters
-        ----------
-        model : ...
-            The model object.
+#         Parameters
+#         ----------
+#         model : ...
+#             The model object.
 
-        state_dict_path : str
-            The path on disk to the model weights.
+#         state_dict_path : str
+#             The path on disk to the model weights.
         
-        Returns
-        -------
-        mtenn.conversion_utils.GAT
-            GAT graph model        
-        """
+#         Returns
+#         -------
+#         mtenn.conversion_utils.GAT
+#             GAT graph model        
+#         """
         
-        # get state dict from disk
-        preloaded_state_dict = torch.load(state_dict_path)
-        state_dict = dict(zip(
-            model.state_dict().keys(),
-            preloaded_state_dict.values()
-        ))
+#         # get state dict from disk
+#         preloaded_state_dict = torch.load(state_dict_path)
+#         state_dict = dict(zip(
+#             model.state_dict().keys(),
+#             preloaded_state_dict.values()
+#         ))
 
-        # load into model
-        model.load_state_dict(state_dict)
-        model.eval()
-        model = model.to(self.device)
+#         # load into model
+#         model.load_state_dict(state_dict)
+#         model.eval()
+#         model = model.to(self.device)
 
-        return model
+#         return model
