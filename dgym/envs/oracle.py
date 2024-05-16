@@ -282,8 +282,6 @@ class ReactionStepOracle(Oracle):
         
         return 1 + max(self.reaction_depth(reactant) for reactant in synthetic_route['reactants'])
 
-
-
 class ConstantOracle(Oracle):
 
     def __init__(
@@ -297,7 +295,25 @@ class ConstantOracle(Oracle):
 
     def predict(self, molecules: MoleculeCollection, **kwargs):
         smiles = [m.smiles for m in molecules]
-        scores = [1 for _ in molecules]
+        scores = [self.constant for _ in molecules]
+        return smiles, scores
+    
+class GaussianOracle(Oracle):
+    
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[Union[float, int]] = None,
+        scale: Optional[Union[float, int]] = None,
+    ):
+        super().__init__()
+        self.name = name
+        self.loc = loc if loc else 0
+        self.scale = scale if scale else 1
+
+    def predict(self, molecules: MoleculeCollection, **kwargs):
+        smiles = [m.smiles for m in molecules]
+        scores = np.random.normal(self.loc, self.scale, len(molecules)).tolist()
         return smiles, scores
 
 class RandomOracle(Oracle):
