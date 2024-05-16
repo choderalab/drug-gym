@@ -246,6 +246,74 @@ class CatBoostOracle(Oracle):
 
 #         return smiles, scores
 
+class ReactionStepOracle(Oracle):
+
+    def __init__(
+        self,
+        name: str,
+        constant: Optional[Union[float, int]] = None,
+    ):
+        super().__init__()
+        self.name = name
+        self.constant = constant if constant else 1
+
+    def predict(self, molecules: MoleculeCollection, **kwargs):
+        smiles = [m.smiles for m in molecules]
+        scores = [self.reaction_depth(m.dump()) for m in molecules]
+        return smiles, scores
+
+    def reaction_depth(self, synthetic_route):
+        """
+        Compute the depth of a reaction dictionary, representing the number of reaction steps
+        necessary to make the molecule.
+        
+        Parameters
+        ----------
+        molecule : dg.molecule.Molecule
+            The dictionary representing the reaction steps to produce a molecule.
+        
+        Returns
+        -------
+        int
+            The depth of the reaction dictionary.
+        """
+        if 'reactants' not in synthetic_route or not synthetic_route['reactants']:
+            return 0
+        
+        return 1 + max(self.reaction_depth(reactant) for reactant in synthetic_route['reactants'])
+
+
+
+class ConstantOracle(Oracle):
+
+    def __init__(
+        self,
+        name: str,
+        constant: Optional[Union[float, int]] = None,
+    ):
+        super().__init__()
+        self.name = name
+        self.constant = constant if constant else 1
+
+    def predict(self, molecules: MoleculeCollection, **kwargs):
+        smiles = [m.smiles for m in molecules]
+        scores = [1 for _ in molecules]
+        return smiles, scores
+
+class RandomOracle(Oracle):
+
+    def __init__(
+        self,
+        name: str
+    ):
+        super().__init__()
+        self.name = name
+
+    def predict(self, molecules: MoleculeCollection, **kwargs):
+        smiles = [m.smiles for m in molecules]
+        scores = np.random.random(len(molecules)).tolist()
+        return smiles, scores
+
 
 class RDKitOracle(Oracle):
 
@@ -267,8 +335,8 @@ class RDKitOracle(Oracle):
             self.descriptor = rdkit.Chem.QED.default
 
     def predict(self, molecules: MoleculeCollection, **kwargs):
-        scores = [self.descriptor(m.mol) for m in molecules]
         smiles = [m.smiles for m in molecules]
+        scores = [self.descriptor(m.mol) for m in molecules]
         return smiles, scores
 
 
