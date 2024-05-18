@@ -6,6 +6,7 @@ import dgym as dg
 import torch
 import random
 import itertools
+import numpy as np
 import pandas as pd
 from rdkit import Chem
 from dgym.molecule import Molecule
@@ -179,6 +180,8 @@ class Collection(torch.utils.data.Dataset):
         elif isinstance(key, slice):
             return self.__class__(self._items[key], index=self.index[key])
         elif isinstance(key, Iterable):
+            if len(key) > 0 and isinstance(key[0], (bool, np.bool_)):
+                key = np.where(key)[0]
             return self.__class__(
                 [self._items[k] for k in key], index=[self.index[k] for k in key])
         else:

@@ -76,6 +76,8 @@ class Molecule:
         self.reaction = reaction
 
         self.annotations = annotations if annotations else {}
+        if isinstance(inspiration, str):
+            inspiration = self.__class__(inspiration)
         self.inspiration = inspiration
         self._status = status
         self._name_attr = name_attr
@@ -342,6 +344,7 @@ class Molecule:
         reaction_name = route.get('reaction', None)
         reactants_data = route.get('reactants', [])
         annotations = route.get('annotations', {})
+        inspiration = annotations.get('Inspiration', None)
         
         reactants = [Molecule.load(reactant) for reactant in reactants_data]
         
@@ -349,5 +352,6 @@ class Molecule:
             mol=product_mol,
             reactants=reactants,
             reaction=reaction_name,
-            annotations=annotations
+            annotations=annotations,
+            inspiration=inspiration,
         )
