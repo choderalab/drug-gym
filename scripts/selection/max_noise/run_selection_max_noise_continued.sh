@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Update to force git pull
 # Disable core dumps
 ulimit -c 0
 
