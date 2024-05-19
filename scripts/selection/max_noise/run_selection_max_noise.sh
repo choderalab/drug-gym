@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Source the LSF configuration profile
+source /admin/lsftest/conf/profile.lsf
+
 # Update to force git pull
 # Disable core dumps
 ulimit -c 0
