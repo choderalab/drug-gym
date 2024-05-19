@@ -31,6 +31,7 @@ for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
 
     # Submit a bsub job to run the script in parallel instances
     bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+            -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
             -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
             -eo "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stderr" \
             python3 $PYTHON_SCRIPT --experiment_state_path "$EXPERIMENT_STATE" --out_dir "$RUN_DIR"
