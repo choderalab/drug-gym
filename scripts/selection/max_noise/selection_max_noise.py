@@ -202,9 +202,14 @@ print('Loaded oracles.', flush=True)
 
 # Load experiment state off disk if available
 import json
-with open(args.experiment_state_path) as f:
-    experiment_state = json.load(f)
-    sigma = experiment_state.get('sigma', None) or args.sigma
+try:
+    with open(args.experiment_state_path, 'r') as f:
+        experiment_state = json.load(f)
+        args_dict = vars(args)
+        for key in ['sigma']:
+            args_dict[key] = experiment_state[key]
+except:
+    experiment_state = {}
 
 # Create multiple utility functions
 (
