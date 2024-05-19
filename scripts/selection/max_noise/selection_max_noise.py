@@ -113,13 +113,14 @@ def get_multiple_utility_functions(
         log_S_oracle, ideal=(-3, 1), acceptable=(-4, 1))
 
     # Assemble assays and surrogate models
+    from dgym.envs.oracle import GaussianOracle
     assays = [
         pIC50_oracle,
         log_P_oracle,
         log_S_oracle,
-        pIC50_oracle.surrogate(sigma=sigma),
-        log_P_oracle.surrogate(sigma=sigma),
-        log_S_oracle.surrogate(sigma=sigma),
+        GaussianOracle(f'Noisy {pIC50_oracle.name}', loc=7.460298232446733, scale=100),
+        GaussianOracle(f'Noisy {log_P_oracle.name}', loc=2.223214738326521, scale=100),
+        GaussianOracle(f'Noisy {log_S_oracle.name}', loc=-3.752548978069126, scale=100),
     ]
 
     # Environment tolerates acceptable ADMET

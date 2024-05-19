@@ -10,7 +10,7 @@ PYTHON_SCRIPT="./selection_max_noise.py"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 # Define the base output directory for results
-BASE_OUT_DIR="/data/chodera/retchinm/noise"
+BASE_OUT_DIR="/data/chodera/retchinm/max_noise"
 
 # Create a new directory for this run with the timestamp
 RUN_DIR="${BASE_OUT_DIR}/${TIMESTAMP}"
@@ -28,14 +28,13 @@ NUM_PARALLEL=1
 
 # Run multiple trials for each noise level
 for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
-    NOISE=$(echo "scale=2; 100000" | bc)
-    echo "Trial $TRIAL for noise $NOISE"
+    echo "Trial $TRIAL for maximum error"
 
     # Submit a bsub job to run the script in parallel instances
-    bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8] span[hosts=1]" -W 5:59 \
-            -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
-            -o "${LOGS_DIR}/temp_${NOISE}_trial_${TRIAL}.stdout" \
-            -eo "${LOGS_DIR}/temp_${NOISE}_trial_${TRIAL}.stderr" \
-            "for i in $(seq -s ' ' 1 $NUM_PARALLEL); do python3 '$PYTHON_SCRIPT' --sigma $NOISE --out_dir '$RUN_DIR' & done; wait"
+    bsub -q gpuqueue -n 4 -gpu "num=1:mig=1/1:aff=no" \
+            -J drug-gym_max_error_${TRIAL} -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+            -o "${LOGS_DIR}/max_error_trial_${TRIAL}.stdout" \
+            -eo "${LOGS_DIR}/max_error_trial_${TRIAL}.stderr" \
+            /usr/bin/sh /home/retchinm/chodera/drug-gym/scripts/selection/max_noise/run_trial.sh $RUN_DIR
 done
 echo "All trials completed."
