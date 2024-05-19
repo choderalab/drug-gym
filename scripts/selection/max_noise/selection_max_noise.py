@@ -215,7 +215,6 @@ with open(args.experiment_state_path) as f:
     pIC50_oracle,
     log_P_oracle,
     log_S_oracle,
-    sigma=sigma
 )
 
 print('Loaded utility functions.', flush=True)
@@ -246,7 +245,7 @@ print('Loaded DrugAgent.', flush=True)
 from dgym.experiment import Experiment
 experiment = Experiment(drug_agent=drug_agent, drug_env=drug_env).load(experiment_state)
 file_path = args.experiment_state_path \
-    or f'{args.out_dir}/selection_noise_{args.sigma}_{uuid.uuid4()}.json'
+    or f'{args.out_dir}/selection_max_noise_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
