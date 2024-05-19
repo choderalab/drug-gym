@@ -1,3 +1,4 @@
+# Update to force git pull
 #!/bin/sh
 
 echo "about to start"
