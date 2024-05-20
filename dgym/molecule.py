@@ -74,11 +74,14 @@ class Molecule:
         self.mol = mol
         self.reactants = reactants
         self.reaction = reaction
-
         self.annotations = annotations if annotations else {}
+
         if isinstance(inspiration, str):
             inspiration = self.__class__(inspiration)
+        elif not isinstance(inspiration, type(self)):
+            inspiration = None
         self.inspiration = inspiration
+
         self._status = status
         self._name_attr = name_attr
         
