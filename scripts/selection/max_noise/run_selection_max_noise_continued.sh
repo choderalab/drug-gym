@@ -11,7 +11,7 @@ ulimit -c 0
 PYTHON_SCRIPT="./selection_max_noise.py"
 
 # Define output directory for results
-RUN_DIR="/data/chodera/retchinm/noise/2024-05-10_23-36-56"
+RUN_DIR="/data/chodera/retchinm/max_noise/2024-05-19_11-56-02"
 LOGS_DIR="${RUN_DIR}/logs"
 
 # Make sure the new directories exist
@@ -35,10 +35,11 @@ for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
 
     # Submit a bsub job to run the script in parallel instances
     bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
-            -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
+            -m "ln03 ln07 lj03 lj 04 lj04 ll07 lf01 lj10 lj1 ly06 lx07 lx08 lj13" \
             -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
             -eo "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stderr" \
             python3 $PYTHON_SCRIPT --experiment_state_path "$EXPERIMENT_STATE" --out_dir "$RUN_DIR"
     echo "Submitted experiment: $EXPERIMENT_STATE"
+#            -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
 done
 echo "All trials completed."
