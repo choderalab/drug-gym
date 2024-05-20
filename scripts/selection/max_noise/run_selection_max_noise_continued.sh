@@ -34,12 +34,18 @@ for EXPERIMENT_STATE in "$RUN_DIR"/*.json; do
     fi
 
     # Submit a bsub job to run the script in parallel instances
-    bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
-            -m "ln03 ln07 lj03 lj 04 lj04 ll07 lf01 lj10 lj1 ly06 lx07 lx08 lj13" \
-            -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
-            -eo "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stderr" \
-            python3 $PYTHON_SCRIPT --experiment_state_path "$EXPERIMENT_STATE" --out_dir "$RUN_DIR"
+    bsub -q gpuqueue -n 4 -gpu "num=1:mig=1/1:aff=no" \
+            -J drug-gym_max_error_${EXPERIMENT_STATE_FILENAME} -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+            -o "${LOGS_DIR}/max_error_trial_${EXPERIMENT_STATE_FILENAME}.stdout" \
+            -eo "${LOGS_DIR}/max_error_trial_${EXPERIMENT_STATE_FILENAME}.stderr" \
+            /usr/bin/sh /home/retchinm/chodera/drug-gym/scripts/selection/max_noise/run_trial.sh $EXPERIMENT_STATE $RUN_DIR
+
+    # # Submit a bsub job to run the script in parallel instances
+    # bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8G] span[hosts=1]" -W 5:59 \
+    #         -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
+    #         -o "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stdout" \
+    #         -eo "${LOGS_DIR}/${EXPERIMENT_STATE_FILENAME}.stderr" \
+    #         python3 $PYTHON_SCRIPT --experiment_state_path "$EXPERIMENT_STATE" --out_dir "$RUN_DIR"
     echo "Submitted experiment: $EXPERIMENT_STATE"
-#            -m "ln-gpu lu-gpu lc-gpu lx-gpu ly-gpu lj-gpu ll-gpu" \
 done
 echo "All trials completed."
