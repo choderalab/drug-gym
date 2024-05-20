@@ -239,7 +239,7 @@ class Molecule:
         int
             The count of the design cycle.
         """
-        if not self.inspiration or not isinstance(self.inspiration, 'Molecule'):
+        if not self.inspiration or not isinstance(self.inspiration, type(self)):
             return 0
         else:
             return 1 + self.inspiration.design_cycle
