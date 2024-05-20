@@ -262,6 +262,7 @@ class DrugEnv(gym.Env):
         self.designer.reset()
         self.reward_history = []
         self.library = self._library_0.copy()
+        self.valid_actions[:len(self.library)] = True
         return self.get_observations(), {}
     
     @property

@@ -33,6 +33,7 @@ class Experiment:
 
             self.drug_agent.reset()
             observations, info = self.drug_env.reset()
+            print(observations)
 
             if progress:
                 pbar = tqdm(total = self.drug_env.budget)
