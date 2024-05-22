@@ -408,7 +408,7 @@ class DockingOracle(Oracle):
             case 'deltaG':
                 pass
             case 'pIC50':
-                coef = -math.log10(math.e) / 0.6
+                coef = -math.log10(math.e) / 0.5961473427254528
                 scores = [coef * score for score in scores]
             case _:
                 raise Exception(f'{units} is not a valid units. Must be `pIC50` or `deltaG`.')

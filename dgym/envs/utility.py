@@ -78,7 +78,7 @@ class ClassicUtilityFunction(UtilityFunction):
         return 1 - res
 
 
-class MultipleUtilityFunction:
+class Policy:
     
     def __init__(
         self,
@@ -150,7 +150,7 @@ class MultipleUtilityFunction:
         """
         Rescales surrogates to reduce selection bias.
         """
-        if len(actuals.dropna()) <= 10:
+        if len(actuals.dropna()) <= 30:
             return surrogates
 
         # Create filter for complete measurements

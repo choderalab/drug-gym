@@ -101,7 +101,7 @@ def get_multiple_utility_functions(
     sigma=1.0
 ):
     from dgym.envs.utility import (
-        ClassicUtilityFunction, MultipleUtilityFunction
+        ClassicUtilityFunction, Policy
     )
 
     # Define utility functions
@@ -118,13 +118,13 @@ def get_multiple_utility_functions(
         log_P_oracle,
         log_S_oracle,
         pIC50_oracle.surrogate(sigma=sigma),
-        log_P_oracle.surrogate(sigma=sigma),
-        log_S_oracle.surrogate(sigma=sigma),
+        log_P_oracle.surrogate(sigma=1.0),
+        log_S_oracle.surrogate(sigma=1.0),
     ]
 
     # Environment tolerates acceptable ADMET
     from copy import deepcopy
-    utility_agent = MultipleUtilityFunction(
+    utility_agent = Policy(
         utility_functions = [pIC50_utility, log_P_utility, log_S_utility],
         weights = [0.8, 0.1, 0.1]
     )
