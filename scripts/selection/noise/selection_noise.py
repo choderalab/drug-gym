@@ -165,7 +165,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Run experiment
-path = '../../../../dgym-data'
+path = '/data/chodera/retchinm/dgym-data'
 
 # Load all data
 (
