@@ -38,7 +38,7 @@ for (( TRIAL=1; TRIAL<=NUM_TRIALS; TRIAL++ )); do
 
         # Submit a bsub job to run the script in parallel instances
         bsub -q gpuqueue -n 4 -gpu "num=1:j_exclusive=yes:mode=shared" -R "rusage[mem=8] span[hosts=1]" -W 5:59 \
-             -m "lc-gpu ly-gpu lj-gpu ll-gpu" \
+             -m "lc-gpu ly-gpu lj-gpu" \
              -o "${LOGS_DIR}/temp_${NOISE}_trial_${TRIAL}.stdout" \
              -eo "${LOGS_DIR}/temp_${NOISE}_trial_${TRIAL}.stderr" \
              "ulimit -c 0; python3 '$PYTHON_SCRIPT' --sigma $NOISE --out_dir '$RUN_DIR'"
