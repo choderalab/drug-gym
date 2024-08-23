@@ -100,6 +100,7 @@ class Oracle:
 
 
 class NoisyOracle(Oracle):
+    
     def __init__(self, oracle: Oracle, sigma: float = 0.1) -> None:
         """
         Initialize a NoisyOracle decorator for an Oracle instance.
