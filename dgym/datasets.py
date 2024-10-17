@@ -1,3 +1,4 @@
+import chemfp
 import pandas as pd
 from rdkit import Chem
 from typing import Optional
@@ -5,7 +6,6 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools
 from dgym.reaction import Reaction
 
-import chemfp
 chemfp.set_license('20241121-columbia.edu@DAAAPLPPDDKGPECJIJJGFNBEPIIKHOOMFAOG')
 
 def fingerprints(path):

@@ -12,6 +12,8 @@ from typing import Iterable
 from rdkit import Chem
 from rdkit.Chem import rdFMCS, AllChem, Draw
 
+import chemfp
+chemfp.set_license('20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF')
 __all__ = [
     'sort_fingerprints',
     'partition_building_blocks',
@@ -19,10 +21,6 @@ __all__ = [
     'match_reactions',
     'align_lineage'
 ]
-
-import chemfp
-chemfp.set_license('20231114-columbia.edu@DAAABLGMDNEEHFALIFOLIONPFHFDJDOLHABF')
-
 
 # Building block processing.
 # -----------------------------------------------

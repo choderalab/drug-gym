@@ -1,6 +1,26 @@
 import argparse
 import dgym as dg
 
+import torch
+import pyarrow.parquet as pq
+
+# Docking oracles
+from dgym.envs.oracle import DockingOracle
+from dgym.envs.utility import ClassicUtilityFunction
+
+import pandas as pd
+from dgym.molecule import Molecule
+from dgym.envs.designer import Designer, Generator
+from dgym.envs.drug_env import DrugEnv
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+from dgym.experiment import Experiment
+import random
+import pdb
+import json
+import uuid
+from utils import serialize_with_class_names
+
 # load all data
 path = '../../../../dgym-data'
 
@@ -18,14 +38,10 @@ reactions = dg.ReactionCollection.from_json(
 building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
 fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-import torch
-import pyarrow.parquet as pq
 table = pq.read_table(f'{path}/sizes.parquet')[0]
 sizes = torch.tensor(table.to_numpy())
 
-# Docking oracles
-from dgym.envs.oracle import DockingOracle
-from dgym.envs.utility import ClassicUtilityFunction
+
 
 config = {
     'center_x': 44.294,
@@ -52,13 +68,7 @@ docking_utility = ClassicUtilityFunction(
     acceptable=(7.125, 9.5)
 )
 
-import pandas as pd
-from dgym.molecule import Molecule
-from dgym.envs.designer import Designer, Generator
-from dgym.envs.drug_env import DrugEnv
-from dgym.agents import SequentialDrugAgent
-from dgym.agents.exploration import EpsilonGreedy
-from dgym.experiment import Experiment
+
 
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes),
@@ -66,7 +76,7 @@ designer = Designer(
     cache = True
 )
 
-import random
+
 initial_index = random.randint(0, len(deck))
 initial_library = dg.MoleculeCollection([deck[initial_index]]) # 659
 initial_library.update_annotations()
@@ -108,12 +118,10 @@ experiment = Experiment(drug_agent, drug_env)
 try:
     result = experiment.run(**vars(args))
 except:
-    import pdb; pdb.set_trace()
+    pdb.set_trace()
 
 # Export results
-import json
-import uuid
-from utils import serialize_with_class_names
+
 
 file_path = f'{args.out_dir}/selection_batch_size_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)

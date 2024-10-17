@@ -1,6 +1,21 @@
 import argparse
 import dgym as dg
 
+from dgym.envs.oracle import DockingOracle, NoisyOracle
+from dgym.envs.utility import ClassicUtilityFunction
+
+import pandas as pd
+from dgym.molecule import Molecule
+from dgym.envs.designer import Designer, Generator
+from dgym.envs.drug_env import DrugEnv
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+from dgym.experiment import Experiment
+
+import json
+import uuid
+from utils import serialize_with_class_names
+
 # load all data
 path = '../../../../dgym-data'
 
@@ -19,8 +34,7 @@ building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock
 fingerprints = dg.datasets.fingerprints(f'{path}/out/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
 # Docking oracles
-from dgym.envs.oracle import DockingOracle, NoisyOracle
-from dgym.envs.utility import ClassicUtilityFunction
+
 
 config = {
     'center_x': 44.294,
@@ -63,13 +77,7 @@ noisy_docking_utility = ClassicUtilityFunction(
     acceptable=(7.125, 9.5)
 )
 
-import pandas as pd
-from dgym.molecule import Molecule
-from dgym.envs.designer import Designer, Generator
-from dgym.envs.drug_env import DrugEnv
-from dgym.agents import SequentialDrugAgent
-from dgym.agents.exploration import EpsilonGreedy
-from dgym.experiment import Experiment
+
 
 designer = Designer(
     Generator(building_blocks, fingerprints),
@@ -113,9 +121,6 @@ experiment = Experiment(drug_agent, drug_env)
 result = experiment.run(**vars(args))
 
 # Export results
-import json
-import uuid
-from utils import serialize_with_class_names
 
 file_path = f'{args.out_dir}/selection_noise_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)

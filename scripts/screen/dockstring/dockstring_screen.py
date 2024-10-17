@@ -1,5 +1,17 @@
 import argparse
 import dgym as dg
+import torch
+import pyarrow.parquet as pq
+from dgym.envs.designer import Designer, Generator
+# select first molecule
+import random
+import os
+from dgym.envs.oracle import DockingOracle
+import pandas as pd
+from dgym.molecule import Molecule
+from dgym.envs.designer import Designer, Generator
+import os
+
 
 def get_data(path):
 
@@ -19,8 +31,6 @@ def get_data(path):
     fingerprints = dg.datasets.fingerprints(
         f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
@@ -34,17 +44,13 @@ def get_molecules(
         fingerprints,
         sizes,
     ):
-    
-    from dgym.envs.designer import Designer, Generator
-    
+        
     designer = Designer(
         Generator(building_blocks, fingerprints, sizes),
         reactions,
         cache = True
     )
 
-    # select first molecule
-    import random
     
     def select_molecule(deck):
         initial_index = random.randint(0, len(deck))
@@ -75,7 +81,6 @@ def get_molecules(
 
 def get_docking_config(path, target_index, scorer):
     
-    import os
 
     dockstring_dir = f'{path}/dockstring_targets/'
     files = os.listdir(dockstring_dir)
@@ -107,7 +112,6 @@ def get_docking_config(path, target_index, scorer):
 
 def get_oracle(path: str, target_index: int, scorer: str):
     
-    from dgym.envs.oracle import DockingOracle
     
     # Create noiseless evaluators
     name, receptor_path, config = get_docking_config(path, target_index, scorer=scorer)
@@ -124,9 +128,6 @@ parser.add_argument("--scorer", type=str, help="Which mode for scoring. `vina`, 
 args = parser.parse_args()
 
 # Run experiment
-import pandas as pd
-from dgym.molecule import Molecule
-from dgym.envs.designer import Designer, Generator
 
 # Load all data
 path = '../../../../dgym-data'
@@ -163,7 +164,6 @@ results_df['target'] = docking_oracle.name
 results_df['scorer'] = args.scorer
 
 # Write to disk
-import os
 
 file_path = f'{args.out_dir}/screen_targets_{args.target_index}_{args.scorer}.tsv'
 results_df.to_csv(

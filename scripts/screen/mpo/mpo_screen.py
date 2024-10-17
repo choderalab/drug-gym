@@ -1,5 +1,14 @@
 import argparse
 import dgym as dg
+import torch
+import pyarrow.parquet as pq
+from dgym.envs.designer import Designer, Generator
+import random
+import os
+from dgym.envs.oracle import DockingOracle, CatBoostOracle, RDKitOracle
+import pandas as pd
+import os
+
 
 def get_data(path):
 
@@ -19,8 +28,7 @@ def get_data(path):
     fingerprints = dg.datasets.fingerprints(
         f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
+    
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
@@ -35,7 +43,7 @@ def get_molecules(
         sizes,
     ):
     
-    from dgym.envs.designer import Designer, Generator
+
     
     designer = Designer(
         Generator(building_blocks, fingerprints, sizes),
@@ -44,7 +52,7 @@ def get_molecules(
     )
 
     # select first molecule
-    import random
+
     
     def select_molecule(deck):
         initial_index = random.randint(0, len(deck) - 1)
@@ -75,7 +83,7 @@ def get_molecules(
 
 def get_docking_config(path, target_index):
     
-    import os
+
 
     dockstring_dir = f'{path}/dockstring_targets/'
     files = os.listdir(dockstring_dir)
@@ -107,7 +115,7 @@ def get_docking_config(path, target_index):
 
 def get_oracles(path: str, target_index: int):
     
-    from dgym.envs.oracle import DockingOracle, CatBoostOracle, RDKitOracle
+
     
     # Create noiseless evaluators
     name, receptor_path, config = get_docking_config(path, target_index)
@@ -126,7 +134,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Run experiment
-import pandas as pd
+
 # dg.envs.utility.MultipleUtilityFunction
 
 # Load all data
@@ -175,7 +183,6 @@ results_df = pd.DataFrame(
 )
 
 # Write to disk
-import os
 
 file_path = f'{args.out_dir}/screen_mpo.tsv'
 results_df.to_csv(

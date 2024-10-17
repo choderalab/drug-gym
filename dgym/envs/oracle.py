@@ -17,6 +17,14 @@ from dgym.collection import MoleculeCollection
 from sklearn.preprocessing import normalize
 from scikit_mol.descriptors import MolecularDescriptorTransformer
 
+import re
+import glob
+from itertools import islice
+
+import subprocess
+import os
+import shutil
+import tempfile
 
 class OracleCache(dict):
     def __missing__(self, key):
@@ -418,10 +426,6 @@ class DockingOracle(Oracle):
 
 
     def _gather_results(self, directory: str):
-        
-        import re
-        import glob
-        from itertools import islice
 
         scores = []
         smiles = []
@@ -451,7 +455,6 @@ class DockingOracle(Oracle):
         return smiles, scores
     
     def _dock(self, command: str):
-        import subprocess
         return subprocess.run(
             command,
             shell=True, 
@@ -480,10 +483,7 @@ class DockingOracle(Oracle):
 
         return ' '.join(['unidock', *inputs])
 
-    def _prepare_ligands(self, molecules, directory: str):
-        
-        import os
-        
+    def _prepare_ligands(self, molecules, directory: str):       
         failed = []
         paths = []
         for idx, mol in enumerate(molecules):
@@ -548,8 +548,6 @@ class DockingOracle(Oracle):
 
     @contextmanager
     def _managed_directory(self, dir_path=None):
-        import shutil
-        import tempfile
         is_temp_dir = False
         if dir_path is None:
             dir_path = tempfile.mkdtemp()

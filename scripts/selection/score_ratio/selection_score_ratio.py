@@ -2,6 +2,38 @@ import uuid
 import argparse
 import dgym as dg
 
+import torch
+import pyarrow.parquet as pq
+
+import random
+
+import os
+
+from dgym.envs.oracle import \
+    DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
+from dgym.envs.utility import ClassicUtilityFunction
+
+from dgym.envs.utility import (
+    ClassicUtilityFunction, MultipleUtilityFunction
+)
+
+from copy import deepcopy
+
+from dgym.envs.designer import Designer, Generator
+
+import json
+
+from dgym.envs import DrugEnv
+
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+
+from dgym.experiment import Experiment
+
+import json
+import uuid
+from utils import serialize_with_class_names
+
 def get_data(path):
 
     deck = dg.MoleculeCollection.load(
@@ -20,8 +52,6 @@ def get_data(path):
     fingerprints = dg.datasets.fingerprints(
         f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
@@ -30,7 +60,6 @@ def get_data(path):
 def get_initial_library(deck, designer):
     
     # select first molecule
-    import random
     def _select_molecule(deck):
         initial_index = random.randint(0, len(deck) - 1)
         initial_molecule = deck[initial_index]
@@ -47,7 +76,6 @@ def get_initial_library(deck, designer):
     
 def get_docking_config(path: str, target_index: int):
     
-    import os
 
     dockstring_dir = f'{path}/dockstring_targets/'
     files = os.listdir(dockstring_dir)
@@ -77,9 +105,6 @@ def get_docking_config(path: str, target_index: int):
 
 def get_oracles(path: str, target_index: int):
 
-    from dgym.envs.oracle import \
-        DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
-    from dgym.envs.utility import ClassicUtilityFunction
     
     target, config = get_docking_config(path, target_index)
 
@@ -100,9 +125,6 @@ def get_multiple_utility_functions(
     log_S_oracle,
     sigma=1.0
 ):
-    from dgym.envs.utility import (
-        ClassicUtilityFunction, MultipleUtilityFunction
-    )
 
     # Define utility functions
     pIC50_utility = ClassicUtilityFunction(
@@ -123,7 +145,6 @@ def get_multiple_utility_functions(
     ]
 
     # Environment tolerates acceptable ADMET
-    from copy import deepcopy
     utility_agent = MultipleUtilityFunction(
         utility_functions = [pIC50_utility, log_P_utility, log_S_utility],
         weights = [0.8, 0.1, 0.1]
@@ -187,7 +208,6 @@ path = '/data/chodera/retchinm/dgym-data'
 print('Loaded data.', flush=True)
 
 # Get starting library
-from dgym.envs.designer import Designer, Generator
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
 library = get_initial_library(deck, designer)
@@ -207,7 +227,6 @@ print('Loaded library and designer.', flush=True)
 print('Loaded oracles.', flush=True)
 
 # Load experiment state off disk if available
-import json
 try:
     with open(args.experiment_state_path, 'r') as f:
         experiment_state = json.load(f)
@@ -231,7 +250,6 @@ except:
 print('Loaded utility functions.', flush=True)
 
 # Create DrugEnv
-from dgym.envs import DrugEnv
 drug_env = DrugEnv(
     designer = designer,
     library = library,
@@ -242,8 +260,6 @@ drug_env = DrugEnv(
 print('Loaded DrugEnv.', flush=True)
 
 # Create DrugAgent
-from dgym.agents import SequentialDrugAgent
-from dgym.agents.exploration import EpsilonGreedy
 sequence = get_agent_sequence(batch_size=args.batch_size, score_ratio=args.score_ratio)
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
@@ -253,16 +269,12 @@ drug_agent = SequentialDrugAgent(
 print('Loaded DrugAgent.', flush=True)
 
 # Create and run Experiment
-from dgym.experiment import Experiment
 experiment = Experiment(drug_agent=drug_agent, drug_env=drug_env).load(experiment_state)
 file_path = args.experiment_state_path \
     or f'{args.out_dir}/selection_batch_size_{args.batch_size}_score_ratio_{args.score_ratio}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
-import json
-import uuid
-from utils import serialize_with_class_names
 
 result_serialized = serialize_with_class_names(result)
 with open(file_path, 'w') as f:

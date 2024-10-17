@@ -8,6 +8,13 @@ from dgym.envs.oracle import DockingOracle
 import random
 
 import dgym as dg
+import torch
+import pyarrow.parquet as pq
+# Docking oracles
+from dgym.envs.oracle import DockingOracle, NoisyOracle
+from dgym.envs.utility import ClassicUtilityFunction
+from dgym.envs.designer import Designer, Generator
+import uuid
 
 def get_data(path):
 
@@ -25,18 +32,12 @@ def get_data(path):
     building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
     fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
     return deck, reactions, building_blocks, fingerprints, sizes
 
 def get_oracles(path, sigma=0.1):
-
-    # Docking oracles
-    from dgym.envs.oracle import DockingOracle, NoisyOracle
-    from dgym.envs.utility import ClassicUtilityFunction
 
     config = {
         'center_x': 44.294,
@@ -116,8 +117,6 @@ path = '../../../../dgym-data'
     sizes
 ) = get_data(path)
 
-from dgym.envs.designer import Designer, Generator
-
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes),
     reactions,
@@ -147,7 +146,6 @@ docking_oracle = DockingOracle(
 batch_size = 300
 
 # Check if file already exists
-import uuid
 
 file_path = f'./out/adam17_random_batch_{uuid.uuid4()}.tsv'
 for _ in range(10):

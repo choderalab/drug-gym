@@ -1,6 +1,27 @@
 import argparse
 import dgym as dg
 
+import torch
+import pyarrow.parquet as pq
+
+# Docking oracles
+from dgym.envs.oracle import DockingOracle, NoisyOracle
+from dgym.envs.utility import ClassicUtilityFunction
+    
+import pandas as pd
+from dgym.molecule import Molecule
+from dgym.envs.designer import Designer, Generator
+from dgym.envs.drug_env import DrugEnv
+import random
+
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+from dgym.experiment import Experiment
+
+import json
+import uuid
+from utils import serialize_with_class_names
+
 def get_data(path):
 
     deck = dg.MoleculeCollection.load(
@@ -17,8 +38,7 @@ def get_data(path):
     building_blocks = dg.datasets.disk_loader(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630.sdf')
     fingerprints = dg.datasets.fingerprints(f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
+    
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
@@ -26,9 +46,7 @@ def get_data(path):
 
 def get_oracles(path, sigma=0.5):
 
-    # Docking oracles
-    from dgym.envs.oracle import DockingOracle, NoisyOracle
-    from dgym.envs.utility import ClassicUtilityFunction
+    
 
     config = {
         'center_x': 44.294,
@@ -72,10 +90,6 @@ def get_drug_env(
         docking_utility
     ):
     
-    import pandas as pd
-    from dgym.molecule import Molecule
-    from dgym.envs.designer import Designer, Generator
-    from dgym.envs.drug_env import DrugEnv
 
     designer = Designer(
         Generator(building_blocks, fingerprints, sizes),
@@ -84,7 +98,7 @@ def get_drug_env(
     )
 
     # select first molecule
-    import random
+    
     def select_molecule(deck):
         initial_index = random.randint(0, len(deck) - 1)
         initial_molecule = deck[initial_index]
@@ -110,8 +124,7 @@ def get_drug_env(
 
 def get_drug_agent(docking_utility, args):
 
-    from dgym.agents import SequentialDrugAgent
-    from dgym.agents.exploration import EpsilonGreedy
+    
 
     # Run the experiment
     sequence = [
@@ -162,14 +175,11 @@ drug_env = get_drug_env(
 drug_agent = get_drug_agent(noisy_docking_utility, args)
 
 # Run experiment
-from dgym.experiment import Experiment
+
 experiment = Experiment(drug_agent, drug_env)
 result = experiment.run(**vars(args))
 
 # Export results
-import json
-import uuid
-from utils import serialize_with_class_names
 
 file_path = f'{args.out_dir}/selection_epsilon_{uuid.uuid4()}.json'
 result_serialized = serialize_with_class_names(result)

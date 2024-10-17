@@ -3,6 +3,36 @@ import argparse
 import dgym as dg
 import pandas as pd
 
+import torch
+import pyarrow.parquet as pq
+
+import random
+
+import os
+
+from dgym.envs.oracle import \
+    DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
+from dgym.envs.utility import ClassicUtilityFunction
+
+from dgym.envs.utility import (
+    ClassicUtilityFunction, MultipleUtilityFunction
+)
+
+from copy import deepcopy
+
+from dgym.envs.designer import Designer, Generator
+
+from dgym.envs import DrugEnv
+
+from dgym.agents import SequentialDrugAgent
+from dgym.agents.exploration import EpsilonGreedy
+
+from dgym.experiment import Experiment
+
+import json
+import uuid
+from utils import serialize_with_class_names
+
 def get_data(path):
 
     deck = dg.MoleculeCollection.load(
@@ -21,8 +51,6 @@ def get_data(path):
     fingerprints = dg.datasets.fingerprints(
         f'{path}/Enamine_Building_Blocks_Stock_262336cmpd_20230630_atoms.fpb')
 
-    import torch
-    import pyarrow.parquet as pq
     table = pq.read_table(f'{path}/sizes.parquet')[0]
     sizes = torch.tensor(table.to_numpy())
 
@@ -31,7 +59,6 @@ def get_data(path):
 def get_initial_library(deck, designer):
     
     # select first molecule
-    import random
     def _select_molecule(deck):
         initial_index = random.randint(0, len(deck) - 1)
         initial_molecule = deck[initial_index]
@@ -48,7 +75,6 @@ def get_initial_library(deck, designer):
     
 def get_docking_config(path: str, target_index: int):
     
-    import os
 
     dockstring_dir = f'{path}/dockstring_targets/'
     files = os.listdir(dockstring_dir)
@@ -78,9 +104,6 @@ def get_docking_config(path: str, target_index: int):
 
 def get_oracles(path: str, target_index: int):
 
-    from dgym.envs.oracle import \
-        DockingOracle, CatBoostOracle, RDKitOracle, NoisyOracle
-    from dgym.envs.utility import ClassicUtilityFunction
     
     target, config = get_docking_config(path, target_index)
 
@@ -101,9 +124,7 @@ def get_multiple_utility_functions(
     log_S_oracle,
     sigma=1.0
 ):
-    from dgym.envs.utility import (
-        ClassicUtilityFunction, MultipleUtilityFunction
-    )
+    
 
     # Define utility functions
     pIC50_utility = ClassicUtilityFunction(
@@ -124,7 +145,7 @@ def get_multiple_utility_functions(
     ]
 
     # Environment tolerates acceptable ADMET
-    from copy import deepcopy
+    
     utility_agent = MultipleUtilityFunction(
         utility_functions = [pIC50_utility, log_P_utility, log_S_utility],
         weights = [0.8, 0.1, 0.1]
@@ -174,7 +195,7 @@ path = '../../../../dgym-data'
 ) = get_data(path)
 
 # Get starting library
-from dgym.envs.designer import Designer, Generator
+
 designer = Designer(
     Generator(building_blocks, fingerprints, sizes), reactions, cache = True)
 library = get_initial_library(deck, designer)
@@ -201,7 +222,7 @@ library = get_initial_library(deck, designer)
 )
 
 # Create DrugEnv
-from dgym.envs import DrugEnv
+
 drug_env = DrugEnv(
     designer = designer,
     library = library,
@@ -210,8 +231,7 @@ drug_env = DrugEnv(
 )
 
 # Create DrugAgent
-from dgym.agents import SequentialDrugAgent
-from dgym.agents.exploration import EpsilonGreedy
+
 sequence = get_agent_sequence(temperature = args.temperature)
 drug_agent = SequentialDrugAgent(
     sequence = sequence,
@@ -220,16 +240,14 @@ drug_agent = SequentialDrugAgent(
 )
 
 # Create and run Experiment
-from dgym.experiment import Experiment
+
 experiment = Experiment(
     drug_agent=drug_agent, drug_env=drug_env)
 file_path = f'{args.out_dir}/selection_temperature_{args.temperature}_{uuid.uuid4()}.json'
 result = experiment.run(**vars(args), out=file_path)[0]
 
 # Export results
-import json
-import uuid
-from utils import serialize_with_class_names
+
 
 result_serialized = serialize_with_class_names(result)
 json.dump(result_serialized, open(file_path, 'w'))

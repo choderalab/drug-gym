@@ -2,6 +2,8 @@
 # =============================================================================
 # IMPORTS
 # =============================================================================
+import copy
+import random
 import dgym as dg
 import torch
 import random
@@ -9,6 +11,7 @@ import itertools
 import numpy as np
 import pandas as pd
 from rdkit import Chem
+from functools import partial
 from dgym.molecule import Molecule
 from dgym.reaction import LazyReaction
 from typing import Union, Iterable, Optional, List, Any, Callable
@@ -194,7 +197,6 @@ class Collection(torch.utils.data.Dataset):
 
     def shuffle(self, seed=None):
         """ Shuffle the collection and return it. """
-        import random
         if seed is not None:
             random.seed(seed)
         random.shuffle(self._items)
@@ -334,7 +336,6 @@ class Collection(torch.utils.data.Dataset):
 
     def copy(self, unique=False):
         """ Return a copy of self. """
-        import copy
         return self.__class__(copy.deepcopy(self._items))
 
     def view(
@@ -357,8 +358,6 @@ class Collection(torch.utils.data.Dataset):
         torch.utils.data.DataLoader
             Resulting data loader.
         """
-        from functools import partial
-
         if collate_fn is None:
             # provide default collate function
             collate_fn = self._batch
@@ -524,7 +523,6 @@ class ReactionCollection(Collection):
         From SmilesClickChem: https://zenodo.org/record/4100676
         
         """
-        import pandas as pd
 
         # load from JSON
         reactions_df = pd.read_json(path).T.reset_index(drop=True)
